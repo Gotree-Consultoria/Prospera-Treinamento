@@ -13,3 +13,13 @@
 - 🚀 Deploy realizado na **Vercel** para disponibilização online e facilitar a visibilidade das atualizações pela empresa.  
 - 🌐 Primeira versão pública do projeto em ambiente de produção.
 - 🛠️ Renomeado o arquivo principal para `index.html` para garantir que a Vercel reconheça corretamente o ponto de entrada da aplicação.
+
+
+
+## 🌐 Acesso ao Projeto Online
+
+Você pode visualizar o projeto em tempo real através do link abaixo.  
+Todas as atualizações feitas no repositório são refletidas automaticamente no deploy:
+
+🔗 [prospera-treinamento.vercel.app](https://prospera-treinamento.vercel.app/)
+
