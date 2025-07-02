@@ -78,7 +78,6 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Erro ao carregar o conteúdo do cart page:", error)
     );
 
-
   // Carregar home page
   fetch("partials/homePage.html")
     .then((response) => response.text())
@@ -90,7 +89,6 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Erro ao carregar o conteúdo do home page:", error)
     );
 
-
   // Carregar product categories section
   fetch("partials/productCategoriesPage.html")
     .then((response) => response.text())
@@ -99,11 +97,13 @@ document.addEventListener("DOMContentLoaded", function () {
       if (container) container.innerHTML = html;
     })
     .catch((error) =>
-      console.error("Erro ao carregar o conteúdo do product categories section:", error)
+      console.error(
+        "Erro ao carregar o conteúdo do product categories section:",
+        error
+      )
     );
 
-
-     // Carregar header page
+  // Carregar header page
   fetch("partials/headerPage.html")
     .then((response) => response.text())
     .then((html) => {
@@ -114,5 +114,14 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Erro ao carregar o conteúdo do header page:", error)
     );
 
-  // Se tiver header ou outro componente, adiciona mais blocos iguais
+  // Carregar faq page
+  fetch("partials/faqPage.html")
+    .then((response) => response.text())
+    .then((html) => {
+      const container = document.getElementById("faqPageContainer");
+      if (container) container.innerHTML = html;
+    })
+    .catch((error) =>
+      console.error("Erro ao carregar o conteúdo do faq page:", error)
+    );
 });

@@ -292,17 +292,17 @@ function showPage(page) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
-    
+
     const activeLink = document.querySelector(`[onclick="showPage('${page}')"]`);
     if (activeLink) {
         activeLink.classList.add('active');
     }
-    
+
     // Hide all pages
     document.querySelectorAll('.page').forEach(pageEl => {
         pageEl.classList.remove('active');
     });
-    
+
     // Show selected page
     const pageMap = {
         'home': 'homePage',
@@ -311,22 +311,30 @@ function showPage(page) {
         'about': 'aboutPage',
         'contact': 'contactPage',
         'account': 'accountPage',
-        'cart': 'cartPage'
+        'cart': 'cartPage',
+        'faq': 'faqPage',
     };
-    
+
     const targetPage = document.getElementById(pageMap[page]);
     if (targetPage) {
         targetPage.classList.add('active');
         currentPage = page;
-        
+
         // Load page-specific data
         if (page === 'cart') {
             renderCart();
         }
+
+        // Scroll logic
+        if (page === 'faq') {
+            // Espera um pequeno delay para garantir que o conteúdo foi carregado/renderizado
+            setTimeout(() => {
+                targetPage.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
-    
-    // Scroll to top
-    window.scrollTo(0, 0);
 }
 
 function scrollToSection(sectionId) {
