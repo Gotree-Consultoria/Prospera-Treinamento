@@ -1,0 +1,112 @@
+<!-- Account Page -->
+   <div class="page" id="accountPage">
+    <section class="page-header">
+     <div class="container">
+      <h1>
+       Minha Conta
+      </h1>
+     </div>
+    </section>
+    <section class="account-content">
+     <div class="container">
+      <div class="account-grid">
+       <div class="account-sidebar">
+        <div class="account-menu">
+         <a class="menu-item active" href="#" onclick="showAccountSection('profile')">
+          <i class="fas fa-user">
+          </i>
+          Perfil
+         </a>
+         <a class="menu-item" href="#" onclick="showAccountSection('orders')">
+          <i class="fas fa-shopping-bag">
+          </i>
+          Pedidos
+         </a>
+         <a class="menu-item" href="#" onclick="showAccountSection('downloads')">
+          <i class="fas fa-download">
+          </i>
+          Downloads
+         </a>
+        </div>
+       </div>
+       <div class="account-main">
+        <div class="account-section active" id="profileSection">
+         <h2>
+          Informações do Perfil
+         </h2>
+         <form onsubmit="updateProfile(event)">
+          <div class="form-group">
+           <label for="profileName">
+            Nome
+           </label>
+           <input id="profileName" name="name" type="text" value="João Silva"/>
+          </div>
+          <div class="form-group">
+           <label for="profileEmail">
+            E-mail
+           </label>
+           <input id="profileEmail" name="email" type="email" value="joao@exemplo.com"/>
+          </div>
+          <div class="form-group">
+           <label for="profileCompany">
+            Empresa
+           </label>
+           <input id="profileCompany" name="company" type="text" value="Empresa Exemplo Lda."/>
+          </div>
+          <button class="btn btn-primary" type="submit">
+           Atualizar Perfil
+          </button>
+         </form>
+        </div>
+        <div class="account-section" id="ordersSection">
+         <h2>
+          Histórico de Pedidos
+         </h2>
+         <div class="orders-list">
+          <div class="order-item">
+           <div class="order-header">
+            <span class="order-number">
+             #001
+            </span>
+            <span class="order-date">
+             15/01/2024
+            </span>
+            <span class="order-status completed">
+             Concluído
+            </span>
+           </div>
+           <div class="order-items">
+            <p>
+             Pacote Completo de Ergonomia - R$ 89,99
+            </p>
+           </div>
+          </div>
+         </div>
+        </div>
+        <div class="account-section" id="downloadsSection">
+         <h2>
+          Downloads Disponíveis
+         </h2>
+         <div class="downloads-list">
+          <div class="download-item">
+           <i class="fas fa-file-pdf">
+           </i>
+           <div class="download-info">
+            <h4>
+             E-book Ergonomia no Trabalho
+            </h4>
+            <p>
+             Comprado em 15/01/2024
+            </p>
+           </div>
+           <button class="btn btn-small">
+            Download
+           </button>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </section>
+   </div>
