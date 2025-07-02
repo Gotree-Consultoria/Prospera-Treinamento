@@ -17,6 +17,7 @@
 - 🎨 Estilização completa da página de FAQ, com foco em experiência do usuário e identidade visual mais agradável e moderna.
 - 🛒 Ajustes e início da melhoria no contador de itens do carrinho, incluindo planejamento para tratar popups, alinhamento e responsividade.
 - 🛒 Correção na exibição do contador de itens do carrinho: movida a variável cartCount para dentro da função updateCartDisplay(), garantindo que o elemento exista no DOM antes de ser acessado.
+- 🌐 Adicionado botão "Site Oficial" na navegação com redirecionamento para o site institucional da Gootree, substituindo o antigo botão "Blog".
 - 🧼 Melhorias no código e estruturação HTML, com correções em classes, organização de seções e comentários.
 
 
