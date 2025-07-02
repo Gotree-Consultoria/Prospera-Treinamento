@@ -9,10 +9,14 @@
 - 📁 Separadas as lógicas em arquivos distintos, utilizando JavaScript com lógica de container, para facilitar manutenção e escalabilidade.  
 - ⏳ Progresso: **80% concluído**.
 
-### 📅 02/07/2025
-- 🚀 Deploy realizado na **Vercel** para disponibilização online e facilitar a visibilidade das atualizações pela empresa.  
-- 🌐 Primeira versão pública do projeto em ambiente de produção.
-- 🛠️ Renomeado o arquivo principal para `index.html` para garantir que a Vercel reconheça corretamente o ponto de entrada da aplicação.
+📅 02/07/2025
+- 🚀 Deploy inicial realizado na Vercel, permitindo que o projeto possa ser visualizado online e facilitando o acompanhamento pela equipe.
+- 🌐 Primeira versão pública do site em ambiente de produção: prospera-treinamento.vercel.app
+- 🛠️ Renomeado o arquivo principal para index.html para garantir o reconhecimento automático pela Vercel.
+- 📁 Separação da seção de FAQ em um container independente, melhorando a organização do código e seguindo o padrão do projeto.
+- 🎨 Estilização completa da página de FAQ, com foco em experiência do usuário e identidade visual mais agradável e moderna.
+- 🛒 Ajustes e início da melhoria no contador de itens do carrinho, incluindo planejamento para tratar popups, alinhamento e responsividade.
+- 🧼 Melhorias no código e estruturação HTML, com correções em classes, organização de seções e comentários.
 
 
 
