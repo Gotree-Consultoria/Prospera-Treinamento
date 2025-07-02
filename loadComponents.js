@@ -109,6 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .then((html) => {
       const container = document.getElementById("headerPageContainer");
       if (container) container.innerHTML = html;
+    
     })
     .catch((error) =>
       console.error("Erro ao carregar o conteúdo do header page:", error)

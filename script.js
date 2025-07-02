@@ -10,7 +10,8 @@ const API_BASE_URL = 'https://j6h5i7c1kjn6.manus.space';
 
 // DOM Elements
 const mainContent = document.getElementById('mainContent');
-const cartCount = document.getElementById('cartCount');
+//Inutilizavel.
+//const cartCount = document.getElementById('cartCount');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -411,6 +412,7 @@ function updateQuantity(itemId, itemType, newQuantity) {
 
 function updateCartDisplay() {
     const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const cartCount = document.getElementById("cartCount");
     if (cartCount) {
         cartCount.textContent = totalItems;
         cartCount.style.display = totalItems > 0 ? 'flex' : 'none';
@@ -421,7 +423,7 @@ function renderCart() {
     const cartEmpty = document.getElementById('cartEmpty');
     const cartItemsContainer = document.getElementById('cartItems');
     const cartList = document.getElementById('cartList');
-    const cartSubtotal = document.getElementById(formatPrice('cartSubtotal'));
+    const cartSubtotal = document.getElementById('cartSubtotal');
     const cartTax = document.getElementById('cartTax');
     const cartTotal = document.getElementById('cartTotal');
     
