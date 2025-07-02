@@ -289,22 +289,20 @@ function renderProducts(filteredProducts = null) {
 
 // Navigation Functions
 function showPage(page) {
-    // Update navigation
+    // Atualiza navegação
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
+        if (link.dataset.page === page) {
+            link.classList.add('active');
+        }
     });
 
-    const activeLink = document.querySelector(`[onclick="showPage('${page}')"]`);
-    if (activeLink) {
-        activeLink.classList.add('active');
-    }
-
-    // Hide all pages
+    // Esconde todas as páginas
     document.querySelectorAll('.page').forEach(pageEl => {
         pageEl.classList.remove('active');
     });
 
-    // Show selected page
+    // Mapeamento de ID dos containers
     const pageMap = {
         'home': 'homePage',
         'ebooks': 'ebooksPage',
@@ -321,20 +319,19 @@ function showPage(page) {
         targetPage.classList.add('active');
         currentPage = page;
 
-        // Load page-specific data
-        if (page === 'cart') {
-            renderCart();
-        }
+        if (page === 'cart') renderCart();
 
-        // Scroll logic
+        // Scroll comportado
         if (page === 'faq') {
-            // Espera um pequeno delay para garantir que o conteúdo foi carregado/renderizado
             setTimeout(() => {
                 targetPage.scrollIntoView({ behavior: 'smooth' });
             }, 100);
         } else {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // Atualiza a URL sem recarregar a página
+        history.pushState({ page }, '', `#${page}`);
     }
 }
 
@@ -636,13 +633,12 @@ document.addEventListener('error', function(e) {
 }, true);
 
 // Smooth scrolling for anchor links
-document.addEventListener('click', function(e) {
-    if (e.target.matches('a[href^="#"]')) {
+document.addEventListener('click', function (e) {
+    const target = e.target.closest('[data-page]');
+    if (target) {
         e.preventDefault();
-        const target = document.querySelector(e.target.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth' });
-        }
+        const page = target.dataset.page;
+        if (page) showPage(page);
     }
 });
 
