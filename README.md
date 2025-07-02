@@ -12,3 +12,4 @@
 ### 📅 02/07/2025
 - 🚀 Deploy realizado na **Vercel** para disponibilização online e facilitar a visibilidade das atualizações pela empresa.  
 - 🌐 Primeira versão pública do projeto em ambiente de produção.
+- 🛠️ Renomeado o arquivo principal para `index.html` para garantir que a Vercel reconheça corretamente o ponto de entrada da aplicação.
