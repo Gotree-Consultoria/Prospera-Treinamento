@@ -1,6 +1,11 @@
 // loadComponents.js (carrega as paginas via container)
 
 document.addEventListener("DOMContentLoaded", function () {
+
+
+
+
+  
   // Carregar E-books
   fetch("partials/ebooksPage.html")
     .then((response) => response.text())

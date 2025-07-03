@@ -866,7 +866,8 @@ function updateCarousel() {
   if (param) {
     const url = new URL(window.location);
     url.searchParams.set("card", param);
-    history.replaceState(null, "", url); // Substitui o histórico da URL
+    history.pushState({ card: param }, "", url);  // Usando pushState ao invés de replaceState
+    // history.replaceState(null, "", url); // Substitui o histórico da URL
   }
 }
 
