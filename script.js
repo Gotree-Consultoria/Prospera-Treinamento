@@ -80,28 +80,28 @@ function loadStaticData() {
       name: "Ergonomia",
       description: "E-books sobre ergonomia no ambiente de trabalho",
       icon: "fas fa-user-check",
-      count: 12,
+      count: 0,
     },
     {
       id: 2,
       name: "Segurança",
       description: "Gestão de riscos e prevenção de acidentes",
       icon: "fas fa-shield-alt",
-      count: 15,
+      count: 0,
     },
     {
       id: 3,
       name: "Saúde Ocupacional",
       description: "Promoção da saúde no trabalho",
       icon: "fas fa-heartbeat",
-      count: 10,
+      count: 0,
     },
     {
       id: 4,
       name: "Gestão de RH",
       description: "Recursos humanos e desenvolvimento organizacional",
       icon: "fas fa-users",
-      count: 8,
+      count: 0,
     },
   ];
 
@@ -174,6 +174,13 @@ function loadStaticData() {
       ],
     },
   ];
+
+  // Atualizando o count de cada categoria com base no número de e-books em cada uma
+  categories.forEach((category) => {
+    category.count = products.filter(
+      (product) => product.category === category.name
+    ).length;
+  });
 
   // Renderiza as categorias, pacotes e produtos com dados estáticos
   renderCategories();
