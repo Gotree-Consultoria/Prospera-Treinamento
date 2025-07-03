@@ -103,7 +103,8 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Erro ao carregar o conteúdo do header page:", error)
     );
 
-  // Carregar faq page
+ 
+// Carregar faq page
 fetch("partials/faqPage.html")
   .then((response) => response.text())
   .then((html) => {
@@ -112,24 +113,33 @@ fetch("partials/faqPage.html")
 
     // Esperar DOM ficar pronto antes de chamar o carrossel
     setTimeout(() => {
-      // Só ativa a FAQ se a URL tiver ?card=algumaCoisa
       const params = new URLSearchParams(window.location.search);
-      if (params.has("card")) {
-        // Oculta todas as outras páginas
+      const cardParam = params.get("card");
+
+      const isCarouselCard =
+        cardParam === "faq" ||
+        cardParam === "privacidade" ||
+        cardParam === "termos" ||
+        cardParam === "suporte";
+
+      // Só ativa a FAQ se for um card válido E a URL não tiver hash como #home
+      if (isCarouselCard && !window.location.hash) {
+        // Oculta todas as páginas
         document
           .querySelectorAll(".page")
           .forEach((page) => page.classList.remove("active"));
 
-        // Ativa a página FAQ
+        // Ativa somente a página FAQ
         const faqPage = document.getElementById("faqPage");
         if (faqPage) faqPage.classList.add("active");
       }
 
-      // Inicializa o carrossel, sempre (caso seja necessário depois por navegação)
+      // Inicializa o carrossel sempre
       initCarousel();
     }, 100);
   })
   .catch((error) =>
     console.error("Erro ao carregar o conteúdo do faq page:", error)
   );
+
 });
