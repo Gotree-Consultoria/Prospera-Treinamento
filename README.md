@@ -42,3 +42,55 @@ Todas as atualizações feitas no repositório são refletidas automaticamente n
 
 🔗 [prospera-treinamento.vercel.app](https://prospera-treinamento.vercel.app/)
 
+
+
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+## ⚙️ Coisas a Corrigir ou Melhorar
+
+### 1. 🔙 **Correção de Bugs no Botão de Voltar/Avançar do Navegador**
+   - **Descrição**: O comportamento de navegação nos botões "voltar" e "avançar" do navegador não está funcionando corretamente, especialmente ao navegar pelas seções carregadas dinamicamente. A página recarrega em vez de voltar corretamente.
+   - **Tarefa**: Revisar a manipulação do histórico de navegação e garantir que as mudanças de estado (por exemplo, ao alternar entre seções ou cards) sejam bem integradas com os botões de navegação do navegador.
+   - **Status**: **Em andamento / Aguardando testes adicionais**.
+
+### 2. 🚀 **Otimização da Performance no Carrossel**
+   - **Descrição**: O carrossel está sendo carregado de forma assíncrona, mas ainda há espaço para melhorar a performance, especialmente quando há muitos produtos ou cards.
+   - **Tarefa**: Refatorar o código para garantir que a navegação entre as seções do carrossel seja mais fluida, possivelmente carregando os itens de forma "lazy load" ou otimizando o número de renders.
+   - **Status**: Planejado.
+
+### 3. 📱 **Ajustes na Responsividade do Carrossel**
+   - **Descrição**: Embora o carrossel seja responsivo, há alguns pontos onde ele não se adapta tão bem em dispositivos menores.
+   - **Tarefa**: Melhorar o layout para telas pequenas (mobile) e garantir que a navegação, botões e cards se ajustem corretamente.
+   - **Status**: Em andamento.
+
+### 4. 🔗 **Correção na Navegação com Parâmetros de URL**
+   - **Descrição**: A navegação baseada nos parâmetros de URL (`?card=`) funciona na maioria dos casos, mas há alguns comportamentos inesperados quando o parâmetro é alterado manualmente ou quando a página é atualizada com o parâmetro presente.
+   - **Tarefa**: Ajustar o código para garantir que a navegação via URL seja completamente estável, evitando recarregamentos ou falhas no carregamento da seção correta.
+   - **Status**: Em andamento.
+
+### 5. 🛒 **Melhorias no Sistema de Carrinho de Compras**
+   - **Descrição**: O carrinho de compras está funcional, mas existem algumas melhorias que podem ser feitas, como a adição de animações mais suaves, melhor visibilidade de itens no carrinho e integração com a API de checkout.
+   - **Tarefa**: Trabalhar na UI do carrinho, adicionando animações e uma experiência mais fluida para o usuário, além de integrar o processo de checkout.
+   - **Status**: Planejado.
+
+### 6. 📝 **Refatoração de Funções de Navegação**
+   - **Descrição**: O sistema de navegação está funcionando, mas ainda precisa de ajustes finos para garantir que os estados de navegação, como o carregamento das seções, sejam mais robustos.
+   - **Tarefa**: Refatorar as funções de navegação para reduzir a complexidade e garantir uma navegação mais intuitiva e confiável.
+   - **Status**: Em andamento.
+
+
