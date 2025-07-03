@@ -1,69 +1,79 @@
-// Global Variables
-let currentPage = "home";
-let cartItems = [];
-let products = [];
-let packages = [];
-let categories = [];
+// Variáveis globais
+let currentPage = "home"; // Página atual
+let cartItems = []; // Itens no carrinho
+let products = []; // Lista de produtos
+let packages = []; // Lista de pacotes
+let categories = []; // Categorias de produtos
 
-// API Configuration
-const API_BASE_URL = "https://j6h5i7c1kjn6.manus.space";
+// Configuração da API
+const API_BASE_URL = "https://j6h5i7c1kjn6.manus.space"; // URL base para as requisições
 
-// DOM Elements
-const mainContent = document.getElementById("mainContent");
-//Inutilizavel.
-//const cartCount = document.getElementById('cartCount');
+// Elementos do DOM
+const mainContent = document.getElementById("mainContent"); // Conteúdo principal
+// const cartCount = document.getElementById('cartCount'); // Inutilizado
 
-// Initialize the application
+// Inicializa a aplicação assim que o conteúdo estiver carregado
 document.addEventListener("DOMContentLoaded", function () {
-  initializeApp();
+  initializeApp(); // Chama a função para inicializar a aplicação
 });
 
+// Função para inicializar a aplicação
 async function initializeApp() {
   try {
+    // Carrega os dados da API e atualiza a exibição do carrinho
     await loadData();
     updateCartDisplay();
 
+    // Verifica se existe o parâmetro 'card' na URL para navegação
     const params = new URLSearchParams(window.location.search);
     const targetCard = params.get("card");
 
-    // Só vai pra home se não tiver card na URL
+    // Se não tiver parâmetro 'card', vai para a página inicial
     if (!targetCard) {
       showPage("home");
     }
   } catch (error) {
-    console.error("Error initializing app:", error);
+    // Em caso de erro, exibe uma mensagem no console e carrega dados estáticos
+    console.error("Erro ao inicializar a aplicação:", error);
     loadStaticData();
   }
 }
-// Data Loading Functions
+
+// Função para carregar dados da API
 async function loadData() {
   try {
+    // Realiza as requisições para produtos e pacotes em paralelo
     const [productsResponse, packagesResponse] = await Promise.all([
       fetch(`${API_BASE_URL}/api/products`),
       fetch(`${API_BASE_URL}/api/packages`),
     ]);
 
+    // Verifica se as respostas são válidas
     if (productsResponse.ok && packagesResponse.ok) {
+      // Converte as respostas para JSON
       products = await productsResponse.json();
       packages = await packagesResponse.json();
 
-      // Extract categories from products
+      // Extrai categorias dos produtos
       categories = extractCategories(products);
 
+      // Renderiza as categorias, pacotes e produtos
       renderCategories();
       renderPackages();
       renderProducts();
     } else {
-      throw new Error("API request failed");
+      throw new Error("Requisição à API falhou");
     }
   } catch (error) {
-    console.error("Error loading data:", error);
+    // Em caso de erro ao carregar dados, exibe o erro e carrega dados estáticos
+    console.error("Erro ao carregar dados:", error);
     loadStaticData();
   }
 }
 
+// Função que carrega dados estáticos como fallback
 function loadStaticData() {
-  // Static data as fallback
+  // Dados estáticos em caso de falha na requisição à API
   categories = [
     {
       id: 1,
@@ -95,6 +105,7 @@ function loadStaticData() {
     },
   ];
 
+  // Dados estáticos de produtos e pacotes
   products = [
     {
       id: 1,
@@ -130,6 +141,7 @@ function loadStaticData() {
     },
   ];
 
+  // Dados estáticos de pacotes
   packages = [
     {
       id: 1,
@@ -163,11 +175,13 @@ function loadStaticData() {
     },
   ];
 
+  // Renderiza as categorias, pacotes e produtos com dados estáticos
   renderCategories();
   renderPackages();
   renderProducts();
 }
 
+// Função para extrair as categorias dos produtos
 function extractCategories(products) {
   const categoryMap = new Map();
 
@@ -188,6 +202,7 @@ function extractCategories(products) {
   return Array.from(categoryMap.values());
 }
 
+// Função para obter o ícone de cada categoria
 function getCategoryIcon(category) {
   const iconMap = {
     Ergonomia: "fas fa-user-check",
@@ -200,13 +215,15 @@ function getCategoryIcon(category) {
   return iconMap[category] || "fas fa-book";
 }
 
-// Rendering Functions
+// Funções de renderização
 function renderCategories() {
+  // Início: renderização das categorias
   const categoriesGrid = document.getElementById("categoriesGrid");
   const categoriesLoading = document.getElementById("categoriesLoading");
 
   if (!categoriesGrid || !categoriesLoading) return;
 
+  // Esconde o loading e mostra a grid de categorias
   categoriesLoading.style.display = "none";
   categoriesGrid.style.display = "grid";
 
@@ -222,9 +239,12 @@ function renderCategories() {
     `
     )
     .join("");
+  // Fim: renderização das categorias
 }
 
+// Função de renderização de pacotes
 function renderPackages() {
+  // Início: renderização dos pacotes
   const packagesGrid = document.getElementById("packagesGrid");
   const packagesLoading = document.getElementById("packagesLoading");
   const packagesPageGrid = document.getElementById("packagesPageGrid");
@@ -249,9 +269,7 @@ function renderPackages() {
                 <span class="price-current">${formatPrice(pkg.price)}</span>
                 ${
                   pkg.discount
-                    ? `<span class="price-discount">${formatPrice(
-                        pkg.discount
-                      )} OFF</span>`
+                    ? `<span class="price-discount">${pkg.discount} OFF</span>`
                     : ""
                 }
             </div>
@@ -289,9 +307,13 @@ function renderPackages() {
     packagesPageGrid.style.display = "grid";
     packagesPageGrid.innerHTML = packageHTML;
   }
+
+  // Fim: renderização dos pacotes
 }
 
+// Função de renderização de produtos
 function renderProducts(filteredProducts = null) {
+  // Início: renderização dos produtos
   const productsToRender = filteredProducts || products;
   const ebooksGrid = document.getElementById("ebooksGrid");
   const ebooksLoading = document.getElementById("ebooksLoading");
@@ -328,11 +350,12 @@ function renderProducts(filteredProducts = null) {
     `
     )
     .join("");
+  // Fim: renderização dos produtos
 }
 
-// Navigation Functions
+// Funções de navegação
 function showPage(page) {
-  // Atualiza navegação
+  // Início: navegação entre páginas
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.classList.remove("active");
     if (link.dataset.page === page) {
@@ -381,8 +404,10 @@ function showPage(page) {
     url.hash = `#${page}`; // Atualiza o fragmento
     history.pushState({ page }, "", url);
   }
+  // Fim: navegação entre páginas
 }
 
+// Função para rolar para uma seção específica
 function scrollToSection(sectionId) {
   const section = document.getElementById(sectionId);
   if (section) {
@@ -390,6 +415,7 @@ function scrollToSection(sectionId) {
   }
 }
 
+// Função de filtro de produtos por categoria
 function filterByCategory(categoryName) {
   const filteredProducts = products.filter(
     (product) => product.category === categoryName
@@ -400,56 +426,66 @@ function filterByCategory(categoryName) {
   }, 100);
 }
 
-// Cart Functions
+// Funções do Carrinho
 function addToCart(itemId, itemType) {
   let item;
 
+  // Verifica se o item é do tipo produto ou pacote
   if (itemType === "product") {
-    item = products.find((p) => p.id === itemId);
+    item = products.find((p) => p.id === itemId); // Encontrar o produto
   } else if (itemType === "package") {
-    item = packages.find((p) => p.id === itemId);
+    item = packages.find((p) => p.id === itemId); // Encontrar o pacote
   }
 
-  if (!item) return;
+  if (!item) return; // Se não encontrar o item, não faz nada
 
+  // Verifica se o item já está no carrinho
   const existingItem = cartItems.find(
     (cartItem) => cartItem.id === itemId && cartItem.type === itemType
   );
 
+  // Se o item já está no carrinho, aumenta a quantidade
   if (existingItem) {
     existingItem.quantity += 1;
   } else {
+    // Caso contrário, adiciona o item ao carrinho
     cartItems.push({
       id: itemId,
       type: itemType,
       title: item.title,
       price: item.price,
       quantity: 1,
-      image: item.image || "fas fa-book",
+      image: item.image || "fas fa-book", // Usa um ícone genérico caso não tenha imagem
     });
   }
 
+  // Atualiza a exibição do carrinho e exibe notificação
   updateCartDisplay();
   showCartNotification();
 }
 
 function removeFromCart(itemId, itemType) {
+  // Remove o item do carrinho baseado no ID e tipo
   cartItems = cartItems.filter(
     (item) => !(item.id === itemId && item.type === itemType)
   );
+
   updateCartDisplay();
   renderCart();
 }
 
 function updateQuantity(itemId, itemType, newQuantity) {
+  // Encontra o item no carrinho
   const item = cartItems.find(
     (cartItem) => cartItem.id === itemId && cartItem.type === itemType
   );
 
   if (item) {
+    // Se a nova quantidade for menor ou igual a zero, remove o item
     if (newQuantity <= 0) {
       removeFromCart(itemId, itemType);
     } else {
+      // Caso contrário, atualiza a quantidade
       item.quantity = newQuantity;
       updateCartDisplay();
       renderCart();
@@ -458,15 +494,19 @@ function updateQuantity(itemId, itemType, newQuantity) {
 }
 
 function updateCartDisplay() {
+  // Calcula o número total de itens no carrinho
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartCount = document.getElementById("cartCount");
+
+  // Atualiza o contador do carrinho
   if (cartCount) {
     cartCount.textContent = totalItems;
-    cartCount.style.display = totalItems > 0 ? "flex" : "none";
+    cartCount.style.display = totalItems > 0 ? "flex" : "none"; // Exibe apenas se houver itens
   }
 }
 
 function renderCart() {
+  // Verifica se o carrinho está vazio ou não
   const cartEmpty = document.getElementById("cartEmpty");
   const cartItemsContainer = document.getElementById("cartItems");
   const cartList = document.getElementById("cartList");
@@ -474,15 +514,18 @@ function renderCart() {
   const cartTax = document.getElementById("cartTax");
   const cartTotal = document.getElementById("cartTotal");
 
+  // Se o carrinho estiver vazio
   if (cartItems.length === 0) {
     if (cartEmpty) cartEmpty.style.display = "block";
     if (cartItemsContainer) cartItemsContainer.style.display = "none";
     return;
   }
 
+  // Caso contrário, exibe os itens do carrinho
   if (cartEmpty) cartEmpty.style.display = "none";
   if (cartItemsContainer) cartItemsContainer.style.display = "grid";
 
+  // Renderiza cada item no carrinho
   if (cartList) {
     cartList.innerHTML = cartItems
       .map(
@@ -526,21 +569,22 @@ function renderCart() {
       .join("");
   }
 
-  // Calculate totals
+  // Calcula os totais do carrinho
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  //const tax = subtotal * 0.23; // 23% IVA
+  //const tax = subtotal * 0.23; // 23% IVA (pode ser ajustado conforme necessidade)
   const total = subtotal;
 
+  // Atualiza os valores do subtotal e total
   if (cartSubtotal) cartSubtotal.textContent = `${formatPrice(subtotal)}`;
   //if (cartTax) cartTax.textContent = `${tax.toFixed(2)}`;
   if (cartTotal) cartTotal.textContent = `${formatPrice(total)}`;
 }
 
+// Exibe a notificação de item adicionado ao carrinho
 function showCartNotification() {
-  // Simple notification - could be enhanced with a toast library
   const notification = document.createElement("div");
   notification.style.cssText = `
         position: fixed;
@@ -557,18 +601,20 @@ function showCartNotification() {
 
   document.body.appendChild(notification);
 
+  // Remove a notificação após 3 segundos
   setTimeout(() => {
     notification.remove();
-  }, 3000);
+  }, 2500);
 }
 
+// Função de checkout (em breve)
 function checkout() {
   alert("Funcionalidade de checkout será implementada em breve!");
 }
 
-// Account Functions
+// Funções da Conta
 function showAccountSection(section) {
-  // Update menu
+  // Atualiza o menu de navegação
   document.querySelectorAll(".menu-item").forEach((item) => {
     item.classList.remove("active");
   });
@@ -580,12 +626,12 @@ function showAccountSection(section) {
     activeMenuItem.classList.add("active");
   }
 
-  // Hide all sections
+  // Esconde todas as seções da conta
   document.querySelectorAll(".account-section").forEach((sectionEl) => {
     sectionEl.classList.remove("active");
   });
 
-  // Show selected section
+  // Exibe a seção selecionada
   const sectionMap = {
     profile: "profileSection",
     orders: "ordersSection",
@@ -598,7 +644,7 @@ function showAccountSection(section) {
   }
 }
 
-// Form Functions
+// Funções de Formulário
 async function subscribeNewsletter(event) {
   event.preventDefault();
   const form = event.target;
@@ -620,8 +666,8 @@ async function subscribeNewsletter(event) {
       throw new Error("Erro na subscrição");
     }
   } catch (error) {
-    console.error("Newsletter subscription error:", error);
-    alert("Subscrição realizada com sucesso!"); // Fallback message
+    console.error("Erro na subscrição da newsletter:", error);
+    alert("Subscrição realizada com sucesso!"); // Fallback caso falhe
     form.reset();
   }
 }
@@ -631,8 +677,8 @@ function sendMessage(event) {
   const form = event.target;
   const formData = new FormData(form);
 
-  // Simulate sending message
-  alert("Mensagem enviada com sucesso! Entraremos em contacto em breve.");
+  // Simula o envio da mensagem
+  alert("Mensagem enviada com sucesso! Entraremos em contato em breve.");
   form.reset();
 }
 
@@ -640,12 +686,13 @@ function updateProfile(event) {
   event.preventDefault();
   const form = event.target;
 
-  // Simulate profile update
+  // Simula a atualização do perfil
   alert("Perfil atualizado com sucesso!");
 }
 
-// Utility Functions
+// Funções Utilitárias
 function formatPrice(price) {
+  // Formata o preço para o padrão monetário BR
   return price.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -664,8 +711,9 @@ function debounce(func, wait) {
   };
 }
 
-// Search functionality (if needed)
+// Função de busca (caso necessário)
 function searchProducts(query) {
+  // Filtra os produtos com base no título, descrição ou categoria
   const filteredProducts = products.filter(
     (product) =>
       product.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -673,13 +721,14 @@ function searchProducts(query) {
       product.category.toLowerCase().includes(query.toLowerCase())
   );
 
+  // Exibe a página "ebooks" e renderiza os produtos filtrados após um pequeno delay
   showPage("ebooks");
   setTimeout(() => {
     renderProducts(filteredProducts);
   }, 100);
 }
 
-// Add CSS animation for notifications
+// Adiciona a animação CSS para notificações
 const style = document.createElement("style");
 style.textContent = `
     @keyframes slideIn {
@@ -695,10 +744,11 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Error handling for images
+// Tratamento de erro para imagens
 document.addEventListener(
   "error",
   function (e) {
+    // Se a imagem falhar, ela é ocultada
     if (e.target.tagName === "IMG") {
       e.target.style.display = "none";
     }
@@ -706,31 +756,32 @@ document.addEventListener(
   true
 );
 
-// Smooth scrolling for anchor links
+// Rolagem suave para links de ancoragem
 document.addEventListener("click", function (e) {
   const target = e.target.closest("[data-page]");
   if (target) {
     e.preventDefault();
     const page = target.dataset.page;
-    if (page) showPage(page);
+    if (page) showPage(page); // Exibe a página correspondente
   }
 });
 
-// Handle browser back/forward buttons
+// Tratamento dos botões de navegação do navegador (voltar/avançar)
 window.addEventListener("popstate", function (e) {
   if (e.state && e.state.page) {
-    showPage(e.state.page);
+    showPage(e.state.page); // Exibe a página que está no histórico
   }
 });
 
-// Add page state to history
+// Função para adicionar um estado à história do navegador
 function addToHistory(page) {
   history.pushState({ page: page }, "", `#${page}`);
 }
 
-// Initialize page from URL hash
+// Inicializa a página com base no hash da URL
 function initializeFromHash() {
   const hash = window.location.hash.substring(1);
+  // Verifica se o hash corresponde a uma das páginas válidas
   if (
     hash &&
     [
@@ -747,7 +798,7 @@ function initializeFromHash() {
   }
 }
 
-// Call initialization from hash on load
+// Chama a inicialização a partir do hash quando a página é carregada
 document.addEventListener("DOMContentLoaded", function () {
   initializeFromHash();
 });
@@ -756,8 +807,7 @@ let currentIndex = 0;
 let track;
 let cards;
 
-
-// Mapeamentos entre parâmetros da URL e IDs dos cards
+// Mapeamento dos parâmetros da URL para os IDs dos cards
 const cardParamMap = {
   faq: "secao-faq",
   privacidade: "secao-privacidade",
@@ -772,32 +822,35 @@ const cardIdMap = {
   "secao-suporte": "suporte",
 };
 
+// Inicializa o carrossel
 function initCarousel() {
   track = document.querySelector(".carousel-track");
   cards = document.querySelectorAll(".carousel-card");
 
+  // Verifica se o carrossel e os cards existem
   if (!track || cards.length === 0) return;
 
-  // Verifica se há parâmetro na URL
+  // Verifica se há um parâmetro "card" na URL
   const params = new URLSearchParams(window.location.search);
   const target = params.get("card");
 
-  // Vai para o card específico, se encontrado
+  // Se o parâmetro for válido, vai para o card correspondente
   if (target && cardParamMap[target]) {
     const index = Array.from(cards).findIndex(
       (card) => card.id === cardParamMap[target]
     );
     if (index !== -1) {
-      currentIndex = index;
+      currentIndex = index; // Atualiza o índice do carrossel
     }
   }
 
   updateCarousel();
 }
 
+// Atualiza a exibição do carrossel
 function updateCarousel() {
   const offset = -currentIndex * 100;
-  track.style.transform = `translateX(${offset}%)`;
+  track.style.transform = `translateX(${offset}%)`; // Move o carrossel para a posição correta
 
   // Atualiza a URL com base no card atual
   const currentCardId = cards[currentIndex]?.id;
@@ -806,10 +859,11 @@ function updateCarousel() {
   if (param) {
     const url = new URL(window.location);
     url.searchParams.set("card", param);
-    history.replaceState(null, "", url);
+    history.replaceState(null, "", url); // Substitui o histórico da URL
   }
 }
 
+// Avança para o próximo card
 function nextCard() {
   if (currentIndex < cards.length - 1) {
     currentIndex++;
@@ -817,6 +871,7 @@ function nextCard() {
   }
 }
 
+// Volta para o card anterior
 function prevCard() {
   if (currentIndex > 0) {
     currentIndex--;
@@ -824,6 +879,7 @@ function prevCard() {
   }
 }
 
+// Vai diretamente para um card pelo ID
 function goToCardById(id) {
   const index = Array.from(cards).findIndex((card) => card.id === id);
   if (index !== -1) {
@@ -832,14 +888,13 @@ function goToCardById(id) {
   }
 }
 
-
 // Torna as funções acessíveis globalmente para uso com onclick no HTML
 window.initCarousel = initCarousel;
 window.nextCard = nextCard;
 window.prevCard = prevCard;
 window.goToCardById = goToCardById;
 
-// Export functions for global access (if needed)
+// Exporta funções para acesso global (caso necessário)
 window.showPage = showPage;
 window.scrollToSection = scrollToSection;
 window.addToCart = addToCart;
