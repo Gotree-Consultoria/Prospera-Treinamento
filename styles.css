@@ -5,6 +5,9 @@
     box-sizing: border-box;
 }
 
+
+
+
 :root {
     /* Color Palette */
     --verde-escuro: #005a32;
@@ -53,6 +56,12 @@ body {
     color: var(--gray-dark);
     background-color: var(--off-white);
 }
+
+
+
+
+
+
 
 /* ADD 15:18 JUAN*/
 .nav-link {
@@ -1228,59 +1237,213 @@ section {
   padding-bottom: 8px;
 }
 
-/* Perguntas (FAQ) */
-#secao-faq .container h2 {
-  font-size: 1.3rem;
-  color: #00796b;
-  margin-top: 25px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: color 0.3s ease;
+
+
+
+
+/* CONFIG CARROSSEL */
+
+/* Início Formulário de Suporte */
+
+#secao-suporte .container {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
 }
 
-#secao-faq .container h2:hover {
-  color: #004d40;
-}
-
-/* Respostas (FAQ) */
-#secao-faq .container p {
-  font-size: 1rem;
-  color: #444;
-  margin-top: 5px;
-  margin-bottom: 20px;
-  line-height: 1.6;
-}
-
-/* Formulário de suporte */
 #secao-suporte form {
-  margin-top: 20px;
+  background: linear-gradient(to bottom, #014d44, #003c36);
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.3s ease;
 }
 
 #secao-suporte label {
-  font-weight: bold;
-  color: #00796b;
+  display: block;
+  font-weight: 600;
+  color: #aafae2;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
 }
 
 #secao-suporte input,
 #secao-suporte textarea {
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  border: 2px solid transparent;
+  border-radius: 12px;
   font-size: 1rem;
-  font-family: inherit;
+  background-color: #ffffff;
+  color: #003c36;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 
-#secao-suporte button {
-  background-color: #00796b;
-  color: #fff;
-  font-size: 1rem;
-  padding: 12px 24px;
-  border-radius: 8px;
+#secao-suporte input:focus,
+#secao-suporte textarea:focus {
+  border-color: #00bfa5;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.2);
+}
+
+#secao-suporte textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+#secao-suporte button[type="submit"] {
+  background: linear-gradient(to right, var(--verde-claro), var(--verde-escuro));
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 30px;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s ease;
+  width: 100%;
+  box-shadow: 0 6px 16px rgba(0, 191, 165, 0.4);
+  transition: all 0.3s ease;
 }
 
-#secao-suporte button:hover {
-  background-color: #004d40;
+#secao-suporte button[type="submit"]:hover {
+  background: linear-gradient(to right, var(--verde-claro), #00695c);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 191, 165, 0.6);
+}
+
+#secao-suporte button[type="submit"]:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Fim Formulário de Suporte */
+
+
+/* Inicio Seção FAQ*/
+
+#secao-faq .container h2 {
+  color: #ffffff; /* ou outra cor desejada */
+  font-size: 1.3rem;
+  margin-top: 24px;
+}
+
+#secao-faq .container p {
+  color: #d0f2e8; /* cor suave e clara para leitura */
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+/* Fim Seção FAQ*/
+
+
+
+.carousel-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  border-radius: 20px;
+  /*background-color: #003c36;*/
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.carousel-container {
+  width: 100%;
+  overflow: hidden;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.5s ease;
+  width: 100%; /* JS define */
+}
+
+.carousel-card {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 60px 40px;
+  background-color: var(--verde-escuro);
+  box-sizing: border-box;
+  color: #fffffB;
+  text-align: center;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.carousel-card h1 {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.carousel-card h2 {
+  font-size: 1.8rem;
+  margin-bottom: 30px;
+  color: #ffffff;
+}
+
+.carousel-card h3 {
+  font-size: 1.2rem;
+  color: #66ffcc;
+  margin-top: 30px;
+  margin-bottom: 8px;
+}
+
+.carousel-card p {
+  font-size: 1rem;
+  color: #d0f2e8;
+  margin-bottom: 20px;
+  line-height: 1.5;
 }
 
 
+
+/* Inicio Botões */
+.carousel-controls {
+  text-align: center;
+  margin: 25px 0;
+  background-color: var(--off-white);
+}
+
+.carousel-controls button {
+  margin: 0 12px;
+  padding: 14px 36px;
+  background: linear-gradient(to right, var(--verde-claro), var(--verde-escuro));
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 16px rgba(0, 191, 165, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-width: 140px;
+}
+
+.carousel-controls button:hover {
+  background: linear-gradient(to right, var(--verde-claro), var(--verde-claro)); /* cor mais clara no hover */
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 191, 165, 0.5);
+}
+
+.carousel-controls button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Adicional opcional: transição suave de sombra e cor */
+.carousel-controls button {
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+
+/* Fim Botões */
+
+
+/* CONFIG CARROSSEL */

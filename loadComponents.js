@@ -78,17 +78,6 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Erro ao carregar o conteúdo do cart page:", error)
     );
 
-  // Carregar home page
-  fetch("partials/homePage.html")
-    .then((response) => response.text())
-    .then((html) => {
-      const container = document.getElementById("homePageContainer");
-      if (container) container.innerHTML = html;
-    })
-    .catch((error) =>
-      console.error("Erro ao carregar o conteúdo do home page:", error)
-    );
-
   // Carregar product categories section
   fetch("partials/productCategoriesPage.html")
     .then((response) => response.text())
@@ -109,20 +98,38 @@ document.addEventListener("DOMContentLoaded", function () {
     .then((html) => {
       const container = document.getElementById("headerPageContainer");
       if (container) container.innerHTML = html;
-    
     })
     .catch((error) =>
       console.error("Erro ao carregar o conteúdo do header page:", error)
     );
 
   // Carregar faq page
-  fetch("partials/faqPage.html")
-    .then((response) => response.text())
-    .then((html) => {
-      const container = document.getElementById("faqPageContainer");
-      if (container) container.innerHTML = html;
-    })
-    .catch((error) =>
-      console.error("Erro ao carregar o conteúdo do faq page:", error)
-    );
+fetch("partials/faqPage.html")
+  .then((response) => response.text())
+  .then((html) => {
+    const container = document.getElementById("faqPageContainer");
+    if (container) container.innerHTML = html;
+
+    // Esperar DOM ficar pronto antes de chamar o carrossel
+    setTimeout(() => {
+      // Só ativa a FAQ se a URL tiver ?card=algumaCoisa
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("card")) {
+        // Oculta todas as outras páginas
+        document
+          .querySelectorAll(".page")
+          .forEach((page) => page.classList.remove("active"));
+
+        // Ativa a página FAQ
+        const faqPage = document.getElementById("faqPage");
+        if (faqPage) faqPage.classList.add("active");
+      }
+
+      // Inicializa o carrossel, sempre (caso seja necessário depois por navegação)
+      initCarousel();
+    }, 100);
+  })
+  .catch((error) =>
+    console.error("Erro ao carregar o conteúdo do faq page:", error)
+  );
 });
