@@ -22,6 +22,16 @@
 - 🧼 Melhorias no código e estruturação HTML, com correções em classes, organização de seções e comentários.
 
 
+📅 03/07/2025
+- 🎠 Adicionado carrossel dinâmico na página de FAQ com suporte à navegação entre seções (FAQ, Privacidade, Termos e Suporte).
+- 🔗 Implementada navegação via parâmetro de URL (?card=suporte, por exemplo), permitindo abrir diretamente uma seção específica.
+- 🧠 Integração complexa com sistema de páginas parciais: foi necessário garantir que o carrossel só fosse inicializado após o carregamento assíncrono (fetch()) da faqPage.html, respeitando o tempo de montagem do DOM.
+- 📌 Corrigido um bug crítico onde a página FAQ abria rapidamente e voltava para a Home automaticamente. O problema estava ligado à função initializeApp() que forçava showPage('home') antes da conclusão do carregamento da página FAQ.
+- 🔁 URLs agora são atualizadas dinamicamente conforme o usuário navega no carrossel usando os botões "Próximo" e "Anterior", sem recarregar a página, utilizando history.pushState.
+- 🧪 Testes manuais extensivos foram necessários para ajustar o timing de carregamento, ativação de classes .active, compatibilidade com a navegação e persistência de estado.
+- ⚠️ Este foi um dos pontos mais desafiadores da estrutura SPA: lidar com navegação baseada em URL em páginas que são carregadas dinamicamente de forma assíncrona, sem quebrar o fluxo do usuário ou gerar comportamento inesperado.
+- 📄 Código revisado e modularizado para facilitar a manutenção futura da lógica do carrossel.
+
 
 ## 🌐 Acesso ao Projeto Online
 
