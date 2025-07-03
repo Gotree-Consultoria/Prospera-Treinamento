@@ -31,6 +31,7 @@
 - 🧪 Testes manuais extensivos foram necessários para ajustar o timing de carregamento, ativação de classes .active, compatibilidade com a navegação e persistência de estado.
 - ⚠️ Este foi um dos pontos mais desafiadores da estrutura SPA: lidar com navegação baseada em URL em páginas que são carregadas dinamicamente de forma assíncrona, sem quebrar o fluxo do usuário ou gerar comportamento inesperado.
 - 📄 Código revisado e modularizado para facilitar a manutenção futura da lógica do carrossel.
+- ✍️ Organizado e comentado o código, adicionando explicações nas funções de navegação do carrossel, controle de histórico de URL, busca de produtos, animações e tratamento de erros. Melhorada a organização geral para facilitar a compreensão do fluxo do código e futuras manutenções.
 
 
 ## 🌐 Acesso ao Projeto Online
