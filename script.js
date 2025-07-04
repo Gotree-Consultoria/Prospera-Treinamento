@@ -616,8 +616,68 @@ function showCartNotification() {
 
 // Função de checkout (em breve)
 function checkout() {
-  alert("Funcionalidade de checkout será implementada em breve!");
+  // Verifica se o usuário está logado
+  const userLoggedIn = checkUserLoggedIn();
+
+  if (!userLoggedIn) {
+    // Se não estiver logado, exibe o pop-up
+    showProfileUpdatePopup();
+  } else {
+    // Caso esteja logado, prossegue com o processo de checkout
+    alert("Função de checkout será implementada em breve!");
+  }
 }
+
+
+// Função fictícia que verifica se o usuário está logado (pode ser com cookies, sessionStorage, etc.)
+function checkUserLoggedIn() {
+  // Substitua por uma verificação real (exemplo usando sessionStorage)
+  return sessionStorage.getItem('userLoggedIn') === 'true'; // Exemplo fictício
+}
+
+// Função para mostrar o pop-up informando sobre a necessidade de atualizar o perfil
+function showProfileUpdatePopup() {
+  const popup = document.createElement('div');
+  popup.classList.add('popup');
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Perfil Incompleto</h3>
+      <p>Para prosseguir com a compra, você precisa atualizar seu perfil. Clique no botão abaixo para atualizar.</p>
+      <button onclick="redirectToUpdateProfile()">Atualizar Perfil</button>
+      <button onclick="closePopup()">Fechar</button>
+    </div>
+  `;
+
+  // Adiciona o pop-up na tela
+  document.body.appendChild(popup);
+  document.body.style.overflow = 'hidden'; // Impede rolagem da página enquanto o pop-up está visível
+}
+
+// Função para fechar o pop-up
+function closePopup() {
+  const popup = document.querySelector('.popup');
+  if (popup) {
+    popup.remove();
+    document.body.style.overflow = 'auto'; // Restaura a rolagem da página
+  }
+}
+
+// Função que redireciona para a página de conta (onde o usuário pode atualizar o perfil)
+function redirectToUpdateProfile() {
+  // Redireciona para a aba de conta
+  showPage('account'); // Função já existente que exibe a aba 'perfil'
+  closePopup(); // Fecha o pop-up
+}
+
+// Função de navegação para exibir a seção de conta
+function showAccountSection(section) {
+  // Atualiza o menu de navegação
+  document.querySelectorAll(".menu-item").forEach((item) => {
+    item.classList.remove("active");
+  });
+}
+
+
 
 // Funções da Conta
 function showAccountSection(section) {
@@ -866,7 +926,7 @@ function updateCarousel() {
   if (param) {
     const url = new URL(window.location);
     url.searchParams.set("card", param);
-    history.pushState({ card: param }, "", url);  // Usando pushState ao invés de replaceState
+    history.pushState({ card: param }, "", url); // Usando pushState ao invés de replaceState
     // history.replaceState(null, "", url); // Substitui o histórico da URL
   }
 }
