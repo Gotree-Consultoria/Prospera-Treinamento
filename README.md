@@ -65,7 +65,7 @@ Todas as atualizações feitas no repositório são refletidas automaticamente n
 
 
 
-## ⚙️ Coisas a Corrigir ou Melhorar
+## ⚙️ Coisas a Corrigir ou Melhorar (FrontEnd)
 
 ### 1. 🔙 **Correção de Bugs no Botão de Voltar/Avançar do Navegador**
    - **Descrição**: O comportamento de navegação nos botões "voltar" e "avançar" do navegador não está funcionando corretamente, especialmente ao navegar pelas seções carregadas dinamicamente. A página recarrega em vez de voltar corretamente.
