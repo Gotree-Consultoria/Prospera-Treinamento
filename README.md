@@ -35,6 +35,10 @@
 - 📊 Atualizada a contagem de e-books nas categorias: a função de dados estáticos foi modificada para calcular dinamicamente o número de produtos por categoria, garantindo que a contagem de e-books seja correta ao exibir as categorias.
 
 
+
+### 📅 04/07/2025
+- 🗂️ Adicionada a pasta api para organização do back-end com Spring.
+
 ## 🌐 Acesso ao Projeto Online
 
 Você pode visualizar o projeto em tempo real através do link abaixo.  
