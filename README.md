@@ -38,6 +38,8 @@
 
 ### 📅 04/07/2025
 - 🗂️ Adicionada a pasta api para organização do back-end com Spring.
+- ⚠️ Implementado popup obrigatório que impede finalização de compra sem perfil atualizado, com redirecionamento automático para a aba de conta.
+
   
 ### 🧑‍💻 Dependências da API (Spring Boot):
 - Spring Boot Starter Web – Para criar a aplicação web e expor as APIs RESTful.
