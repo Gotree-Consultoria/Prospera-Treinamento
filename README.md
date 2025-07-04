@@ -38,6 +38,20 @@
 
 ### 📅 04/07/2025
 - 🗂️ Adicionada a pasta api para organização do back-end com Spring.
+  
+### 🧑‍💻 Dependências da API (Spring Boot):
+- Spring Boot Starter Web – Para criar a aplicação web e expor as APIs RESTful.
+- Spring Boot Starter Data JPA – Para integração com o banco de dados e operações CRUD.
+- Spring Boot Starter Security – Para implementar autenticação e autorização no sistema.
+- Spring Boot Starter Validation – Para validar os dados da API, como a validação de parâmetros de entrada.
+- Spring Boot Starter Actuator – Para monitoramento e métricas da aplicação.
+- Spring Boot Starter Mail – Para envio de notificações por e-mail.
+- Spring Boot Starter Test – Para realizar testes unitários e de integração da API.
+- Spring Boot Starter Logging (Logback) – Para gerenciar os logs da aplicação.
+- Spring Boot Starter OAuth2 Client – Caso precise de autenticação via OAuth2 em serviços externos.
+- Spring Boot DevTools – Para facilitar o desenvolvimento com recarga automática e outras ferramentas.
+
+
 
 ## 🌐 Acesso ao Projeto Online
 
