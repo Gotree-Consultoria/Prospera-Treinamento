@@ -11,6 +11,38 @@
     />
   </head>
   <body>
+  
+    <!-- Modal de Autenticação -->
+    <div id="authModal" class="modal-auth hidden">
+      <div class="modal-auth-content">
+        <button class="modal-auth-close" onclick="closeAuthModal()">&times;</button>
+        <div id="authTabs">
+          <button id="tabLogin" class="active" onclick="showAuthTab('login')">Entrar</button>
+          <button id="tabRegister" onclick="showAuthTab('register')">Cadastrar</button>
+        </div>
+        <div id="authLoginForm">
+          <form onsubmit="handleLogin(event)">
+            <label for="loginEmail">E-mail</label>
+            <input type="email" id="loginEmail" required />
+            <label for="loginPassword">Senha</label>
+            <input type="password" id="loginPassword" required />
+            <button type="submit" class="btn btn-primary">Entrar</button>
+          </form>
+        </div>
+        <div id="authRegisterForm" class="hidden">
+          <form onsubmit="handleRegister(event)">
+            <label for="registerName">Nome</label>
+            <input type="text" id="registerName" required />
+            <label for="registerEmail">E-mail</label>
+            <input type="email" id="registerEmail" required />
+            <label for="registerPassword">Senha</label>
+            <input type="password" id="registerPassword" required />
+            <button type="submit" class="btn btn-primary">Cadastrar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Container onde o conteúdo de headerPage.html será inserido -->
     <div id="headerPageContainer"></div>
     <!-- Main Content -->
@@ -102,9 +134,9 @@
       <div id="cartPageContainer"></div>
       <!-- Container onde o conteúdo de faqPage será inserido-->
       <div id="faqPageContainer"></div>
+      
     </main>
     <footer>
-      <!-- Container onde o conteúdo de footerPage será inserido -->
       <div id="footerPageContainer"></div>
     </footer>
 

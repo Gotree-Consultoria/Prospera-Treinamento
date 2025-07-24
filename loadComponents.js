@@ -148,3 +148,22 @@ fetch("partials/faqPage.html")
   );
 
 });
+/*
+function handleLogin(event) {
+  event.preventDefault(); // Impede o envio padrão do formulário
+  
+
+  // Obter valores dos campos de entrada
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+
+  // Aqui você pode adicionar a lógica para autenticar o usuário
+  // Por exemplo, enviar os dados para um servidor ou verificar localmente
+
+  console.log("Email:", email);
+  console.log("Password:", password);
+
+  // Redirecionar para a página inicial após o login (apenas um exemplo)
+  window.location.href = "index.html";
+}
+  */

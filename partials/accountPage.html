@@ -32,33 +32,36 @@
        <div class="account-main">
         <div class="account-section active" id="profileSection">
          <h2>
-          Informações do Perfil
+          Meu Perfil
          </h2>
-         <form onsubmit="updateProfile(event)">
-          <div class="form-group">
-           <label for="profileName">
-            Nome
-           </label>
-           <input id="profileName" name="name" type="text" value="João Silva"/>
-          </div>
-          <div class="form-group">
-           <label for="profileEmail">
-            E-mail
-           </label>
-           <input id="profileEmail" name="email" type="email" value="joao@exemplo.com"/>
-          </div>
-          <div class="form-group">
-           <label for="profileCompany">
-            Empresa
-           </label>
-           <input id="profileCompany" name="company" type="text" value="Empresa Exemplo Lda."/>
-          </div>
-          <button class="btn btn-primary" type="submit">
-           Atualizar Perfil
-          </button>
-         </form>
+         <ul>
+          <li>
+           <strong>
+            Nome:
+           </strong>
+           <span id="userName"></span>
+          </li>
+          <li>
+           <strong>
+            E-mail:
+           </strong>
+           <span id="userEmail"></span>
+          </li>
+          <li>
+           <strong>
+            Telefone:
+           </strong>
+           <span id="userPhone"></span>
+          </li>
+         </ul>
+         <button onclick="editProfile()">
+          Editar Perfil
+         </button>
+         <button onclick="logout()">
+          Sair
+         </button>
         </div>
-        <div class="account-section" id="ordersSection">
+        <div class="account-section hidden" id="ordersSection">
          <h2>
           Histórico de Pedidos
          </h2>
@@ -83,7 +86,7 @@
           </div>
          </div>
         </div>
-        <div class="account-section" id="downloadsSection">
+        <div class="account-section hidden" id="downloadsSection">
          <h2>
           Downloads Disponíveis
          </h2>

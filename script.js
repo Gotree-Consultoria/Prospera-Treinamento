@@ -29,7 +29,7 @@ async function initializeApp() {
     const targetCard = params.get("card");
 
     // Se não tiver parâmetro 'card', vai para a página inicial
-    if (!targetCard) {
+    if (!targetCard && !hash) {
       showPage("home");
     }
   } catch (error) {
@@ -385,7 +385,38 @@ function showPage(page) {
     account: "accountPage",
     cart: "cartPage",
     faq: "faqPage",
+    login: "loginPage",
+    register: "registerPage",
   };
+
+  if (page === "account") {
+    const isLoggedIn = checkUserLoggedIn();
+
+    // Seções da conta
+    const profile = document.getElementById("profileSection");
+    const orders = document.getElementById("ordersSection");
+    const downloads = document.getElementById("downloadsSection");
+    const loginForm = document.getElementById("loginPage");
+    const registerForm = document.getElementById("registerPage");
+
+    if (isLoggedIn) {
+      // Mostra as seções da conta
+      if (profile) profile.classList.remove("hidden");
+      if (orders) orders.classList.remove("hidden");
+      if (downloads) downloads.classList.remove("hidden");
+      // Esconde login/cadastro
+      if (loginForm) loginForm.classList.add("hidden");
+      if (registerForm) registerForm.classList.add("hidden");
+    } else {
+      // Esconde as seções da conta
+      if (profile) profile.classList.add("hidden");
+      if (orders) orders.classList.add("hidden");
+      if (downloads) downloads.classList.add("hidden");
+      // Mostra login/cadastro
+      if (loginForm) loginForm.classList.remove("hidden");
+      if (registerForm) registerForm.classList.remove("hidden");
+    }
+  }
 
   const targetPage = document.getElementById(pageMap[page]);
   if (targetPage) {
@@ -394,14 +425,14 @@ function showPage(page) {
 
     if (page === "cart") renderCart();
 
-    // Scroll comportado
     if (page === "faq") {
-      setTimeout(() => {
-        targetPage.scrollIntoView({ behavior: "smooth" });
-      }, 100);
-    } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+  initCarousel();
+  setTimeout(() => {
+    targetPage.scrollIntoView({ behavior: "smooth" });
+  }, 100);
+} else {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
     // Atualiza a URL de forma segura, sem remover handlers
     const url = new URL(window.location);
@@ -757,6 +788,72 @@ function updateProfile(event) {
   alert("Perfil atualizado com sucesso!");
 }
 
+// Função de registro
+async function handleRegister(event) {
+  event.preventDefault();
+  const name = document.getElementById("registerName").value;
+  const email = document.getElementById("registerEmail").value;
+  const password = document.getElementById("registerPassword").value;
+  const cpf = document.getElementById("registerCpf").value;
+  const phone = document.getElementById("registerPhone").value;
+  const birthDate = document.getElementById("registerBirth").value;
+
+  try {
+    const response = await fetch('http://localhost:8080/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, cpf, phone, birthDate })
+    });
+
+    if (response.ok) {
+      alert('Cadastro realizado com sucesso!');
+      closeAuthModal();
+    } else {
+      const data = await response.json();
+      alert(data.message || 'Erro ao cadastrar.');
+    }
+  } catch (error) {
+    alert('Erro de conexão com o servidor.');
+  }
+}
+
+// Função de login
+async function handleLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+
+  if (!email || !password) {
+    alert('Preencha todos os campos!');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:8080/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userData', JSON.stringify(data.users));
+      sessionStorage.setItem('userLoggedIn', 'true'); // Marca o usuário como logado
+      alert('Login realizado com sucesso!');
+      closeAuthModal();
+      window.location.hash = '#account'; // Redireciona para a página de conta
+      showPage('account'); // Exibe a página de conta
+      // Atualiza o estado de login do usuário
+    } else {
+      const data = await response.json();
+      alert(data.erro || data.message || 'E-mail ou senha inválidos.');
+    }
+  } catch (error) {
+    alert('Erro de conexão com o servidor.');
+  }
+}
+
 // Funções Utilitárias
 function formatPrice(price) {
   // Formata o preço para o padrão monetário BR
@@ -865,9 +962,12 @@ function initializeFromHash() {
   }
 }
 
-// Chama a inicialização a partir do hash quando a página é carregada
+// Inicializa a aplicação assim que o conteúdo estiver carregado
 document.addEventListener("DOMContentLoaded", function () {
-  initializeFromHash();
+    initializeApp(); // Chama a função para inicializar a aplicação
+
+    // Chama a inicialização a partir do hash quando a página é carregada (você já tem isso no seu código)
+    initializeFromHash();
 });
 
 let currentIndex = 0;
@@ -974,3 +1074,75 @@ window.sendMessage = sendMessage;
 window.updateProfile = updateProfile;
 window.checkout = checkout;
 window.filterByCategory = filterByCategory;
+
+// Novas funções para o modal de autenticação
+function openAuthModal(tab = 'login') {
+  document.getElementById('authModal').classList.remove('hidden');
+  showAuthTab(tab);
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+function showAuthTab(tab) {
+  document.getElementById('tabLogin').classList.remove('active');
+  document.getElementById('tabRegister').classList.remove('active');
+  document.getElementById('authLoginForm').classList.add('hidden');
+  document.getElementById('authRegisterForm').classList.add('hidden');
+  if (tab === 'login') {
+    document.getElementById('tabLogin').classList.add('active');
+    document.getElementById('authLoginForm').classList.remove('hidden');
+  } else {
+    document.getElementById('tabRegister').classList.add('active');
+    document.getElementById('authRegisterForm').classList.remove('hidden');
+  }
+}
+
+// Torna as funções acessíveis globalmente
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.showAuthTab = showAuthTab;
+
+// Função para renderizar o perfil do usuário
+function renderUserProfile() {
+  const userData = localStorage.getItem('userData');
+  if (!userData) return;
+  const user = JSON.parse(userData);
+  if (!user) return;
+  document.getElementById('userName').textContent = user.name || '';
+  document.getElementById('userEmail').textContent = user.email || '';
+  document.getElementById('userPhone').textContent = user.phone || '';
+}
+
+/*
+if (window.location.hash === '#account') {
+  renderUserProfile();
+}
+*/
+
+// Função para editar o perfil (exemplo simplificado)
+function editProfile() {
+    alert("Funcionalidade de edição de perfil será implementada em breve!");
+    // Aqui você poderia:
+    // 1. Abrir um novo modal com um formulário preenchido para edição.
+    // 2. Trocar a exibição dos spans por inputs editáveis na própria seção.
+    // 3. Redirecionar para uma página de edição de perfil.
+}
+
+// Função para logout
+function logout() {
+    localStorage.removeItem('token');      // Remove o token de autenticação
+    localStorage.removeItem('userData');  // Remove os dados do usuário
+    sessionStorage.removeItem('userLoggedIn'); // Remove o status de logado
+    alert('Você foi desconectado.');
+    showPage('home'); // Redireciona para a página inicial
+    updateCartDisplay(); // Opcional: atualiza o carrinho se necessário
+    // Se o ícone do usuário muda para login/register, você precisaria de uma função para isso também.
+}
+
+// Torna as funções acessíveis globalmente
+window.editProfile = editProfile;
+window.logout = logout;

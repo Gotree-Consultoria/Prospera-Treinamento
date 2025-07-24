@@ -685,6 +685,10 @@ section {
     margin-bottom: var(--spacing-md);
 }
 
+#profileName, #profileEmail, #profileCompany {
+    color: gray;
+}
+
 .form-group label {
     display: block;
     margin-bottom: var(--spacing-xs);
@@ -1487,3 +1491,159 @@ section {
 .popup-content button:hover {
   background-color: #0056b3;
 }
+
+/* Modal de autenticação - overlay */
+.modal-auth {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6); /* sombra mais escura para foco */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem; /* espaço nas laterais em telas pequenas */
+  box-sizing: border-box;
+}
+
+/* Esconde modal */
+.modal-auth.hidden {
+  display: none;
+}
+
+/* Conteúdo do modal */
+.modal-auth-content {
+  background: #fff;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px; /* limite para telas grandes */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* espaçamento interno */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Botão de fechar */
+.modal-auth-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #555;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.modal-auth-close:hover,
+.modal-auth-close:focus {
+  color: #007b5a;
+  outline: none;
+}
+
+/* Tabs de autenticação */
+#authTabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+#authTabs button {
+  flex: 1;
+  padding: 0.65rem 0;
+  border: none;
+  border-radius: 8px;
+  background: #eee;
+  color: #333;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#authTabs button.active {
+  background: #007b5a;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 123, 90, 0.3);
+}
+
+#authTabs button:hover:not(.active),
+#authTabs button:focus:not(.active) {
+  background: #d4f0e0;
+  outline: none;
+}
+
+/* Botões “Entrar” e “Cadastrar” dentro dos forms */
+.modal-auth-content form .btn.btn-primary {
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #007b5a;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: block;
+}
+
+.modal-auth-content form .btn.btn-primary:hover,
+.modal-auth-content form .btn.btn-primary:focus {
+  background-color: #005a3e;
+  outline: none;
+}
+
+/* Classe para esconder elementos */
+.hidden {
+  display: none;
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .modal-auth-content {
+    padding: 1.5rem 1.8rem;
+    max-width: 100%;
+  }
+  
+  #authTabs {
+    gap: 0.5rem;
+  }
+  
+  #authTabs button {
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+  }
+  
+  .modal-auth-close {
+    font-size: 1.5rem;
+    top: 8px;
+    right: 8px;
+  }
+  
+  .modal-auth-content form .btn.btn-primary {
+    font-size: 1rem;
+    padding: 0.7rem;
+  }
+}
+
+.modal-auth-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* espaço entre inputs e labels */
+}
+
+.modal-auth-content form input,
+.modal-auth-content form label {
+  width: 100%;
+  display: block;
+}
+
+
