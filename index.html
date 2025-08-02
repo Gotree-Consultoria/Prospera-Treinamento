@@ -16,11 +16,11 @@
     <div id="authModal" class="modal-auth hidden">
       <div class="modal-auth-content">
         <button class="modal-auth-close" onclick="closeAuthModal()">&times;</button>
-        <div id="authTabs">
+        <div id="authTabs" class="hidden">
           <button id="tabLogin" class="active" onclick="showAuthTab('login')">Entrar</button>
           <button id="tabRegister" onclick="showAuthTab('register')">Cadastrar</button>
         </div>
-        <div id="authLoginForm">
+        <div id="authLoginForm" class="hidden">
           <form onsubmit="handleLogin(event)">
             <label for="loginEmail">E-mail</label>
             <input type="email" id="loginEmail" required />
