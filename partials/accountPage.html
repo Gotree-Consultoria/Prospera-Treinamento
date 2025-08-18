@@ -29,38 +29,82 @@
          </a>
         </div>
        </div>
+
+      <!-- Profile Section -->
        <div class="account-main">
         <div class="account-section active" id="profileSection">
          <h2>
           Meu Perfil
          </h2>
-         <ul>
-          <li>
-           <strong>
-            Nome:
-           </strong>
-           <span id="userName"></span>
-          </li>
-          <li>
-           <strong>
-            E-mail:
-           </strong>
-           <span id="userEmail"></span>
-          </li>
-          <li>
-           <strong>
-            Telefone:
-           </strong>
-           <span id="userPhone"></span>
-          </li>
-         </ul>
-         <button onclick="editProfile()">
-          Editar Perfil
-         </button>
+         <div id="profileView">
+            <ul>
+            <li>
+            <strong>
+               Nome:
+            </strong>
+            <span id="userName"></span>
+            </li>
+            <li>
+            <strong>
+               E-mail:
+            </strong>
+            <span id="userEmail"></span>
+            </li>
+            <li>
+            <strong>
+               Telefone:
+            </strong>
+            <span id="userPhone"></span>
+            </li>
+            <!-- Incluir campo de senha -->
+            </ul>
+         </div>
+      <!-- Fim do Profile Section -->
+     
+      <!-- Forms de edição -->
+        <div id="profileEditForm" class="hidden">
+         <form>
+            <div>
+               <label for="editName">Nome</label>
+               <input type="text" id="editName" name="name" />
+            </div>
+            <div>
+               <label for="editEmail">E-mail</label>
+               <input type="email" id="editEmail" name="email" />
+               <button type="button" onclick="changeEmail()">Alterar E-mail</button>
+            </div>
+            <div>
+               <label for="editPhone">Telefone</label>
+               <input type="tel" id="editPhone" name="phone" />
+            </div>
+            <div id="saveProfileButton">
+            <button type="submit" onclick="updateProfile(event)">
+            Salvar
+            </button>
+            <button type="button" onclick="cancelEditProfile()">
+            Cancelar
+            </button>
+            </div>
+            <!-- Incluir campo de edição de senha -->
+            
+         </form>
+        </div>
+      <!-- Botões de edição e logout -->
+      <!-- Falta configurar para quando editar o perfil, esconder cada qual -->
+        <div class="buttons-edit">
+         <div id="editProfileButton">
+            <button onclick="editProfile()">
+            Editar Perfil
+            </button>
+         </div>
          <button onclick="logout()">
           Sair
          </button>
         </div>
+        </div>
+      <!-- Fim do forms de edição  -->
+
+      <!-- Orders Section -->
         <div class="account-section hidden" id="ordersSection">
          <h2>
           Histórico de Pedidos

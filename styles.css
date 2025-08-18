@@ -1548,6 +1548,7 @@ section {
   outline: none;
 }
 
+
 /* Tabs de autenticação */
 #authTabs {
   display: flex;
@@ -1640,10 +1641,17 @@ section {
   gap: 1rem; /* espaço entre inputs e labels */
 }
 
-.modal-auth-content form input,
-.modal-auth-content form label {
-  width: 100%;
-  display: block;
+.remember-and-password {
+    display: flex;
+    justify-content: space-between;
 }
 
+.remember-me-container{
+    display: flex;
+    gap: 0.5rem;
+}
 
+.register-link {
+    text-align: center;
+    margin-top: 0.5rem;
+}

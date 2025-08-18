@@ -262,7 +262,7 @@ function showPage(page) {
 
 /**
  * Abre o modal de autenticação.
- * @param {string} tab - A aba a ser exibida ('login' ou 'register').
+ * @param {string} tab - A aba a ser exibida ('Entrar' ou 'Cadastrar').
  */
 function openAuthModal(tab = 'login') {
     authModal.classList.remove('hidden');
@@ -280,7 +280,7 @@ function closeAuthModal() {
 
 /**
  * Alterna entre as abas de login e registro no modal.
- * @param {string} tab - A aba a ser exibida ('login' ou 'register').
+ * @param {string} tab - A aba a ser exibida ('Entrar' ou 'Cadastrar').
  */
 function showAuthTab(tab) {
     const authTabs = document.getElementById('authTabs');
@@ -307,7 +307,7 @@ function showAuthTab(tab) {
 
 /**
  * Lida com o clique no botão "Conta" do header.
- * Redireciona para a página da conta se logado, ou abre o modal de login/cadastro se desconectado.
+ * Redireciona para a página da conta se logado, ou abre o modal de Entrar/Cadastrar se desconectado.
  */
 function handleContaClick() {
     if (checkUserLoggedIn()) {
@@ -596,7 +596,7 @@ async function fetchUserProfile() {
             localStorage.setItem('userData', JSON.stringify(userData));
             renderUserProfile(userData);
         } else if (response.status === 401 || response.status === 403) {
-            console.warn('Sessão expirada. Token JWT inválido. Redirecionando para login.');
+            console.warn('Sessão expirada. Redirecionando para login.');
             logout();
         } else {
             const errorText = await response.text();
@@ -617,8 +617,125 @@ function showAccountSection(section) {
     if (targetSection) targetSection.classList.add("active");
 }
 
+// =======================================================
+// FUNÇÕES DE EDIÇÃO DO PERFIL (NOME E TELEFONE)
+// =======================================================
+
 function editProfile() {
-    alert("Funcionalidade de edição de perfil será implementada em breve!");
+    const profileView = document.getElementById('profileView');
+    const profileEditForm = document.getElementById('profileEditForm');
+    if (!profileView || !profileEditForm) return;
+    profileView.classList.add('hidden');
+    profileEditForm.classList.remove('hidden');
+    const editButton = document.getElementById('editProfileButton');
+    if (editButton) editButton.classList.add('hidden');
+    // Preencher os campos de edição com os dados atuais do usuário 
+    document.getElementById('editName').value = document.getElementById('userName').textContent;
+    document.getElementById('editPhone').value = document.getElementById('userPhone').textContent;
+}
+
+// =======================================================
+// FUNÇÕES Do CANCELAMENTO DE EDIÇÃO DO PERFIL (NOME E TELEFONE)
+// =======================================================
+
+function cancelEditProfile() {
+    // 1. Obter os elementos de visualização e edição do perfil
+    const profileView = document.getElementById('profileView');
+    const profileEditForm = document.getElementById('profileEditForm');
+    
+    // 2. Obter o botão de edição do perfil
+    const editButton = document.getElementById('editProfileButton');
+
+    // 3. Reverter as classes 'hidden'
+    if (profileView && profileEditForm) {
+        profileView.classList.remove('hidden'); // Torna a visualização do perfil visível
+        profileEditForm.classList.add('hidden'); // Oculta o formulário de edição
+    }
+
+    // 4. Mostrar o botão de 'Editar Perfil' novamente, se existir
+    if (editButton) {
+        editButton.classList.remove('hidden');
+    }
+}
+
+// =======================================================
+// FUNÇÕES DE EDIÇÃO DO PERFIL (EMAIL)
+// =======================================================
+function changeEmail() {
+    alert("Função de alteração de e-mail será implementada em breve!");
+}
+
+// =======================================================
+// FUNÇÕES DE EDIÇÃO DO PERFIL (SENHA)
+// =======================================================
+function changePassword() {
+    alert("Função de alteração de senha será implementada em breve!");
+}
+
+// =======================================================
+// FUNÇÕES DE ATUALIZAÇÃO DO PERFIL
+// =======================================================
+
+// Local: Seu arquivo de script JavaScript
+
+function updateProfile(event) {
+    event.preventDefault();
+    const name = document.getElementById('editName').value;
+    const phone = document.getElementById('editPhone').value;
+    const currentToken = localStorage.getItem('jwtToken');
+
+    // Validação básica no frontend
+    if (!name.trim() || !phone.trim()) {
+        alert('Nome e Telefone não podem ficar em branco.');
+        return;
+    }
+
+    fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ name, phone })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Erro ao atualizar perfil.');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Verifica a mensagem do backend para saber se houve alteração
+        if (data.message && data.message.includes("Nenhum dado foi alterado.")) {
+            alert(data.message);
+        } else {
+            // Se houve sucesso real, atualiza a interface e o localStorage
+            document.getElementById('userName').innerText = data.name || 'Não informado';
+            document.getElementById('userPhone').innerText = data.phone || 'Não informado';
+            
+            let user = JSON.parse(localStorage.getItem('user')) || {};
+            user.name = data.name;
+            user.phone = data.phone;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            alert('Perfil atualizado com sucesso!');
+        }
+
+        // Reverte a interface para o modo de visualização em ambos os casos
+        const profileView = document.getElementById('profileView');
+        const profileEditForm = document.getElementById('profileEditForm');
+        profileView.classList.remove('hidden');
+        profileEditForm.classList.add('hidden');
+        
+        const editButton = document.getElementById('editProfileButton');
+        if (editButton) editButton.classList.remove('hidden');
+    })
+    .catch(error => {
+        console.error('Erro ao atualizar perfil:', error);
+        alert('Erro ao atualizar perfil: ' + error.message);
+    });
 }
 
 
@@ -655,10 +772,6 @@ function sendMessage(event) {
     event.target.reset();
 }
 
-function updateProfile(event) {
-    event.preventDefault();
-    alert("Perfil atualizado com sucesso!");
-}
 
 function formatPrice(price) {
     return price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

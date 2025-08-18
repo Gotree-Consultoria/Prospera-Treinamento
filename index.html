@@ -26,9 +26,23 @@
             <input type="email" id="loginEmail" required />
             <label for="loginPassword">Senha</label>
             <input type="password" id="loginPassword" required />
+            <div class="remember-and-password">
+              <div class="remember-me-container"><input type="checkbox" id="rememberMe" />
+              <label for="rememberMe">Lembrar-me</label>
+              </div>
+              <div class="forgot-password">
+                <a href="#" onclick="showForgotPassword()">Esqueci minha senha</a>
+              </div>
+            </div>
+            <div class="register-link">
+              <a href="#" onclick="showAuthTab('register')">Não tem conta? Cadastre-se</a>
+            </div>
             <button type="submit" class="btn btn-primary">Entrar</button>
           </form>
         </div>
+
+        <!-- Formulário de Registro -->
+        <!-- Incluir CPF para validar com o backend  -->
         <div id="authRegisterForm" class="hidden">
           <form onsubmit="handleRegister(event)">
             <label for="registerName">Nome</label>
