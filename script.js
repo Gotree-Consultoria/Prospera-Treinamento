@@ -475,8 +475,6 @@ async function handleLogin(event) {
             const data = await response.json();
             localStorage.setItem('jwtToken', data.token);
             localStorage.setItem('loggedInUserEmail', data.email);
-
-            console.log("Login bem-sucedido! Iniciando busca do perfil..."); // TESTE
             
             alert('Login realizado com sucesso!');
             closeAuthModal();
@@ -505,8 +503,14 @@ async function handleRegister(event) {
     const phone = document.getElementById("registerPhone").value;
     const birthDate = document.getElementById("registerBirth").value;
 
+    // Adiciona validação no frontend para evitar requisições desnecessárias
+    if (!name.trim() || !email.trim() || !password.trim() || !cpf.trim() || !phone.trim() || !birthDate.trim()) {
+        alert("Todos os campos são obrigatórios.");
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/users`, {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, password, cpf, phone, birthDate })
@@ -515,12 +519,22 @@ async function handleRegister(event) {
         if (response.ok) {
             alert('Cadastro realizado com sucesso!');
             closeAuthModal();
+            showPage('account');
+            fetchUserProfile()
         } else {
-            const data = await response.json();
-            alert(data.message || 'Erro ao cadastrar.');
+            // Lógica de tratamento de erro aprimorada
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const errorData = await response.json();
+                alert(errorData.message || 'Erro ao cadastrar.');
+            } else {
+                const errorText = await response.text();
+                alert(errorText || 'Erro desconhecido ao cadastrar.');
+            }
         }
     } catch (error) {
-        alert('Erro de conexão com o servidor.');
+        console.error('Erro de conexão ou requisição:', error);
+        alert('Erro de conexão com o servidor. Por favor, tente novamente.');
     }
 }
 
