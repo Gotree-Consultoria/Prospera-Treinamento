@@ -1,4 +1,4 @@
-<!-- E-books Page -->
+<!-- E-book Page-->
 <div class="page" id="ebooksPage">
   <section class="page-header">
     <div class="container">
@@ -6,14 +6,31 @@
       <p>Escolha os e-books que mais se adequam às suas necessidades específicas.</p>
     </div>
   </section>
+
+  <section class="filters-and-search">
+    <div class="container">
+      <div class="filter-controls">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="rh">RH</button>
+        <button class="filter-btn" data-filter="financeiro">Financeiro</button>
+        <button class="filter-btn" data-filter="administrativo">Administrativo</button>
+        <button class="filter-btn" data-filter="sst">SST</button>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" placeholder="Pesquisar por título ou autor..." id="ebooksSearch" />
+        <i class="fas fa-search"></i>
+      </div>
+    </div>
+  </section>
+
   <section class="products">
     <div class="container">
       <div class="loading" id="ebooksLoading">
         A carregar e-books...
       </div>
       <div class="products-grid" id="ebooksGrid" style="display: none;">
-        <!-- E-books will be loaded here -->
-      </div>
+        </div>
     </div>
   </section>
 </div>

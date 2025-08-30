@@ -16,12 +16,12 @@
     --coral: #e65f3c;
     --white: #ffffff;
     --black: #000000;
-    --gray-light: #f8f9fa;
+    --gray-light: #d4d4d4;
     --gray-medium: #6c757d;
     --gray-dark: #343a40;
     
     /* Typography */
-    --font-family: 'Montserrat';
+    --font-family: 'Montserrat', sans-serif;
     --font-size-base: 14px;
     --line-height-base: 1.6;
     
@@ -46,7 +46,7 @@
     /* Transitions */
     --transition-fast: 0.2s ease;
     --transition-normal: 0.3s ease;
-    --transition-slow: 0.5s ease;
+    --transition-slow: 0.5s ease; 
 }
 
 body {
@@ -57,13 +57,6 @@ body {
     background-color: var(--off-white);
 }
 
-
-
-
-
-
-
-/* ADD 15:18 JUAN*/
 .nav-link {
   cursor: pointer;
 }
@@ -72,6 +65,7 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 var(--spacing-md);
+    overflow: hidden; /* Adicionado para evitar overflow horizontal */
 }
 
 /* Typography */
@@ -316,7 +310,7 @@ section {
 
 .page-header {
     background-color: var(--white);
-    padding: 16px;
+    padding: var(--spacing-xl) 0;
     text-align: center;
     border-bottom: 1px solid #e9ecef;
 }
@@ -343,19 +337,28 @@ section {
     font-size: 2.25rem;
 }
 
+/* Original grid layout
 .categories-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--spacing-lg);
 }
+*/
 
+/* Novo estilo para o carrossel de categorias com setas de navegação */
 .category-card {
     background-color: var(--off-white);
     border-radius: var(--border-radius-lg);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     text-align: center;
     transition: all var(--transition-normal);
     border: 2px solid transparent;
+    cursor: pointer;
+    flex-basis: 250px; /* Largura base dos cartões */
+    flex-shrink: 0; /* Impede que os cartões encolham */
+    flex-grow: 1; /* Permite que os cartões cresçam */
+    min-height: 250px;
+    max-width: 300px;
 }
 
 .category-card:hover {
@@ -385,6 +388,72 @@ section {
     border-radius: var(--border-radius-sm);
     font-size: 0.875rem;
     font-weight: 500;
+}
+
+.categories-grid {
+    display: flex;
+    flex-wrap: nowrap; /* Impede que os itens quebrem a linha */
+    overflow-x: auto; /* Adiciona rolagem horizontal quando necessário */
+    padding: 0 45px; /* Adicione padding suficiente para que as setas não cubram o primeiro/último card */
+    padding-bottom: 15px; /* Adiciona um espaço para a barra de rolagem não sobrepor o conteúdo */
+    gap: 10px; /* Adiciona espaço entre os cartões */
+    -ms-overflow-style: none; /* Oculta a barra de rolagem no Internet Explorer e Edge */
+}
+
+/* Oculta a barra de rolagem para navegadores baseados em WebKit (Chrome, Safari, etc.) */
+.categories-grid::-webkit-scrollbar {
+    display: none;
+}
+
+/* Estilo para o contêiner do carrossel para posicionar as setas */
+.carousel-container {
+    position: relative;
+    display: flex; /* Para alinhar os itens e as setas */
+    align-items: center; /* Centraliza verticalmente as setas */
+}
+
+/* Estilo para os botões de seta */
+.arrow {
+    background-color: var(--gray-light); /* Cor de fundo do círculo */
+    color: var(--white); /* Cor do ícone da seta */
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem; /* Tamanho do ícone da seta */
+    width: 40px; /* Largura do círculo */
+    height: 40px; /* Altura do círculo */
+    border-radius: 50%; /* Transforma o botão em um círculo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute; /* Posicionamento absoluto dentro do carousel-container */
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10; /* Garante que as setas fiquem por cima do conteúdo */
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: var(--shadow-sm); /* Uma sombra leve para destacá-lo */
+}
+
+.arrow.prev-arrow {
+    left: 0; /* Alinha a seta esquerda à margem esquerda */
+}
+
+.arrow.next-arrow {
+    right: 0; /* Alinha a seta direita à margem direita */
+}
+
+.arrow:hover {
+    background-color: var(--verde-claro); /* Cor de fundo ao passar o mouse */
+    transform: translateY(-50%) scale(1.1); /* Um pequeno zoom no hover */
+}
+
+/* Ocultar as setas em telas pequenas se a navegação por toque for suficiente */
+@media (max-width: 768px) {
+    .arrow {
+        display: none;
+    }
+    .categories-grid {
+        padding: 0; /* Remove o padding em telas pequenas para aproveitar o espaço */
+    }
 }
 
 /* Packages */
@@ -713,17 +782,24 @@ section {
     box-shadow: 0 0 0 3px rgba(190, 215, 55, 0.1);
 }
 
-/* Account Section */
+/* =======================================================
+// Estilos da Página da Conta
+// ======================================================= */
+
+/* Estilo para o contêiner principal da página da conta */
 .account-content {
     background-color: var(--white);
+    padding: var(--spacing-lg) 0;
 }
 
+/* Layout de grade para a página da conta */
 .account-grid {
     display: grid;
     grid-template-columns: 250px 1fr;
     gap: var(--spacing-xl);
 }
 
+/* Estilo da barra lateral de navegação */
 .account-sidebar {
     background-color: var(--off-white);
     border-radius: var(--border-radius-lg);
@@ -731,12 +807,14 @@ section {
     height: fit-content;
 }
 
+/* Estilo do menu de navegação da barra lateral */
 .account-menu {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
 }
 
+/* Estilo de cada item do menu */
 .menu-item {
     display: flex;
     align-items: center;
@@ -746,6 +824,7 @@ section {
     text-decoration: none;
     border-radius: var(--border-radius-md);
     transition: all var(--transition-fast);
+    font-weight: 500;
 }
 
 .menu-item:hover,
@@ -754,6 +833,7 @@ section {
     color: var(--white);
 }
 
+/* Estilo para a seção de conteúdo principal */
 .account-section {
     display: none;
 }
@@ -762,26 +842,40 @@ section {
     display: block;
 }
 
-.orders-list,
-.downloads-list {
+/* Estilo para os cabeçalhos de seção */
+.account-section h2 {
+    margin-bottom: var(--spacing-md);
+    color: var(--gray-dark);
+    font-size: 1.5rem;
+}
+/* =========================================
+// Estilo das listas de pedidos
+// ========================================= */
+.orders-list {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
 }
 
-.order-item,
-.download-item {
+/* Estilo de cada item individual de pedido */
+.order-item {
     background-color: var(--off-white);
     padding: var(--spacing-md);
     border-radius: var(--border-radius-lg);
     border: 1px solid #e9ecef;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
 }
 
+/* Estilo do cabeçalho do item de pedido */
 .order-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+    width: 100%;
 }
 
 .order-number {
@@ -789,6 +883,7 @@ section {
     color: var(--verde-escuro);
 }
 
+/* Estilo para o status do pedido */
 .order-status {
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--border-radius-sm);
@@ -801,28 +896,63 @@ section {
     color: var(--verde-escuro);
 }
 
-.download-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
+/* =========================================
+// Estilos para Downloads
+// ========================================= */
+
+/* Estilo da lista de downloads - O contêiner dos cartões */
+.downloads-list {
+    display: flex; /* Usamos flexbox para quebra de linha */
+    flex-wrap: wrap; /* Permite que os itens quebrem para a linha de baixo */
+    gap: var(--spacing-sm); /* Espaçamento entre os cartões */
+    justify-content: flex-start; /* Alinha os cartões ao início */
+    padding: 0;
+    margin: 0;
 }
 
+/* Estilo de cada item de download (o "quadro" ou "cartão") */
+.download-item {
+    background-color: var(--off-white);
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid #e9ecef;
+    box-shadow: var(--shadow-sm);
+    
+    flex-basis: 150px; /* Largura fixa para cada cartão */
+    flex-shrink: 0; /* Impede que os cartões encolham */
+    flex-grow: 0; /* Impede que os cartões cresçam para preencher o espaço */
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* Ícone de download */
 .download-item i {
     font-size: 2rem;
     color: var(--coral);
+    margin-bottom: var(--spacing-sm);
 }
 
+/* Informações do download (título e subtítulo) */
 .download-info {
     flex: 1;
 }
 
 .download-info h4 {
+    font-size: 1rem;
+    color: var(--gray-dark);
     margin-bottom: var(--spacing-xs);
 }
 
 .download-info p {
-    margin: 0;
     font-size: 0.875rem;
+    color: var(--gray-medium);
+}
+
+.download-item .btn-small {
+    margin-top: auto;
 }
 
 /* Cart Section */
@@ -1235,7 +1365,7 @@ section {
   font-size: 2rem;
   margin-bottom: 30px;
   color: #1b1b1b;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-family);
   border-bottom: 2px solid #00796b;
   display: inline-block;
   padding-bottom: 8px;
@@ -1354,7 +1484,6 @@ section {
 
 .carousel-container {
   width: 100%;
-  overflow: hidden;
 }
 
 .carousel-track {
@@ -1372,7 +1501,7 @@ section {
   background: linear-gradient(to bottom, #014d44, #003c36);
   color: #ffffff;
   text-align: center;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: var(--font-family);
 }
 
 .carousel-card h1 {
@@ -1525,7 +1654,7 @@ section {
   display: flex;
   flex-direction: column;
   gap: 1rem; /* espaçamento interno */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-family);
 }
 
 /* Botão de fechar */
@@ -1580,7 +1709,7 @@ section {
   outline: none;
 }
 
-/* Botões “Entrar” e “Cadastrar” dentro dos forms */
+/* Botões “Entrar” e “Cadastrar” dentro dos forms do modal */
 .modal-auth-content form .btn.btn-primary {
   margin-top: 1.5rem;
   width: 100%;
@@ -1635,6 +1764,8 @@ section {
   }
 }
 
+
+/* Estilização dos formulários dentro do modal*/
 .modal-auth-content form {
   display: flex;
   flex-direction: column;
@@ -1661,7 +1792,6 @@ section {
     margin-top: 0.5rem;
 }
 
-/* Estilizando o container de cada campo do formulário */
 .form-group {
     display: flex;
     flex-direction: column;
@@ -1679,8 +1809,7 @@ section {
 }
 
 .register-fields input,
-.login-fields input,
-.profile-form input {
+.login-fields input {
     width: 100%;
     padding: 0.15rem;
     border: 1px solid #ddd;
@@ -1689,51 +1818,142 @@ section {
     transition: border-color 0.3s ease;
 }
 
-.profile-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+/* =======================================================
+// Estilos da Página da Conta
+// ======================================================= */
+
+/* Estilo da lista de visualização do perfil */
+.profile-view {
+    list-style-type: none;
 }
 
-.profile-actions {
+/* Estilo para os botões de ação do perfil */
+.buttons-edit-profile button {
+  background-color: var(--verde-escuro);
+  color: var(--white);
+  border: 2px solid var(--verde-escuro);
+  padding: 0.40rem 1.0rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.buttons-edit-profile button:hover {
+  background-color: transparent;
+  color: var(--verde-escuro);
+  transform: translateY(-2px);
+}
+
+.buttons-edit-profile {
     display: flex;
-    gap: 1rem;
-    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+/* Estilo do botão de Sair da Conta */
+.logout-button button {
+  background-color: var(--coral);
+  color: var(--white);
+  border: 2px solid var(--coral);
+  padding: 0.40rem 1.0rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.logout-button{
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-top: var(--spacing-sm)
+}
+
+.logout-button button:hover {
+  background-color: transparent;
+  color: var(--coral);
+  transform: translateY(-2px);
+}
+
+/* =======================================================
+// Estilos da Página de E-books
+// ======================================================= */
+
+/* Estilo do contêiner de filtros e pesquisa */
+.filters-and-search {
+    margin: var(--spacing-lg) 0;
+    padding: 0 var(--spacing-md);
+    display: flex;
     align-items: center;
-
-}
-
-.profile-fields {
-    display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--spacing-md);
 }
 
-.button-actions {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px 10px;
-    border: none;
-    border-radius: var(--border-radius-md);
-    font-size: var(--font-size-base);
-    font-weight: 400;
-    font-style: var(--font-family);
-    text-decoration: none;
+/* Estilo do grupo de botões de filtro */
+.filter-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+/* Estilo para cada botão de filtro */
+.filter-btn {
+    background-color: var(--gray-light);
+    color: var(--gray-medium);
+    border: 2px solid var(--gray-light);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all var(--transition-normal);
-    gap: var(--spacing-xs);
-    margin: 4px;
+    transition: all 0.3s ease;
 }
 
-.button-actions:hover {
+/* Efeito hover para os botões de filtro */
+.filter-btn:hover {
+    background-color: var(--verde-claro);
+    color: var(--verde-escuro);
+    border-color: var(--verde-claro);
+}
+
+/* Estado ativo do botão de filtro */
+.filter-btn.active {
     background-color: var(--verde-escuro);
     color: var(--white);
-    background-color: #004025;
+    border-color: var(--verde-escuro);
 }
 
+/* Estilo da barra de pesquisa */
+.search-bar {
+    position: relative;
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+    padding-top: 10px; 
+}
 
+.search-bar input {
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-md);
+    padding-right: 40px; /* Espaço para o ícone */
+    border: 2px solid var(--gray-light);
+    border-radius: var(--border-radius-md);
+    background-color: var(--off-white);
+    font-size: 1rem;
+    color: var(--gray-dark);
+    transition: border-color 0.3s ease;
+}
 
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--verde-claro);
+}
 
+.search-bar i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-light);
+}

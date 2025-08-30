@@ -40,7 +40,6 @@ async function initializeApp() {
 
     } catch (error) {
         console.error("Erro ao inicializar a aplicação:", error);
-        loadStaticData();
     }
 }
 
@@ -63,22 +62,7 @@ async function loadData() {
         }
     } catch (error) {
         console.error("Erro ao carregar dados:", error);
-        loadStaticData();
     }
-}
-
-function loadStaticData() {
-    categories = [{ id: 1, name: "Ergonomia", description: "...", icon: "...", count: 0 }, /* ... */];
-    products = [{ id: 1, title: "...", price: 29.99, category: "...", image: "..." }, /* ... */];
-    packages = [{ id: 1, title: "...", price: 89.99, originalPrice: 119.99, discount: "25%", features: ["..."] }, /* ... */];
-
-    categories.forEach((category) => {
-        category.count = products.filter((product) => product.category === category.name).length;
-    });
-
-    renderCategories();
-    renderPackages();
-    renderProducts();
 }
 
 function extractCategories(products) {
@@ -111,7 +95,6 @@ function getCategoryIcon(category) {
     return iconMap[category] || "fas fa-book";
 }
 
-
 // =======================================================
 // FUNÇÕES DE RENDERIZAÇÃO
 // =======================================================
@@ -121,9 +104,10 @@ function renderCategories() {
     if (!categoriesGrid || !categoriesLoading) return;
     categoriesLoading.style.display = "none";
     categoriesGrid.style.display = "grid";
+
     categoriesGrid.innerHTML = categories
         .map((category) => `
-            <div class="category-card" onclick="filterByCategory('${category.name}')">
+            <div class="category-card" onclick="showPage('ebooks', '${category.name}')">
                 <i class="${category.icon}"></i>
                 <h3>${category.name}</h3>
                 <p>${category.description}</p>
@@ -205,21 +189,14 @@ function renderProducts(filteredProducts = null) {
         .join("");
 }
 
-
 // =======================================================
-// FUNÇÕES DE NAVEGAÇÃO E MODAIS
+// FUNÇÕES DE NAVEGAÇÃO
 // =======================================================
-
-/**
- * Funções que manipulam a exibição das páginas principais.
- * @param {string} page - O nome da página a ser exibida ('home', 'ebooks', etc.).
- */
-function showPage(page) {
+function showPage(page, category = null) {
+    // Remove "active" de todos os links e páginas
     document.querySelectorAll(".nav-link").forEach((link) => {
         link.classList.remove("active");
-        if (link.dataset.page === page) {
-            link.classList.add("active");
-        }
+        if (link.dataset.page === page) link.classList.add("active");
     });
 
     document.querySelectorAll(".page").forEach((pageEl) => {
@@ -244,21 +221,60 @@ function showPage(page) {
 
         if (page === "cart") renderCart();
 
-        if (page === "faq") {
-            initCarousel();
-            setTimeout(() => {
-                targetPage.scrollIntoView({ behavior: "smooth" });
-            }, 100);
-        } else {
-            window.scrollTo({ top: 0, behavior: "smooth" });
+
+        if (page === "ebooks") {
+            // Se veio de card de categoria
+            if (category) {
+                filterByCategory(category);
+                highlightFilterButton(category);
+            } 
+
+            // Garante que os botões de filtro funcionem sempre
+            document.querySelectorAll(".filter-btn").forEach((btn) => {
+                btn.onclick = () => {
+                    const filter = btn.dataset.filter;
+                    filterByCategory(filter);
+                    highlightFilterButton(filter);
+                };
+            });
         }
 
-        const url = new URL(window.location);
-        url.searchParams.delete("card");
-        url.hash = `#${page}`;
-        history.pushState({ page }, "", url);
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 }
+
+// Função para destacar o botão de filtro ativo
+function filterByCategory(category) {
+    const allProducts = document.querySelectorAll("#ebooksGrid .product-card");
+    allProducts.forEach((product) => {
+        if (category === "all" || product.dataset.category === category) {
+            product.style.display = "block";
+        } else {
+            product.style.display = "none";
+        }
+    });
+}
+
+// Função para destacar o botão de filtro ativo
+function highlightFilterButton(category) {
+    document.querySelectorAll(".filter-btn").forEach((btn) => {
+        btn.classList.remove("active");
+        if (btn.dataset.filter === category) {
+            btn.classList.add("active");
+        }
+    });
+}
+
+// Adiciona event listeners aos botões de filtro
+document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter;
+        filterByCategory(filter);
+        highlightFilterButton(filter);
+    });
+});
+// =======================================================
+
 
 /**
  * Abre o modal de autenticação.
@@ -673,7 +689,7 @@ function cancelEditProfile() {
 }
 
 // =======================================================
-// FUNÇÕES DE ALTERAÇÃO DE SENHA (EMAIL)
+// FUNÇÕES DE EDIÇÃO DO PERFIL (EMAIL)
 // =======================================================
 function changeEmail() {
     alert("Função de alteração de e-mail será implementada em breve!");
@@ -894,6 +910,31 @@ document.addEventListener("click", (e) => {
         if (page) showPage(page);
     }
 });
+
+// =======================================================
+// FUNÇÕES DE ROLAGEM DO CARROSSEL
+// =======================================================
+
+// Torna as funções globais para que o HTML consiga chamá-las
+window.scrollLeft = function() {
+    const grid = document.getElementById('categoriesGrid');
+    if (grid) {
+        grid.scrollBy({
+            left: -280,
+            behavior: 'smooth'
+        });
+    }
+};
+
+window.scrollRight = function() {
+    const grid = document.getElementById('categoriesGrid');
+    if (grid) {
+        grid.scrollBy({
+            left: 280,
+            behavior: 'smooth'
+        });
+    }
+};
 
 const style = document.createElement("style");
 style.textContent = `@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`;

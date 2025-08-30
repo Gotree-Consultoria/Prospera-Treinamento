@@ -1,10 +1,36 @@
 <!-- Product Categories -->
 <section class="categories" id="categories">
-  <div class="container">
-    <h2>Categorias de E-books</h2>
-    <div class="loading" id="categoriesLoading">A carregar categorias...</div>
-    <div class="categories-grid" id="categoriesGrid" style="display: none">
-      <!-- Categories will be loaded here -->
+    <div class="container">
+        <h2>Categorias de E-books</h2>
+        <div class="carousel-container">
+            <button class="arrow prev-arrow" onclick="scrollLeft()" aria-label="Rolar para a esquerda">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="categories-grid" id="categoriesGrid">
+                <div class="category-card" onclick="showPage('ebooks', 'rh')">
+                    <i class="fas fa-users"></i>
+                    <h3>RH</h3>
+                    <p>E-books sobre gestão de recursos humanos.</p>
+                </div>
+                <div class="category-card" onclick="showPage('ebooks', 'financeiro')">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <h3>Financeiro</h3>
+                    <p>E-books sobre gestão financeira e contabilidade.</p>
+                </div>
+                <div class="category-card" onclick="showPage('ebooks', 'administrativo')">
+                    <i class="fas fa-briefcase"></i>
+                    <h3>Administrativo</h3>
+                    <p>E-books sobre rotinas e processos administrativos.</p>
+                </div>
+                <div class="category-card" onclick="showPage('ebooks', 'sst')">
+                    <i class="fas fa-helmet-safety"></i>
+                    <h3>SST</h3>
+                    <p>E-books sobre Segurança e Saúde no Trabalho.</p>
+                </div>
+            </div>
+            <button class="arrow next-arrow" onclick="scrollRight()" aria-label="Rolar para a direita">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
     </div>
-  </div>
 </section>

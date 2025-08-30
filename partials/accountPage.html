@@ -1,169 +1,165 @@
-<!-- Account Page -->
-   <div class="page" id="accountPage">
-    <section class="page-header">
-     <div class="container">
-      <h1>
-       Minha Conta
-      </h1>
-     </div>
-    </section>
-    <section class="account-content">
-     <div class="container">
-      <div class="account-grid">
-       <div class="account-sidebar">
-        <div class="account-menu">
-         <a class="menu-item active" href="#" onclick="showAccountSection('profile')">
-          <i class="fas fa-user">
-          </i>
-          Perfil
-         </a>
-         <a class="menu-item" href="#" onclick="showAccountSection('orders')">
-          <i class="fas fa-shopping-bag">
-          </i>
-          Pedidos
-         </a>
-         <a class="menu-item" href="#" onclick="showAccountSection('downloads')">
-          <i class="fas fa-download">
-          </i>
-          Downloads
-         </a>
-        </div>
-       </div>
-
-      <!-- Profile Section -->
-       <div class="account-main">
-        <div class="account-section active" id="profileSection" class="profile-section">
-         <h2>
-          Meu Perfil
-         </h2>
-         <div id="profileView">
-            <ul>
-            <li>
-            <strong>
-               Nome:
-            </strong>
-            <span id="userName"></span>
-            </li>
-            <li>
-            <strong>
-               E-mail:
-            </strong>
-            <span id="userEmail"></span>
-            </li>
-            <li>
-            <strong>
-               Telefone:
-            </strong>
-            <span id="userPhone"></span>
-            </li>
-            <!-- Incluir campo de senha -->
-            </ul>
-         </div>
-      <!-- Fim do Profile Section -->
-     
-      <!-- Forms de edição -->
-        <div id="profileEditForm" class="hidden">
-         <form class="profile-form">
-            <div class="profile-fields">
-            <div>
-               <label for="editName">Nome</label>
-               <input type="text" id="editName" name="name" />
-            </div>
-            <div>
-               <label for="editPhone">Telefone</label>
-               <input type="tel" id="editPhone" name="phone" />
-            </div>
-            <div>
-               <label for="editEmail">E-mail</label>
-               <input type="email" id="editEmail" name="email" />
-               <button type="button" onclick="changeEmail()" class="button-actions">Alterar E-mail</button>
-            </div>
-            <div>
-               <label for="editPassword">Senha</label>
-               <input type="password" id="editPassword" />
-               <button type="button" onclick="changePassword()" class="button-actions">Alterar Senha</button>
-            </div>
-            </div>
-            <div class="profile-actions">
-            <div id="saveProfileButton">
-            <button type="submit" onclick="updateProfile(event)" class="btn btn-primary">
-            Salvar
-            </button>
-            <button type="button" onclick="cancelEditProfile()" class="btn btn-secondary">
-            Cancelar
-            </button>
-            </div>
-            </div>
-            
-         </form>
-        </div>
-      <!-- Botões de edição e logout -->
-      <!-- Falta configurar para quando editar o perfil, esconder cada qual -->
-        <div class="buttons-edit">
-         <div id="editProfileButton">
-            <button onclick="editProfile()" class="btn btn-primary">
-             <i class="fas fa-edit">
-             </i>
-            Editar Perfil
-            </button>
-         </div>
-         <button onclick="logout()" class="btn btn-secondary">
-          Sair
-         </button>
-        </div>
-        </div>
-      <!-- Fim do forms de edição  -->
-
-      <!-- Orders Section -->
-        <div class="account-section hidden" id="ordersSection">
-         <h2>
-          Histórico de Pedidos
-         </h2>
-         <div class="orders-list">
-          <div class="order-item">
-           <div class="order-header">
-            <span class="order-number">
-             #001
-            </span>
-            <span class="order-date">
-             15/01/2024
-            </span>
-            <span class="order-status completed">
-             Concluído
-            </span>
-           </div>
-           <div class="order-items">
-            <p>
-             Pacote Completo de Ergonomia - R$ 89,99
-            </p>
-           </div>
-          </div>
-         </div>
-        </div>
-        <div class="account-section hidden" id="downloadsSection">
-         <h2>
-          Downloads Disponíveis
-         </h2>
-         <div class="downloads-list">
-          <div class="download-item">
-           <i class="fas fa-file-pdf">
-           </i>
-           <div class="download-info">
-            <h4>
-             E-book Ergonomia no Trabalho
-            </h4>
-            <p>
-             Comprado em 15/01/2024
-            </p>
-           </div>
-           <button class="btn btn-small">
-            Download
-           </button>
-          </div>
-         </div>
-        </div>
-       </div>
+<div class="page" id="accountPage">
+   <section class="page-header">
+      <div class="container">
+         <h1>
+            Minha Conta
+         </h1>
       </div>
-     </div>
-    </section>
-   </div>
+   </section>
+   <section class="account-content">
+      <div class="container">
+         <div class="account-grid">
+            <div class="account-sidebar">
+               <div class="account-menu">
+                  <a class="menu-item active" href="#" onclick="showAccountSection('profile')">
+                     <i class="fas fa-user">
+                     </i>
+                     Perfil
+                  </a>
+                  <a class="menu-item" href="#" onclick="showAccountSection('orders')">
+                     <i class="fas fa-shopping-bag">
+                     </i>
+                     Pedidos
+                  </a>
+                  <a class="menu-item" href="#" onclick="showAccountSection('downloads')">
+                     <i class="fas fa-download">
+                     </i>
+                     Downloads
+                  </a>
+               </div>
+            </div>
+
+            <div class="account-main">
+               <div class="account-section active" id="profileSection">
+                  <h2>
+                     Meu Perfil
+                  </h2>
+                  <div id="profileView">
+                     <ul class="profile-view">
+                        <li>
+                           <strong>
+                              Nome:
+                           </strong>
+                           <span id="userName"></span>
+                        </li>
+                        <li>
+                           <strong>
+                              E-mail:
+                           </strong>
+                           <span id="userEmail"></span>
+                        </li>
+                        <li>
+                           <strong>
+                              Telefone:
+                           </strong>
+                           <span id="userPhone"></span>
+                        </li>
+                     </ul>
+                  </div>
+                  <div id="profileEditForm" class="hidden">
+                     <form>
+                        <div class="edit-fields">
+                           <div>
+                              <label for="editName">Nome</label>
+                              <input type="text" id="editName" name="name" />
+                           </div>
+                           <div>
+                              <label for="editPhone">Telefone</label>
+                              <input type="tel" id="editPhone" name="phone" />
+                           </div>
+                           <div id="saveProfileButton">
+                              <button type="submit" onclick="updateProfile(event)">
+                                 Salvar
+                              </button>
+                           </div>
+                        </div>
+                        <div class="edit-credentials">
+                           <div>
+                              <label for="editEmail">Novo E-mail</label>
+                              <input type="email" id="editEmail" name="email"
+                                 placeholder="Utilize esse campo para alterar seu e-mail." />
+                              <button type="button" onclick="changeEmail()">Alterar E-mail</button>
+                           </div>
+                           <div>
+                              <label for="editPassword">Nova Senha</label>
+                              <input type="password" id="editPassword" name="password"
+                                 placeholder="Utilize esse campo para alterar sua senha." />
+                              <button type="button" onclick="changePassword()">Alterar Senha</button>
+                           </div>
+                        </div>
+                        <div>
+                           <button type="button" onclick="cancelEditProfile()">
+                              Cancelar
+                           </button>
+                        </div>
+                     </form>
+                  </div>
+                  <div id="editProfileButton" class="buttons-edit-profile">
+                     <button onclick="editProfile()">
+                        Editar Perfil
+                     </button>
+                  </div>
+                  <div class="logout-button">
+                     <button onclick="logout()">
+                        Sair da Conta
+                     </button>
+                  </div>
+               </div>
+
+               <div class="account-section hidden" id="ordersSection">
+                  <h2>
+                     Histórico de Pedidos
+                  </h2>
+                  <div class="orders-list">
+                     <div class="order-item">
+                        <div class="order-header">
+                           <span class="order-number">
+                              #001
+                           </span>
+                           <span class="order-date">
+                              15/01/2024
+                           </span>
+                           <span class="order-status completed">
+                              Concluído
+                           </span>
+                        </div>
+                        <div class="order-items">
+                           <p>
+                              Pacote Completo de Ergonomia - R$ 89,99
+                           </p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <div class="account-section hidden" id="downloadsSection">
+                  <h2>
+                     Downloads Disponíveis
+                  </h2>
+                  <div class="downloads-list">
+
+                     <div class="download-item">
+                        <i class="fas fa-file-pdf"></i>
+                        <div class="download-info">
+                           <h4>E-book Ergonomia no Trabalho</h4>
+                           <p>Comprado em 15/01/2024</p>
+                        </div>
+                        <button class="btn btn-small">Download</button>
+                     </div>
+
+                     <div class="download-item">
+                        <i class="fas fa-file-pdf"></i>
+                        <div class="download-info">
+                           <h4>E-book RH Poderoso</h4>
+                           <p>Comprado em 30/08/2025</p>
+                        </div>
+                        <button class="btn btn-small">Download</button>
+                     </div>
+
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </section>
+</div>
