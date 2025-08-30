@@ -316,7 +316,7 @@ section {
 
 .page-header {
     background-color: var(--white);
-    padding: var(--spacing-xl) 0;
+    padding: 16px;
     text-align: center;
     border-bottom: 1px solid #e9ecef;
 }
@@ -1679,7 +1679,8 @@ section {
 }
 
 .register-fields input,
-.login-fields input {
+.login-fields input,
+.profile-form input {
     width: 100%;
     padding: 0.15rem;
     border: 1px solid #ddd;
@@ -1687,3 +1688,52 @@ section {
     font-size: 1rem;
     transition: border-color 0.3s ease;
 }
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+
+}
+
+.profile-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.button-actions {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    font-style: var(--font-family);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    gap: var(--spacing-xs);
+    margin: 4px;
+}
+
+.button-actions:hover {
+    background-color: var(--verde-escuro);
+    color: var(--white);
+    background-color: #004025;
+}
+
+
+
+

@@ -673,7 +673,7 @@ function cancelEditProfile() {
 }
 
 // =======================================================
-// FUNÇÕES DE EDIÇÃO DO PERFIL (EMAIL)
+// FUNÇÕES DE ALTERAÇÃO DE SENHA (EMAIL)
 // =======================================================
 function changeEmail() {
     alert("Função de alteração de e-mail será implementada em breve!");

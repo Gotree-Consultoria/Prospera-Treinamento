@@ -32,7 +32,7 @@
 
       <!-- Profile Section -->
        <div class="account-main">
-        <div class="account-section active" id="profileSection">
+        <div class="account-section active" id="profileSection" class="profile-section">
          <h2>
           Meu Perfil
          </h2>
@@ -63,29 +63,37 @@
      
       <!-- Forms de edição -->
         <div id="profileEditForm" class="hidden">
-         <form>
+         <form class="profile-form">
+            <div class="profile-fields">
             <div>
                <label for="editName">Nome</label>
                <input type="text" id="editName" name="name" />
             </div>
             <div>
-               <label for="editEmail">E-mail</label>
-               <input type="email" id="editEmail" name="email" />
-               <button type="button" onclick="changeEmail()">Alterar E-mail</button>
-            </div>
-            <div>
                <label for="editPhone">Telefone</label>
                <input type="tel" id="editPhone" name="phone" />
             </div>
+            <div>
+               <label for="editEmail">E-mail</label>
+               <input type="email" id="editEmail" name="email" />
+               <button type="button" onclick="changeEmail()" class="button-actions">Alterar E-mail</button>
+            </div>
+            <div>
+               <label for="editPassword">Senha</label>
+               <input type="password" id="editPassword" />
+               <button type="button" onclick="changePassword()" class="button-actions">Alterar Senha</button>
+            </div>
+            </div>
+            <div class="profile-actions">
             <div id="saveProfileButton">
-            <button type="submit" onclick="updateProfile(event)">
+            <button type="submit" onclick="updateProfile(event)" class="btn btn-primary">
             Salvar
             </button>
-            <button type="button" onclick="cancelEditProfile()">
+            <button type="button" onclick="cancelEditProfile()" class="btn btn-secondary">
             Cancelar
             </button>
             </div>
-            <!-- Incluir campo de edição de senha -->
+            </div>
             
          </form>
         </div>
@@ -93,11 +101,13 @@
       <!-- Falta configurar para quando editar o perfil, esconder cada qual -->
         <div class="buttons-edit">
          <div id="editProfileButton">
-            <button onclick="editProfile()">
+            <button onclick="editProfile()" class="btn btn-primary">
+             <i class="fas fa-edit">
+             </i>
             Editar Perfil
             </button>
          </div>
-         <button onclick="logout()">
+         <button onclick="logout()" class="btn btn-secondary">
           Sair
          </button>
         </div>
