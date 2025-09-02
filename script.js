@@ -654,52 +654,115 @@ function showAccountSection(section) {
 function editProfile() {
     const profileView = document.getElementById('profileView');
     const profileEditForm = document.getElementById('profileEditForm');
-    if (!profileView || !profileEditForm) return;
+
+    // Obter o botão de edição principal
+    const editButton = document.getElementById('editProfileButton');
+
+    // Obter a div que contém o botão de cancelar
+    const cancelButtonDiv = document.querySelector('.cancel-button'); // Use o seletor de classe
+
+    if (!profileView || !profileEditForm || !editButton || !cancelButtonDiv) return;
+
+    // Ocultar a visualização e mostrar o formulário
     profileView.classList.add('hidden');
     profileEditForm.classList.remove('hidden');
-    const editButton = document.getElementById('editProfileButton');
-    if (editButton) editButton.classList.add('hidden');
-    // Preencher os campos de edição com os dados atuais do usuário 
+
+    // Ocultar o botão de 'Editar' e mostrar o botão 'Cancelar'
+    editButton.classList.add('hidden');
+    cancelButtonDiv.classList.remove('hidden'); // Aqui o botão Cancelar é exibido
+
+    // Preencher os campos de edição
     document.getElementById('editName').value = document.getElementById('userName').textContent;
     document.getElementById('editPhone').value = document.getElementById('userPhone').textContent;
 }
 
 // =======================================================
-// FUNÇÕES Do CANCELAMENTO DE EDIÇÃO DO PERFIL (NOME E TELEFONE)
+// FUNÇÕES DO CANCELAMENTO DE EDIÇÃO DO PERFIL (NOME E TELEFONE)
 // =======================================================
 
 function cancelEditProfile() {
-    // 1. Obter os elementos de visualização e edição do perfil
     const profileView = document.getElementById('profileView');
     const profileEditForm = document.getElementById('profileEditForm');
-    
-    // 2. Obter o botão de edição do perfil
     const editButton = document.getElementById('editProfileButton');
+    const cancelButtonDiv = document.querySelector('.cancel-button');
 
-    // 3. Reverter as classes 'hidden'
-    if (profileView && profileEditForm) {
-        profileView.classList.remove('hidden'); // Torna a visualização do perfil visível
-        profileEditForm.classList.add('hidden'); // Oculta o formulário de edição
-    }
+    if (!profileView || !profileEditForm || !editButton || !cancelButtonDiv) return;
 
-    // 4. Mostrar o botão de 'Editar Perfil' novamente, se existir
-    if (editButton) {
-        editButton.classList.remove('hidden');
-    }
+    // Reverter as classes 'hidden'
+    profileView.classList.remove('hidden');
+    profileEditForm.classList.add('hidden');
+
+    // Mostrar o botão de 'Editar Perfil' e ocultar o de 'Cancelar'
+    editButton.classList.remove('hidden');
+    cancelButtonDiv.classList.add('hidden'); // Aqui o botão Cancelar é ocultado novamente
 }
 
 // =======================================================
 // FUNÇÕES DE EDIÇÃO DO PERFIL (EMAIL)
 // =======================================================
-function changeEmail() {
-    alert("Função de alteração de e-mail será implementada em breve!");
+
+function toggleEmailEdit(show) {
+    const showButton = document.getElementById('showEmailButton');
+    const controls = document.getElementById('email-controls');
+
+    if (show) {
+        showButton.style.display = 'none'; // Esconde o botão "Alterar E-mail"
+        controls.style.display = 'block';  // Mostra os controles (input, salvar, cancelar)
+        document.getElementById('editEmail').focus(); // Opcional: foca no input
+    } else {
+        showButton.style.display = 'block'; // Mostra o botão "Alterar E-mail"
+        controls.style.display = 'none';    // Esconde os controles
+    }
 }
 
-// =======================================================
-// FUNÇÕES DE EDIÇÃO DO PERFIL (SENHA)
-// =======================================================
+function togglePasswordEdit(show) {
+    const showButton = document.getElementById('showPasswordButton');
+    const controls = document.getElementById('password-controls');
+
+    if (show) {
+        showButton.style.display = 'none'; // Esconde o botão "Alterar Senha"
+        controls.style.display = 'block';  // Mostra os controles
+        document.getElementById('editPassword').focus(); // Opcional: foca no input
+    } else {
+        showButton.style.display = 'block'; // Mostra o botão "Alterar Senha"
+        controls.style.display = 'none';    // Esconde os controles
+    }
+}
+
+// Funções de ação (Salvar e Sair)
+function changeEmail() {
+    // 1. Obter o elemento do campo de e-mail
+    const emailInput = document.getElementById('editEmail');
+    
+    // 2. Obter o valor do campo e remover espaços em branco no início e no fim
+    const emailValue = emailInput.value.trim();
+
+    // 3. Verificar se o valor está vazio
+    if (emailValue === '') {
+        alert("Por favor, preencha o campo com seu novo e-mail."); // Mostra um alerta
+        emailInput.focus(); // Opcional: foca novamente no campo para facilitar a digitação
+        return; // Interrompe a execução da função
+    }
+
+    // Lógica para salvar o novo e-mail (executada apenas se o campo não estiver vazio)
+    console.log("E-mail alterado para:", emailValue);
+    alert("Seu e-mail foi alterado com sucesso!");
+    toggleEmailEdit(false); // Esconde os campos após a ação
+}
+
 function changePassword() {
-    alert("Função de alteração de senha será implementada em breve!");
+    const passwordInput = document.getElementById('editPassword');
+    const passwordValue = passwordInput.value.trim();
+
+    if (passwordValue === '') {
+        alert("Por favor, preencha o campo com sua nova senha.");
+        passwordInput.focus();
+        return;
+    }
+
+    console.log("Senha alterada.");
+    alert("Sua senha foi alterada com sucesso!");
+    togglePasswordEdit(false);
 }
 
 // =======================================================

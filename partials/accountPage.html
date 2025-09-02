@@ -34,7 +34,7 @@
                   <h2>
                      Meu Perfil
                   </h2>
-                  <div id="profileView">
+                  <div id="profileView" class="profile-infos">
                      <ul class="profile-view">
                         <li>
                            <strong>
@@ -44,67 +44,84 @@
                         </li>
                         <li>
                            <strong>
-                              E-mail:
-                           </strong>
-                           <span id="userEmail"></span>
-                        </li>
-                        <li>
-                           <strong>
                               Telefone:
                            </strong>
                            <span id="userPhone"></span>
                         </li>
+                        <li>
+                           <strong>
+                              E-mail:
+                           </strong>
+                           <span id="userEmail"></span>
+                        </li>
                      </ul>
                   </div>
+
+                  <!-- Edição de perfil -->
                   <div id="profileEditForm" class="hidden">
                      <form>
                         <div class="edit-fields">
-                           <div>
+                           <div class="edit-credentials">
                               <label for="editName">Nome</label>
                               <input type="text" id="editName" name="name" />
                            </div>
-                           <div>
+                           <div class="edit-credentials">
                               <label for="editPhone">Telefone</label>
                               <input type="tel" id="editPhone" name="phone" />
                            </div>
-                           <div id="saveProfileButton">
+
+                           <div id="saveProfileButton" class="buttons-edit-profile">
                               <button type="submit" onclick="updateProfile(event)">
                                  Salvar
                               </button>
                            </div>
                         </div>
-                        <div class="edit-credentials">
-                           <div>
-                              <label for="editEmail">Novo E-mail</label>
-                              <input type="email" id="editEmail" name="email"
-                                 placeholder="Utilize esse campo para alterar seu e-mail." />
-                              <button type="button" onclick="changeEmail()">Alterar E-mail</button>
-                           </div>
-                           <div>
-                              <label for="editPassword">Nova Senha</label>
-                              <input type="password" id="editPassword" name="password"
-                                 placeholder="Utilize esse campo para alterar sua senha." />
-                              <button type="button" onclick="changePassword()">Alterar Senha</button>
-                           </div>
-                        </div>
-                        <div>
-                           <button type="button" onclick="cancelEditProfile()">
-                              Cancelar
-                           </button>
-                        </div>
-                     </form>
                   </div>
                   <div id="editProfileButton" class="buttons-edit-profile">
                      <button onclick="editProfile()">
-                        Editar Perfil
+                        Editar Nome e Telefone
                      </button>
                   </div>
-                  <div class="logout-button">
-                     <button onclick="logout()">
-                        Sair da Conta
+                  <div class="cancel-button hidden">
+                     <button type="button" onclick="cancelEditProfile()">
+                        Cancelar
                      </button>
+                  </div>
+                  </form>
+               </div>
+
+               <div id="editCredentials" class="edit-credentials">
+                  <div class="buttons-edit-profile">
+                     <label for="editEmail">Novo Email</label>
+
+                     <button id="showEmailButton" onclick="toggleEmailEdit(true)">Alterar E-mail</button>
+
+                     <div id="email-controls" class="hidden-controls">
+                        <input type="email" id="editEmail" name="email"
+                           placeholder="Utilize esse campo para alterar seu e-mail." />
+                        <button onclick="changeEmail()">Salvar</button>
+                        <button onclick="toggleEmailEdit(false)">Cancelar</button>
+                     </div>
+                  </div>
+
+                  <div class="buttons-edit-profile">
+                     <label for="editPassword">Nova Senha</label>
+
+                     <button id="showPasswordButton" onclick="togglePasswordEdit(true)">Alterar Senha</button>
+
+                     <div id="password-controls" class="hidden-controls">
+                        <input type="password" id="editPassword" name="password"
+                           placeholder="Utilize esse campo para alterar sua senha." />
+                        <button onclick="changePassword()">Salvar</button>
+                        <button onclick="togglePasswordEdit(false)">Cancelar</button>
+                     </div>
+                  </div>
+
+                  <div class="logout-button">
+                     <button onclick="logout()">Sair da Conta</button>
                   </div>
                </div>
+
 
                <div class="account-section hidden" id="ordersSection">
                   <h2>
@@ -131,7 +148,6 @@
                      </div>
                   </div>
                </div>
-
                <div class="account-section hidden" id="downloadsSection">
                   <h2>
                      Downloads Disponíveis

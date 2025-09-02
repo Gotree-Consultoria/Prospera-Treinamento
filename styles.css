@@ -337,14 +337,6 @@ section {
     font-size: 2.25rem;
 }
 
-/* Original grid layout
-.categories-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--spacing-lg);
-}
-*/
-
 /* Novo estilo para o carrossel de categorias com setas de navegação */
 .category-card {
     background-color: var(--off-white);
@@ -1827,54 +1819,58 @@ section {
     list-style-type: none;
 }
 
-/* Estilo para os botões de ação do perfil */
+.hidden-controls {
+    display: none;
+}
+
+
+/* Botões */
 .buttons-edit-profile button {
-  background-color: var(--verde-escuro);
-  color: var(--white);
-  border: 2px solid var(--verde-escuro);
-  padding: 0.40rem 1.0rem;
-  border-radius: var(--border-radius-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+    background-color: var(--verde-escuro);
+    color: var(--white);
+    border: none;
+    border-radius: var(--border-radius-md);
+    padding: var(--border-radius-md);
+    transition: var(--transition-slow);
 }
 
 .buttons-edit-profile button:hover {
-  background-color: transparent;
-  color: var(--verde-escuro);
-  transform: translateY(-2px);
+    background-color: var(--verde-claro);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
-.buttons-edit-profile {
-    display: flex;
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-sm);
-}
-
-/* Estilo do botão de Sair da Conta */
+.cancel-button button,
 .logout-button button {
-  background-color: var(--coral);
-  color: var(--white);
-  border: 2px solid var(--coral);
-  padding: 0.40rem 1.0rem;
-  border-radius: var(--border-radius-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+    background-color: var(--coral);
+    color: var(--white);
+    border: none;
+    border-radius: var(--border-radius-md);
+    padding: var(--border-radius-md);
+    transition: var(--transition-slow);
 }
 
-.logout-button{
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    margin-top: var(--spacing-sm)
-}
-
+.cancel-button button:hover,
 .logout-button button:hover {
-  background-color: transparent;
-  color: var(--coral);
-  transform: translateY(-2px);
+    background-color: var(--verde-claro);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
+
+/* Inputs */
+/* Layout para os campos de entrada */
+.edit-fields {
+    display: flex; /* Transforma em um contêiner flexível */
+    flex-wrap: wrap; /* Permite que os itens quebrem para a próxima linha em telas pequenas */
+    gap: 14px; /* Cria um espaço entre os campos */
+    margin-bottom: 20px; /* Adiciona espaço abaixo dos campos, antes dos botões */
+}
+
+.edit-fields input {
+    border: 1px solid var(--gray-light);
+    padding: var(--border-radius-sm);
+}
+
 
 /* =======================================================
 // Estilos da Página de E-books
