@@ -1,5 +1,5 @@
 // As funções do api.js que lidam com a lógica de negócio real
-import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile } from './api.js';
+import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange } from './api.js';
 
 let currentProfile = null;
 
@@ -19,6 +19,29 @@ function maskPhone(phone) {
     return '*** **** ' + visible;
 }
 
+function maskCPF(cpf) {
+    if (!cpf) return '';
+    const digits = cpf.replace(/\D/g, '');
+    if (digits.length < 6) return '*'.repeat(digits.length);
+    const start = digits.slice(0, 3);
+    const end = digits.slice(-2);
+    return start + '.***.***-' + end;
+}
+
+function maskDate(dateStr) {
+    if (!dateStr) return '';
+    // assume YYYY-MM-DD or DD/MM/YYYY
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const parts = dateStr.split('-');
+        return '**/**/' + parts[0];
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+        const parts = dateStr.split('/');
+        return '**/**/' + parts[2];
+    }
+    return dateStr;
+}
+
 export async function loadUserProfile() {
     const token = localStorage.getItem('jwtToken');
     if (!token) return;
@@ -27,21 +50,42 @@ export async function loadUserProfile() {
         currentProfile = profile;
         const nameEl = document.getElementById('userName');
         const emailEl = document.getElementById('userEmail');
-        const phoneEl = document.getElementById('userPhone');
+        const phoneElement = document.getElementById('userPhone');
         if (nameEl) nameEl.textContent = profile.name || '';
         if (emailEl) emailEl.textContent = maskEmail(profile.email || localStorage.getItem('loggedInUserEmail') || '');
-        if (phoneEl) phoneEl.textContent = maskPhone(profile.phone || '');
+    if (phoneElement) phoneElement.textContent = maskPhone(profile.phone || profile.phoneNumber || '');
 
-        // show verified section if exists
-        const verifiedSection = document.getElementById('verifiedSection');
-        if (verifiedSection) {
-            // only admin can change verified info; keep hidden by default
-            verifiedSection.classList.add('hidden');
+        // preencher CPF e data de nascimento (somente leitura) e exibir seção Verificado quando disponíveis
+        const cpfEl = document.getElementById('userCPF');
+        const birthEl = document.getElementById('userBirth');
+        // aceitar diferentes nomes de propriedade retornados pela API
+        const cpfValue = profile.cpf || profile.cpfNumber || profile.document || profile.documentNumber || '';
+        const birthValue = profile.birth || profile.birthDate || profile.dob || profile.birth_date || '';
+    if (cpfEl) cpfEl.textContent = cpfValue ? maskCPF(cpfValue) : '—';
+    if (birthEl) birthEl.textContent = birthValue ? maskDate(birthValue) : '—';
+    // marcar telefone como verificado (cliente deveria contatar central para alterar)
+    const phoneEl = document.getElementById('userPhone');
+    if (phoneEl) phoneEl.classList.add('verified');
+        // garantir que a seção verificado esteja visível (mostra placeholders quando não há dados)
+        const verifiedLi = document.querySelector('.verified-section');
+        if (verifiedLi) {
+            verifiedLi.classList.remove('hidden');
         }
     } catch (err) {
         console.error('Erro ao carregar perfil:', err);
     }
 }
+
+// Quando uma página for injetada, se for a página 'account' carregamos o perfil para popular os spans
+document.addEventListener('page:loaded', (e) => {
+    try {
+        if (e?.detail?.page === 'account') {
+            if (typeof loadUserProfile === 'function') loadUserProfile();
+        }
+    } catch (err) {
+        console.warn('Erro no listener page:loaded em profile.js', err);
+    }
+});
 
 // =======================================================
 // FUNÇÕES DE EDIÇÃO DO PERFIL (NOME E TELEFONE)
@@ -66,7 +110,7 @@ export function toggleProfileEdit() {
     
     // Preenche os campos de edição
     document.getElementById('editName').value = document.getElementById('userName').textContent;
-    document.getElementById('editPhone').value = document.getElementById('userPhone').textContent;
+    // telefone não é editável via UI — não preenchemos campo
 }
 
 
@@ -82,12 +126,44 @@ export function toggleEmailEdit(show) {
     const showButton = document.getElementById('showEmailButton');
     const controls = document.getElementById('email-controls');
 
+    if (!controls || !showButton) return;
+
     if (show) {
-        if (showButton) showButton.style.display = 'none';
-        if (controls) controls.style.display = 'block';
+        showButton.classList.add('hidden');
+        showButton.setAttribute('aria-expanded', 'true');
+        controls.classList.remove('hidden-controls');
+        controls.classList.add('active');
+        controls.setAttribute('aria-hidden', 'false');
+        const input = controls.querySelector('input');
+        if (input) {
+            input.disabled = false;
+            input.focus();
+        }
+        // permitir fechar com ESC
+        const escHandler = (ev) => {
+            if (ev.key === 'Escape') toggleEmailEdit(false);
+        };
+        controls._escHandler = escHandler;
+        document.addEventListener('keydown', escHandler);
     } else {
-        if (showButton) showButton.style.display = 'block';
-        if (controls) controls.style.display = 'none';
+        showButton.classList.remove('hidden');
+        showButton.setAttribute('aria-expanded', 'false');
+        controls.classList.add('hidden-controls');
+        controls.classList.remove('active');
+        controls.setAttribute('aria-hidden', 'true');
+        // remover feedback inline quando fechar
+        const fb = controls.querySelector('.inline-feedback');
+        if (fb) fb.remove();
+        const input = controls.querySelector('input');
+        if (input) {
+            input.value = '';
+            input.disabled = true;
+        }
+        // remover listener de ESC se houver
+        if (controls._escHandler) {
+            document.removeEventListener('keydown', controls._escHandler);
+            delete controls._escHandler;
+        }
     }
 }
 
@@ -114,27 +190,39 @@ export function togglePasswordEdit(show) {
  */
 export async function handleEmailChange() {
     const emailInput = document.getElementById('editEmail');
+    const controls = document.getElementById('email-controls');
     const emailValue = emailInput ? emailInput.value.trim() : '';
+    if (!controls) return;
+
+    // garantir feedback element
+    let feedback = controls.querySelector('.inline-feedback');
+    if (!feedback) {
+        feedback = document.createElement('span');
+        feedback.className = 'inline-feedback';
+        controls.appendChild(feedback);
+    }
+
+    feedback.style.color = 'var(--coral)';
+    feedback.textContent = '';
+
     if (emailValue === '') {
-        alert('Por favor, preencha o campo com seu novo e-mail.');
+        feedback.textContent = 'Por favor, preencha o campo com o novo e-mail.';
         return;
     }
-    // pedir confirmação do e-mail atual
-    const current = prompt('Digite o seu e-mail atual para confirmar a alteração:');
-    const stored = localStorage.getItem('loggedInUserEmail');
-    if (!current || current !== stored) {
-        alert('E-mail atual não confere. A alteração foi cancelada.');
-        return;
-    }
+
     const token = localStorage.getItem('jwtToken');
     try {
-        await updateUserEmail(token, emailValue);
-        alert('Seu e-mail foi alterado com sucesso!');
-        if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = maskEmail(emailValue);
-        localStorage.setItem('loggedInUserEmail', emailValue);
-        toggleEmailEdit(false);
+        await requestEmailChange(token, emailValue);
+        feedback.style.color = 'var(--verde-escuro)';
+        feedback.textContent = 'Solicitação enviada. Verifique seu e-mail atual para autorizar a alteração.';
+        // limpar input e fechar após curto delay
+        setTimeout(() => {
+            toggleEmailEdit(false);
+        }, 1600);
     } catch (error) {
-        alert('Erro ao alterar o e-mail: ' + error.message);
+        feedback.style.color = 'var(--coral)';
+        feedback.textContent = 'Erro ao solicitar alteração: ' + (error.message || 'Tente novamente');
+        console.error('Erro ao solicitar alteração do e-mail:', error);
     }
 }
 
@@ -234,3 +322,5 @@ export async function handleCompleteProfile(event) {
         alert('Erro ao completar perfil: ' + err.message);
     }
 }
+
+// phone editing removed from UI — phone changes must be done via support

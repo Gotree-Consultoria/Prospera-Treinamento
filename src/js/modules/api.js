@@ -244,3 +244,26 @@ export async function completeUserProfile(token, data) {
 
     return response.json();
 }
+
+/**
+ * Solicita ao backend que envie um e-mail de confirmação para o e-mail cadastrado
+ * informando sobre a solicitação de alteração para `newEmail`.
+ * O backend deve enviar a mensagem para o e-mail atual do usuário.
+ */
+export async function requestEmailChange(token, newEmail) {
+    const response = await fetch(`${API_BASE_URL}/auth/profile/email/request-change`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newEmail })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao solicitar alteração de e-mail.');
+    }
+
+    return response.json();
+}

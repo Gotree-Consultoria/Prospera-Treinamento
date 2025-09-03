@@ -1,6 +1,6 @@
 // Importa todas as funções de outros módulos que precisam ser chamadas por eventos
 import { showPage, showAccountSection, scrollToSection } from './navigation.js';
-import { handleLogin, handleRegister, logout } from './auth.js';
+import { handleLogin, handleRegister, logout, checkUserLoggedIn } from './auth.js';
 import { addToCart, removeFromCart, updateQuantity, checkout } from './carts.js';
 import { openAuthModal, closeAuthModal, showAuthTab } from './modals.js';
 import { toggleProfileEdit, toggleEmailEdit, togglePasswordEdit, handleEmailChange, handlePasswordChange, updateProfile, handleCompleteProfile, loadUserProfile } from './profile.js';
@@ -69,11 +69,56 @@ export function setupEventListeners() {
         } else if (authAction === "toggleProfileEdit") {
             toggleProfileEdit();
         } else if (authAction === "openAuth") {
-            openAuthModal();
+            // Se o usuário estiver logado, abrir a página de conta diretamente
+            if (typeof checkUserLoggedIn === 'function' && checkUserLoggedIn()) {
+                await showPage('account');
+                // Garantir que a seção de dados cadastrais esteja visível
+                showAccountSection('profile');
+                const dados = document.getElementById('dadosCadastrais');
+                const payments = document.getElementById('paymentsSection');
+                const changePwd = document.getElementById('changePasswordSubsection');
+                if (dados) dados.classList.remove('hidden');
+                if (payments) payments.classList.add('hidden');
+                if (changePwd) changePwd.classList.add('hidden');
+                // marcar submenu Dados Cadastrais como ativo
+                document.querySelectorAll('.submenu-item').forEach(it => it.classList.remove('active'));
+                const dadosLink = document.querySelector('.submenu-item[data-action="showDados"]');
+                if (dadosLink) dadosLink.classList.add('active');
+                // Carregar perfil para preencher campos
+                if (typeof loadUserProfile === 'function') loadUserProfile();
+            } else {
+                openAuthModal();
+            }
         } else if (target.dataset.section) {
             showAccountSection(target.dataset.section);
         } else if (target.dataset.authTab) {
             showAuthTab(target.dataset.authTab);
+        }
+
+        // Se clicou em um item do submenu, exibir somente a subseção correspondente
+        if (target.classList.contains('submenu-item')) {
+            // marcar ativo
+            document.querySelectorAll('.submenu-item').forEach(it => it.classList.remove('active'));
+            target.classList.add('active');
+            const actionName = target.dataset.action;
+            const dados = document.getElementById('dadosCadastrais');
+            const payments = document.getElementById('paymentsSection');
+            const changePwd = document.getElementById('changePasswordSubsection');
+            // esconder todas
+            if (dados) dados.classList.add('hidden');
+            if (payments) payments.classList.add('hidden');
+            if (changePwd) changePwd.classList.add('hidden');
+            // mostrar apenas a selecionada
+            if (actionName === 'showDados') {
+                if (dados) dados.classList.remove('hidden');
+                showAccountSection('profile');
+            } else if (actionName === 'showPayments') {
+                if (payments) payments.classList.remove('hidden');
+                showAccountSection('profile');
+            } else if (actionName === 'showChangePassword' || actionName === 'togglePasswordEdit') {
+                if (changePwd) changePwd.classList.remove('hidden');
+                showAccountSection('profile');
+            }
         }
 
         // Lógica baseada em data-action (profile, email, senha etc)
@@ -91,18 +136,36 @@ export function setupEventListeners() {
     if (dataAction === 'toggleProfileEdit') {
             toggleProfileEdit();
         } else if (dataAction === 'toggleEmailEdit') {
-            // se estiver visível, a função toggleEmailEdit espera booleano; para simplificar alternamos
             const controls = document.getElementById('email-controls');
-            const show = !(controls && controls.style.display === 'block');
-            toggleEmailEdit(show);
+            const isActive = controls && controls.classList && controls.classList.contains('active');
+            toggleEmailEdit(!isActive);
         } else if (dataAction === 'saveEmail') {
             handleEmailChange();
+        
         } else if (dataAction === 'togglePasswordEdit') {
             const pwdControls = document.getElementById('password-controls');
-            const showPwd = !(pwdControls && pwdControls.style.display === 'block');
+            const showPwd = !(pwdControls && pwdControls.classList && pwdControls.classList.contains('active'));
             togglePasswordEdit(showPwd);
         } else if (dataAction === 'savePassword') {
             handlePasswordChange();
+        } else if (dataAction === 'togglePasswordVisibility') {
+            // alterna visibilidade do input de senha alvo e icon (fa-eye <-> fa-eye-slash)
+            const targetSelector = target.dataset.target;
+            if (targetSelector) {
+                const input = document.querySelector(targetSelector);
+                if (input) {
+                    const isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    // atualizar estado aria
+                    target.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
+                    // trocar ícone se existir
+                    const icon = target.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('fa-eye', !isPassword);
+                        icon.classList.toggle('fa-eye-slash', isPassword);
+                    }
+                }
+            }
         }
 
         // Lógica do carrossel e rolagem
@@ -149,9 +212,7 @@ export function setupEventListeners() {
             handleRegister(e);
         } else if (form.id === 'profileCompleteForm') {
             handleCompleteProfile(e);
-        } else if (form.id === 'changeEmailForm') {
-            handleEmailChange(e);
-        } else if (form.id === 'changePasswordForm') {
+    } else if (form.id === 'changePasswordForm') {
             handlePasswordChange(e);
         } else if (form.id === 'newsletterForm') {
             subscribeNewsletter(e);

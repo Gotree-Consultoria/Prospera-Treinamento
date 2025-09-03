@@ -98,13 +98,24 @@ export async function showPage(page) {
  * @param {string} section - O nome da seção a ser exibida.
  */
 export function showAccountSection(section) {
+    // atualizar estado ativo do menu
     document.querySelectorAll(".menu-item").forEach((item) => item.classList.remove("active"));
     const activeMenuItem = document.querySelector(`[data-section="${section}"]`);
     if (activeMenuItem) activeMenuItem.classList.add("active");
-    document.querySelectorAll(".account-section").forEach((sectionEl) => sectionEl.classList.remove("active"));
+
+    // Esconder todas as subseções e garantir a visibilidade apenas da selecionada
+    document.querySelectorAll(".account-section").forEach((sectionEl) => {
+        sectionEl.classList.remove("active");
+        sectionEl.classList.add("hidden");
+    });
     const sectionMap = { profile: "profileSection", orders: "ordersSection", downloads: "downloadsSection" };
     const targetSection = document.getElementById(sectionMap[section]);
-    if (targetSection) targetSection.classList.add("active");
+    if (targetSection) {
+        targetSection.classList.remove("hidden");
+        targetSection.classList.add("active");
+        // garantir foco visual / rolagem suave para a seção
+        try { targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* fallback silencioso */ }
+    }
 }
 
 /**

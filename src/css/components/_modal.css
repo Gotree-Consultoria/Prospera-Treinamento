@@ -123,6 +123,34 @@
     transition: border-color 0.3s ease;
 }
 
+/* Coloca o ícone de visualização dentro do input */
+.password-input-wrap {
+  position: relative;
+}
+.password-input-wrap input {
+  padding-right: 2.6rem; /* espaço para o ícone */
+}
+.password-toggle {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  color: #666;
+  cursor: pointer;
+}
+.password-toggle:focus {
+  outline: none;
+  color: #007b5a;
+}
+.password-toggle i {
+  pointer-events: none; /* evitar problemas de cliques no ícone */
+}
+
 
 /* Pop-up*/
 

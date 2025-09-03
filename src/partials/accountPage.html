@@ -9,13 +9,19 @@
    <section class="account-content">
       <div class="container">
          <div class="account-grid">
-            <div class="account-sidebar">
+               <div class="account-sidebar">
                <div class="account-menu">
                   <a class="menu-item active" href="#" data-section="profile">
                      <i class="fas fa-user">
                      </i>
                      Perfil
                   </a>
+                  <!-- Submenu de Perfil -->
+                  <div class="menu-submenu" id="profileSubmenu">
+                     <a class="submenu-item" href="#" data-section="profile" data-action="showDados">Dados Cadastrais</a>
+                     <a class="submenu-item" href="#" data-section="profile" data-action="showPayments">Pagamentos</a>
+                     <a class="submenu-item" href="#" data-section="profile" data-action="togglePasswordEdit">Trocar Senha</a>
+                  </div>
                   <a class="menu-item" href="#" data-section="orders">
                      <i class="fas fa-shopping-bag">
                      </i>
@@ -26,123 +32,127 @@
                      </i>
                      Downloads
                   </a>
-               </div>
-            </div>
-
-            <div class="account-main">
-               <!-- Formulário de finalização de cadastro (preenchimento obrigatório no primeiro login) -->
-               <div id="profileCompleteSection" class="account-section hidden">
-                  <h2>Complete seu Perfil</h2>
-                  <p>Por segurança, preencha os dados abaixo para completar seu cadastro.</p>
-                  <form id="profileCompleteForm">
-                     <div class="form-group">
-                        <label for="completeCpf">CPF</label>
-                        <input type="text" id="completeCpf" name="cpf" required />
-                     </div>
-                     <div class="form-group">
-                        <label for="completePhone">Telefone</label>
-                        <input type="tel" id="completePhone" name="phone" required />
-                     </div>
-                     <div class="form-group">
-                        <label for="completeBirth">Data de Nascimento</label>
-                        <input type="date" id="completeBirth" name="birth" required />
-                     </div>
-                     <div>
-                        <button type="submit" class="btn btn-primary">Salvar Perfil</button>
-                     </div>
-                  </form>
-               </div>
-               <div class="account-section active" id="profileSection">
-                  <h2>
-                     Meu Perfil
-                  </h2>
-                  <div id="profileView" class="profile-infos">
-                     <ul class="profile-view">
-                        <li>
-                           <strong>
-                              Nome:
-                           </strong>
-                           <span id="userName"></span>
-                        </li>
-                        <li>
-                           <strong>
-                              Telefone:
-                           </strong>
-                           <span id="userPhone"></span>
-                        </li>
-                        <li>
-                           <strong>
-                              E-mail:
-                           </strong>
-                           <span id="userEmail"></span>
-                        </li>
-                     </ul>
-                  </div>
-
-                  <!-- Edição de perfil -->
-                  <div id="profileEditForm" class="hidden">
-                     <form id="profileUpdateForm">
-                        <div class="edit-fields">
-                           <div class="edit-credentials">
-                              <label for="editName">Nome</label>
-                              <input type="text" id="editName" name="name" />
-                           </div>
-                           <div class="edit-credentials">
-                              <label for="editPhone">Telefone</label>
-                              <input type="tel" id="editPhone" name="phone" />
-                           </div>
-
-                              <div id="saveProfileButton" class="buttons-edit-profile">
-                              <button type="submit">
-                                 Salvar
-                              </button>
-                           </div>
-                        </div>
-                  </div>
-                  <div id="editProfileButton" class="buttons-edit-profile">
-                     <button data-action="toggleProfileEdit">
-                        Editar Nome e Telefone
-                     </button>
-                  </div>
-                  <div class="cancel-button hidden">
-                     <button type="button" data-action="toggleProfileEdit">
-                        Cancelar
-                     </button>
-                  </div>
-                  </form>
-               </div>
-
-               <div id="editCredentials" class="edit-credentials">
-                  <div class="buttons-edit-profile">
-                     <label for="editEmail">Novo Email</label>
-
-                     <button id="showEmailButton" data-action="toggleEmailEdit">Alterar E-mail</button>
-
-                     <div id="email-controls" class="hidden-controls">
-                        <input type="email" id="editEmail" name="email"
-                           placeholder="Utilize esse campo para alterar seu e-mail." />
-                        <button data-action="saveEmail">Salvar</button>
-                        <button data-action="toggleEmailEdit">Cancelar</button>
-                     </div>
-                  </div>
-
-                  <div class="buttons-edit-profile">
-                     <label for="editPassword">Nova Senha</label>
-
-                     <button id="showPasswordButton" data-action="togglePasswordEdit">Alterar Senha</button>
-
-                     <div id="password-controls" class="hidden-controls">
-                        <input type="password" id="editPassword" name="password"
-                           placeholder="Utilize esse campo para alterar sua senha." />
-                        <button data-action="savePassword">Salvar</button>
-                        <button data-action="togglePasswordEdit">Cancelar</button>
-                     </div>
-                  </div>
-
-                  <div class="logout-button">
+                  
+                  <div class="logout-button-sidebar">
                      <button data-auth-action="logout">Sair da Conta</button>
                   </div>
                </div>
+               </div>
+               <div class="account-section active" id="profileSection">
+                  <!-- Dados Cadastrais (contém a lógica de 'Meu Perfil') -->
+                  <div id="dadosCadastrais" class="dados-cadastrais">
+                     <h2>Dados Cadastrais</h2>
+                     <div id="profileView" class="profile-infos">
+                        <ul class="profile-view">
+                           <li>
+                              <strong>Nome:</strong>
+                              <span id="userName"></span>
+                           </li>
+                           
+                           <li>
+                              <strong>E-mail:</strong>
+                              <span id="userEmail"></span>
+                              <!-- botão inline para alterar e-mail -->
+                              <button id="showEmailButton" class="btn-inline" data-action="toggleEmailEdit" aria-label="Alterar e-mail" aria-expanded="false">Alterar</button>
+                              <div id="email-controls" class="hidden-controls inline-controls" aria-hidden="true">
+                                 <input type="email" id="editEmail" name="email" placeholder="Novo e-mail" disabled />
+                                 <button type="button" data-action="saveEmail">Salvar</button>
+                                 <button type="button" data-action="toggleEmailEdit">Cancelar</button>
+                              </div>
+                           </li>
+
+                           <!-- Seção Verificado (dados pessoais parcialmente mascarados) -->
+                           <li class="verified-section">
+                              <hr class="verified-separator" />
+                              <div class="verified-header">
+                                 <strong class="verified-title">Verificado</strong>
+                                 <span class="info-circle" role="note" tabindex="0" aria-label="Informação">i
+                                    <span class="info-tooltip">Identidade verificada. Só poderá alterar entrando em contato com o atendimento ao cliente.</span>
+                                 </span>
+                              </div>
+                              <ul class="verified-list">
+                                 <li><strong>Telefone:</strong> <span id="userPhone" class="masked">—</span></li>
+                                 <li><strong>CPF:</strong> <span id="userCPF" class="masked">—</span></li>
+                                 <li><strong>Data de Nascimento:</strong> <span id="userBirth" class="masked">—</span></li>
+                              </ul>
+                           </li>
+                        </ul>
+                     </div>
+
+                     <!-- Edição de perfil (nome/telefone) -->
+                     <div id="profileEditForm" class="hidden">
+                        <form id="profileUpdateForm">
+                           <div class="edit-fields">
+                              <div class="edit-credentials">
+                                 <label for="editName">Nome</label>
+                                 <input type="text" id="editName" name="name" />
+                              </div>
+                             
+
+                              <div id="saveProfileButton" class="buttons-edit-profile">
+                                 <button type="submit">Salvar</button>
+                              </div>
+                           </div>
+                        </form>
+                     </div>
+
+                     <!-- botão de editar nome e telefone removido conforme solicitado -->
+                     <div id="cancelProfileEditButton" class="cancel-button hidden">
+                        <button type="button" data-action="toggleProfileEdit">Cancelar</button>
+                     </div>
+
+                     <!-- Controles de perfil movidos para dentro de Dados Cadastrais -->
+                     <!-- bloco de alteração de e-mail consolidado dentro da visualização de perfil -->
+
+                     <!-- bloco de alteração de senha removido daqui; mantém-se apenas na subseção 'Trocar Senha' -->
+                  </div>
+
+                  <!-- Pagamentos (subseção dentro de Perfil) -->
+                  <div id="paymentsSection" class="account-subsection hidden">
+                     <h3>Pagamentos</h3>
+                     <p>Aqui você pode gerenciar seus cartões ou formas de pagamento. (Mock estático)</p>
+                     <div class="payment-list">
+                        <div class="payment-item">
+                           <strong>Cartão Visa •••• 1234</strong>
+                           <div>Nome: João Silva</div>
+                           <div>Válido até 12/2026</div>
+                           <div class="payment-actions-row">
+                              <button class="btn btn-small">Definir como padrão</button>
+                              <button class="btn btn-small">Remover</button>
+                           </div>
+                        </div>
+                        <div class="payment-item">
+                           <strong>Cartão MasterCard •••• 9876</strong>
+                           <div>Nome: Maria Oliveira</div>
+                           <div>Válido até 03/2027</div>
+                           <div class="payment-actions-row">
+                              <button class="btn btn-small">Definir como padrão</button>
+                              <button class="btn btn-small">Remover</button>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="payment-actions">
+                        <button class="btn btn-secondary btn-small">Adicionar Método de Pagamento</button>
+                     </div>
+                  </div>
+
+                  <!-- Trocar Senha (form embutido no perfil para melhor UX) -->
+                  <div id="changePasswordSubsection" class="account-subsection hidden">
+                     <h3>Trocar Senha</h3>
+                     <form id="changePasswordForm">
+                        <div class="form-group">
+                           <label for="currentPassword">Senha Atual</label>
+                           <input type="password" id="currentPassword" name="currentPassword" />
+                        </div>
+                        <div class="form-group">
+                           <label for="newPassword">Nova Senha</label>
+                           <input type="password" id="newPassword" name="newPassword" />
+                        </div>
+                        <div>
+                           <button type="submit" data-action="savePassword">Salvar Nova Senha</button>
+                        </div>
+                     </form>
+                  </div>
 
 
                <div class="account-section hidden" id="ordersSection">
@@ -166,6 +176,27 @@
                            <p>
                               Pacote Completo de Ergonomia - R$ 89,99
                            </p>
+                        </div>
+                     </div>
+                     <div class="order-item">
+                        <div class="order-header">
+                           <span class="order-number">#002</span>
+                           <span class="order-date">22/04/2024</span>
+                           <span class="order-status">Em processamento</span>
+                        </div>
+                        <div class="order-items">
+                           <p>Curso Online: Técnicas de Liderança - R$ 149,00</p>
+                        </div>
+                     </div>
+
+                     <div class="order-item">
+                        <div class="order-header">
+                           <span class="order-number">#003</span>
+                           <span class="order-date">05/07/2025</span>
+                           <span class="order-status">Concluído</span>
+                        </div>
+                        <div class="order-items">
+                           <p>Assinatura Mensal - R$ 29,90</p>
                         </div>
                      </div>
                   </div>
@@ -194,8 +225,19 @@
                         <button class="btn btn-small">Download</button>
                      </div>
 
+                     <div class="download-item">
+                        <i class="fas fa-file-pdf"></i>
+                        <div class="download-info">
+                           <h4>Guia Rápido de Gestão de Pessoas</h4>
+                           <p>Incluído com o pedido #002 - 22/04/2024</p>
+                        </div>
+                        <button class="btn btn-small">Download</button>
+                     </div>
+
                   </div>
                </div>
+                
+               
             </div>
          </div>
       </div>
