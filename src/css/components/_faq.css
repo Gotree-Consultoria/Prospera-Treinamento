@@ -1,0 +1,15 @@
+/* Inicio Seção FAQ*/
+
+#secao-faq .container h2 {
+  color: #ffffff; /* ou outra cor desejada */
+  font-size: 1.3rem;
+  margin-top: 24px;
+}
+
+#secao-faq .container p {
+  color: #d0f2e8; /* cor suave e clara para leitura */
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+/* Fim Seção FAQ*/

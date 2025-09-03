@@ -1,0 +1,81 @@
+/* =======================================================
+// Estilos da Página de E-books
+// ======================================================= */
+
+/* Estilo do contêiner de filtros e pesquisa */
+.filters-and-search {
+    margin: var(--spacing-lg) 0;
+    padding: 0 var(--spacing-md);
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+/* Estilo do grupo de botões de filtro */
+.filter-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+/* Estilo para cada botão de filtro */
+.filter-btn {
+    background-color: var(--gray-light);
+    color: var(--gray-medium);
+    border: 2px solid var(--gray-light);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Efeito hover para os botões de filtro */
+.filter-btn:hover {
+    background-color: var(--verde-claro);
+    color: var(--verde-escuro);
+    border-color: var(--verde-claro);
+}
+
+/* Estado ativo do botão de filtro */
+.filter-btn.active {
+    background-color: var(--verde-escuro);
+    color: var(--white);
+    border-color: var(--verde-escuro);
+}
+
+/* Estilo da barra de pesquisa */
+.search-bar {
+    position: relative;
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+    padding-top: 10px; 
+}
+
+.search-bar input {
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-md);
+    padding-right: 40px; /* Espaço para o ícone */
+    border: 2px solid var(--gray-light);
+    border-radius: var(--border-radius-md);
+    background-color: var(--off-white);
+    font-size: 1rem;
+    color: var(--gray-dark);
+    transition: border-color 0.3s ease;
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--verde-claro);
+}
+
+.search-bar i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-light);
+}

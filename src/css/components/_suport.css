@@ -1,0 +1,74 @@
+/* Início Formulário de Suporte */
+
+#secao-suporte .container {
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+#secao-suporte form {
+  background: linear-gradient(to bottom, #00695c, #004d40); /* Ajusta o fundo para um tom mais suave */
+  padding: 36px;
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Suaviza a sombra */
+}
+#secao-suporte label {
+  display: block;
+  font-weight: 600;
+  color: #aafae2;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+#secao-suporte input,
+#secao-suporte textarea {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font-size: 1rem;
+  background-color: #ffffff;
+  color: #003c36;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  transition: border 0.3s ease, box-shadow 0.3s ease;
+}
+
+#secao-suporte input:focus,
+#secao-suporte textarea:focus {
+  border-color: #00bfa5;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.2);
+}
+
+#secao-suporte textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+#secao-suporte button[type="submit"] {
+  background: linear-gradient(to right, var(--verde-escuro), var(--verde-claro)) ;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 30px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 6px 16px rgba(0, 191, 165, 0.4);
+  transition: all 0.3s ease;
+}
+
+#secao-suporte button[type="submit"]:hover {
+  background: linear-gradient(to right, var(--verde-escuro));
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 191, 165, 0.6);
+}
+
+#secao-suporte button[type="submit"]:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Fim Formulário de Suporte */

@@ -1,0 +1,41 @@
+<!-- E-book Page-->
+<div class="page" id="ebooksPage">
+  <section class="page-header">
+    <div class="container">
+      <h1>E-books Avulsos</h1>
+      <p>Escolha os e-books que mais se adequam às suas necessidades específicas.</p>
+    </div>
+  </section>
+
+  <section class="filters-and-search">
+    <div class="container">
+      <div class="filter-controls">
+  <button class="filter-btn active" data-filter="all">Todos</button>
+  <button class="filter-btn" data-filter="alimentacao">Alimentação</button>
+  <button class="filter-btn" data-filter="construcao-civil">Construção Civil</button>
+  <button class="filter-btn" data-filter="educacao">Educação</button>
+  <button class="filter-btn" data-filter="industria">Indústria</button>
+  <button class="filter-btn" data-filter="saude">Saúde</button>
+  <button class="filter-btn" data-filter="transporte-logistica">Transporte e Logística</button>
+  <button class="filter-btn" data-filter="varejo-atacado">Varejo e Atacado</button>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" placeholder="Pesquisar por título ou autor..." id="ebooksSearch" />
+        <i class="fas fa-search"></i>
+      </div>
+    </div>
+  </section>
+
+  <section class="products">
+    <div class="container">
+      <div class="loading" id="ebooksLoading">
+        A carregar e-books...
+      </div>
+      <div class="products-grid" id="ebooksGrid">
+        </div>
+  <!-- Container para lista de treinamentos (fallback quando não há produtos na categoria) -->
+  <div id="trainingsList" class="trainings-list"></div>
+    </div>
+  </section>
+</div>

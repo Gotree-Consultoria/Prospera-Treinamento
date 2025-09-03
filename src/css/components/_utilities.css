@@ -1,0 +1,30 @@
+/* Blocos unificados (FAQ, Privacidade, Termos, Suporte) */
+.bloco-unificado {
+  background-color: #fdfcfb;
+  padding: 40px 20px;
+  margin: 40px auto;
+  max-width: 900px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Títulos das seções principais */
+.bloco-unificado > h2 {
+  font-size: 1.2rem;
+  color: #004d40;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Título interno principal (FAQ, Política...) */
+.bloco-unificado header h1 {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: #1b1b1b;
+  font-family: var(--font-family);
+  border-bottom: 2px solid #00796b;
+  display: inline-block;
+  padding-bottom: 8px;
+}

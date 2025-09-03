@@ -1,0 +1,567 @@
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, var(--verde-escuro) 0%, #007a42 100%);
+    color: var(--white);
+    padding: var(--spacing-xxl) 0;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+}
+
+.hero .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+    align-items: center;
+}
+
+.hero-content h1 {
+    color: var(--white);
+    font-size: 3rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.hero-content p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.125rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.hero-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.hero-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-image i {
+    font-size: 8rem;
+    color: var(--verde-claro);
+    opacity: 0.8;
+}
+
+/* Sections */
+section {
+    padding: var(--spacing-xxl) 0;
+}
+
+.page-header {
+    background-color: var(--white);
+    padding: var(--spacing-xl) 0;
+    text-align: center;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.page-header p {
+    font-size: 1.125rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Categories */
+.categories {
+    background-color: var(--white);
+}
+
+.categories h2 {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    font-size: 2.25rem;
+}
+
+/* Novo estilo para o carrossel de categorias com setas de navegação */
+.category-card {
+    background-color: var(--off-white);
+    border-radius: var(--border-radius-md);
+    padding: 14px; /* ajustado: um pouco maior */
+    text-align: center;
+    transition: all var(--transition-normal);
+    border: 2px solid transparent;
+    cursor: pointer;
+    flex-basis: 210px; /* Largura base levemente maior */
+    flex-shrink: 0;
+    flex-grow: 0.2; /* permite expansão leve */
+    min-height: 190px; /* altura aumentada */
+    max-width: 250px;
+}
+
+.category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--verde-claro);
+}
+
+.category-card i {
+    font-size: 2rem; /* ícone um pouco maior */
+    color: var(--verde-escuro);
+    margin-bottom: 8px;
+}
+
+.category-card h3 {
+    margin-bottom: var(--spacing-sm);
+}
+
+.category-card h3 {
+    margin: 6px 0;
+    font-size: 1.05rem;
+}
+.category-card p {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    color: var(--gray-medium);
+}
+.category-badge {
+    background-color: var(--verde-claro);
+    color: var(--verde-escuro);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.categories-grid {
+    display: flex;
+    flex-wrap: nowrap; /* Impede que os itens quebrem a linha */
+    overflow-x: auto; /* Adiciona rolagem horizontal quando necessário */
+    padding: 0 45px; /* Adicione padding suficiente para que as setas não cubram o primeiro/último card */
+    padding-bottom: 15px; /* Adiciona um espaço para a barra de rolagem não sobrepor o conteúdo */
+    gap: 10px; /* Adiciona espaço entre os cartões */
+    -ms-overflow-style: none; /* Oculta a barra de rolagem no Internet Explorer e Edge */
+}
+
+/* Oculta a barra de rolagem para navegadores baseados em WebKit (Chrome, Safari, etc.) */
+.categories-grid::-webkit-scrollbar {
+    display: none;
+}
+
+/* Estilo para o contêiner do carrossel para posicionar as setas */
+.carousel-container {
+    position: relative;
+    display: flex; /* Para alinhar os itens e as setas */
+    align-items: center; /* Centraliza verticalmente as setas */
+}
+
+/* Estilo para os botões de seta */
+.arrow {
+    background-color: var(--gray-light); /* Cor de fundo do círculo */
+    color: var(--white); /* Cor do ícone da seta */
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem; /* Tamanho do ícone da seta */
+    width: 40px; /* Largura do círculo */
+    height: 40px; /* Altura do círculo */
+    border-radius: 50%; /* Transforma o botão em um círculo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute; /* Posicionamento absoluto dentro do carousel-container */
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10; /* Garante que as setas fiquem por cima do conteúdo */
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: var(--shadow-sm); /* Uma sombra leve para destacá-lo */
+}
+
+.arrow.prev-arrow {
+    left: 0; /* Alinha a seta esquerda à margem esquerda */
+}
+
+.arrow.next-arrow {
+    right: 0; /* Alinha a seta direita à margem direita */
+}
+
+.arrow:hover {
+    background-color: var(--verde-claro); /* Cor de fundo ao passar o mouse */
+    transform: translateY(-50%) scale(1.1); /* Um pequeno zoom no hover */
+}
+
+/* Ocultar as setas em telas pequenas se a navegação por toque for suficiente */
+@media (max-width: 768px) {
+    .arrow {
+        display: none;
+    }
+    .categories-grid {
+        padding: 0; /* Remove o padding em telas pequenas para aproveitar o espaço */
+    }
+}
+
+/* Packages */
+.packages {
+    background-color: var(--gray-light);
+}
+
+.packages h2 {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    font-size: 2.25rem;
+}
+
+.packages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.package-card {
+    background-color: var(--white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+    border: 2px solid transparent;
+}
+
+.package-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--verde-claro);
+}
+
+.package-header {
+    text-align: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.package-title {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.package-description {
+    color: var(--gray-medium);
+    margin-bottom: var(--spacing-md);
+}
+
+.package-price {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.price-original {
+    color: var(--gray-medium);
+    text-decoration: line-through;
+    font-size: 1rem;
+}
+
+.price-current {
+    color: var(--verde-escuro);
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.price-discount {
+    background-color: var(--coral);
+    color: var(--white);
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.package-features {
+    list-style: none;
+    margin-bottom: var(--spacing-lg);
+}
+
+.package-features li {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-xs);
+    color: var(--gray-medium);
+}
+
+.package-features i {
+    color: var(--verde-claro);
+}
+
+/* Products Grid */
+.products {
+    background-color: var(--white);
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    display: none;
+}
+
+.product-card {
+    background-color: var(--off-white);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.product-image {
+    height: 200px;
+    background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 3rem;
+}
+
+.product-content {
+    padding: var(--spacing-md);
+}
+
+.product-title {
+    font-size: 1.125rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.product-description {
+    color: var(--gray-medium);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.product-price {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+}
+
+.product-price-value {
+    color: var(--verde-escuro);
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.product-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+/* Newsletter */
+.newsletter {
+    background: linear-gradient(135deg, var(--verde-escuro) 0%, #007a42 100%);
+    color: var(--white);
+}
+
+.newsletter-content {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.newsletter-content h2 {
+    color: var(--white);
+    margin-bottom: var(--spacing-sm);
+}
+
+.newsletter-content p {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: var(--spacing-lg);
+}
+
+.newsletter-form {
+    display: flex;
+    gap: var(--spacing-sm);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.newsletter-form input {
+    flex: 1;
+    padding: var(--spacing-sm);
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-base);
+}
+
+.newsletter-form input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(190, 215, 55, 0.3);
+}
+
+/* CONFIG CARROSSEL */
+
+.carousel-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  border-radius: 20px;
+  /*background-color: #003c36;*/
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.carousel-container {
+  width: 100%;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.5s ease;
+  width: 100%; /* JS define */
+}
+
+.carousel-card {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 30px 20px;
+  background-color: var(--verde-escuro);
+  box-sizing: border-box;
+  background: linear-gradient(to bottom, #014d44, #003c36);
+  color: #ffffff;
+  text-align: center;
+  font-family: var(--font-family);
+}
+
+.carousel-card h1 {
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+  color: #ffffff;
+  border-bottom: 2px solid #00bfa5; /* Borda mais fina e mais suave */
+  padding-bottom: 10px; /* Espacamento entre o texto e a borda */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Leve sombra para profundidade */
+}
+
+.carousel-card h2 {
+  font-size: 1.9rem;
+  margin-bottom: 30px;
+  color: #ffffff;
+}
+
+.carousel-card h3 {
+  font-size: 1.2rem;
+  color: #66ffcc;
+  margin-top: 30px;
+  margin-bottom: 8px;
+}
+
+.carousel-card p {
+  font-size: 1.1rem;
+  color: #ffffff;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* Trainings component styles */
+.trainings-list {
+    margin-top: 20px;
+    background: var(--white);
+    padding: 16px;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+}
+.trainings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.trainings-refinements select {
+    margin-right: 8px;
+    padding: 6px 8px;
+}
+.training-card {
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.training-meta {
+    font-size: 0.85rem;
+    color: var(--gray-medium);
+}
+.training-actions .add-to-cart-btn {
+    margin-top: 8px;
+}
+
+
+
+/* Inicio Botões */
+.carousel-controls {
+  text-align: center;
+  margin: 25px 0;
+  background-color: var(--off-white);
+}
+
+.carousel-controls button {
+  margin: 0 12px;
+  padding: 14px 36px;
+  background: linear-gradient(to right,  var(--verde-escuro), var(--verde-claro));
+  color: aliceblue;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 16px rgba(0, 191, 165, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-width: 140px;
+}
+
+.carousel-controls button:hover {
+  background: linear-gradient(to right,var(--verde-escuro)); /* cor mais clara no hover */
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 191, 165, 0.5);
+}
+
+.carousel-controls button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Adicional opcional: transição suave de sombra e cor */
+.carousel-controls button {
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .modal-auth-content {
+    padding: 1.5rem 1.8rem;
+    max-width: 100%;
+  }
+  
+  #authTabs {
+    gap: 0.5rem;
+  }
+  
+  #authTabs button {
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+  }
+  
+  .modal-auth-close {
+    font-size: 1.5rem;
+    top: 8px;
+    right: 8px;
+  }
+  
+  .modal-auth-content form .btn.btn-primary {
+    font-size: 1rem;
+    padding: 0.7rem;
+  }
+}

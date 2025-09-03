@@ -2,177 +2,199 @@
 <html lang="pt-BR">
 
 <head>
-  <meta charset="utf-8" />
-  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>Prospera - Capacitação Continuada</title>
-  <link href="styles.css" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Prospera - Capacitação Continuada</title>
+    <link href="src/css/styles.css" rel="stylesheet" />
+    <link href="src/css/components/_header.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="src/css/components/_about.css">
+    <link rel="stylesheet" href="src/css/components/_account.css">
+    <link rel="stylesheet" href="src/css/components/_cart.css">
+    <link rel="stylesheet" href="src/css/components/_contact.css">
+    <link rel="stylesheet" href="src/css/components/_ebooks.css">
+    <link rel="stylesheet" href="src/css/components/_faq.css">
+    <link rel="stylesheet" href="src/css/components/_footer.css">
+    <link rel="stylesheet" href="src/css/components/_header.css">
+    <link rel="stylesheet" href="src/css/components/_homePage.css">
+    <link rel="stylesheet" href="src/css/components/_modal.css">
+    <link rel="stylesheet" href="src/css/components/_social-links.css">
+    <link rel="stylesheet" href="src/css/components/_utilities.css">
+    <link rel="stylesheet" href="src/css/components/_suport.css">
 </head>
 
 <body>
 
-  <!-- Modal de Autenticação -->
-  <div id="authModal" class="modal-auth hidden">
-    <div class="modal-auth-content">
-      <button class="modal-auth-close" onclick="closeAuthModal()">&times;</button>
-      <div id="authTabs" class="hidden">
-        <button id="tabLogin" class="active" onclick="showAuthTab('login')">Entrar</button>
-        <button id="tabRegister" onclick="showAuthTab('register')">Cadastrar</button>
-      </div>
-      <div id="authLoginForm" class="hidden">
-        <form onsubmit="handleLogin(event)" class="login-form">
-          <div class="login-fields">
-            <div>
-              <label for="loginEmail">E-mail</label>
-              <input type="email" id="loginEmail" required />
+    <!-- Modal de Autenticação -->
+    <div id="authModal" class="modal-auth hidden">
+        <div class="modal-auth-content">
+            <button class="modal-auth-close" data-action="closeAuthModal">&times;</button>
+            <div id="authTabs" class="hidden">
+                <button id="tabLogin" class="active" data-auth-tab="login">Entrar</button>
+                <button id="tabRegister" data-auth-tab="register">Cadastrar</button>
             </div>
-            <div>
-              <label for="loginPassword">Senha</label>
-              <input type="password" id="loginPassword" required />
+            <div id="authLoginForm" class="hidden">
+                <form id="authLoginForm" class="login-form">
+                    <div class="login-fields">
+                        <div>
+                            <label for="loginEmail">E-mail</label>
+                            <input type="email" id="loginEmail" required />
+                        </div>
+                        <div>
+                            <label for="loginPassword">Senha</label>
+                            <input type="password" id="loginPassword" required />
+                        </div>
+                    </div>
+                    <div class="remember-and-password">
+                        <div class="remember-me-container"><input type="checkbox" id="rememberMe" />
+                            <label for="rememberMe">Lembrar-me</label>
+                        </div>
+                        <div class="forgot-password">
+                            <a href="#" data-action="showForgotPassword">Esqueci minha senha</a>
+                        </div>
+                    </div>
+                    <div class="register-link">
+                        <a href="#" data-auth-tab="register">Não tem conta? Cadastre-se</a>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </form>
             </div>
-          </div>
-          <div class="remember-and-password">
-            <div class="remember-me-container"><input type="checkbox" id="rememberMe" />
-              <label for="rememberMe">Lembrar-me</label>
+            <!-- Formulário de Registro -->
+            <div id="authRegisterForm" class="hidden">
+                <form id="authRegisterForm" class="register-form">
+                    <div class="register-fields">
+                        <div>
+                            <label for="registerName">Nome completo</label>
+                            <input type="text" id="registerName" name="name" autocomplete="name" required />
+                        </div>
+                        <div>
+                            <label for="registerEmail">E-mail</label>
+                            <input type="email" id="registerEmail" name="email" autocomplete="email" required />
+                        </div>
+                        <div>
+                            <label for="registerEmailConfirm">Repita o E-mail</label>
+                            <input type="email" id="registerEmailConfirm" name="emailConfirm" required />
+                        </div>
+                        <div>
+                            <label for="registerPassword">Senha</label>
+                            <input type="password" id="registerPassword" name="password" autocomplete="new-password" required />
+                        </div>
+                        <div>
+                            <label for="registerPasswordConfirm">Repita a Senha</label>
+                            <input type="password" id="registerPasswordConfirm" name="passwordConfirm" required />
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                    </div>
+                </form>
             </div>
-            <div class="forgot-password">
-              <a href="#" onclick="showForgotPassword()">Esqueci minha senha</a>
-            </div>
-          </div>
-          <div class="register-link">
-            <a href="#" onclick="showAuthTab('register')">Não tem conta? Cadastre-se</a>
-          </div>
-          <button type="submit" class="btn btn-primary">Entrar</button>
-        </form>
-      </div>
-
-      <!-- Formulário de Registro -->
-      <div id="authRegisterForm" class="hidden">
-        <form onsubmit="handleRegister(event)" class="register-form">
-          <div class="register-fields">
-            <div><label for="registerName">Nome</label>
-              <input type="text" id="registerName" autocomplete="name" required />
-            </div>
-            <div>
-              <label for="registerCpf">CPF</label>
-              <input type="text" id="registerCpf" required />
-            </div>
-            <div>
-              <label for="registerBirth">Data de Nascimento</label>
-              <input type="date" id="registerBirth" required />
-            </div>
-            <div>
-              <label for="registerPhone">Telefone</label>
-              <input type="tel" id="registerPhone" autocomplete="tel" required />
-            </div>
-            <div>
-              <label for="registerEmail">E-mail</label>
-              <input type="email" id="registerEmail" autocomplete="email" required />
-            </div>
-            <div>
-              <label for="registerPassword">Senha</label>
-              <input type="password" id="registerPassword" autocomplete="new-password" required />
-            </div>
-          </div>
-          <div>
-            <button type="submit" class="btn btn-primary">Cadastrar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Container onde o conteúdo de headerPage.html será inserido -->
-  <div id="headerPageContainer"></div>
-  <!-- Main Content -->
-  <main id="mainContent">
-    <!-- Home Page -->
-    <div class="page active" id="homePage">
-      <!-- Hero Section -->
-      <section class="hero">
-        <div class="container">
-          <div class="hero-content">
-            <h1>
-              Soluções prontas para treinar sua equipe com zero dor de cabeça
-            </h1>
-            <p>
-              E-books e conteúdos aplicáveis em minutos, criados para donos de
-              pequenas e médias empresas que não têm tempo a perder.
-            </p>
-            <div class="hero-buttons">
-              <button class="btn btn-primary" onclick="scrollToSection('categories')">
-                Explorar E-books
-              </button>
-              <button class="btn btn-secondary" onclick="scrollToSection('packages')">
-                Ver Pacotes Completos
-              </button>
-            </div>
-          </div>
-          <div class="hero-image">
-            <i class="fas fa-book-open"> </i>
-          </div>
         </div>
-      </section>
-      <!-- Home Page -->
-
-      <!-- Container onde o conteúdo de productCategoriesPage.html será inserido -->
-      <div id="productCategoriesContainer"></div>
-
-      <!-- Packages Section -->
-      <section class="packages" id="packages">
-        <div class="container">
-          <h2>Pacotes Completos de Formação</h2>
-          <div class="loading" id="packagesLoading">
-            A carregar pacotes...
-          </div>
-          <div class="packages-grid" id="packagesGrid" style="display: none">
-            <!-- Packages will be loaded here -->
-          </div>
-        </div>
-      </section>
-      <!-- Newsletter Section -->
-      <section class="newsletter">
-        <div class="container">
-          <div class="newsletter-content">
-            <h2>Mantenha-se Atualizado</h2>
-            <p>
-              Receba as últimas novidades sobre Gestão de SST e lançamentos de
-              novos e-books.
-            </p>
-            <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
-              <input placeholder="Seu e-mail" required="" type="email" />
-              <button class="btn btn-primary" type="submit">
-                Subscrever
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
     </div>
 
-    <!-- Container onde o conteúdo de ebooks.html será inserido -->
-    <div id="ebooksPageContainer"></div>
-    <!-- Container onde o conteúdo de packagesPages será inserido -->
-    <div id="packagesPageContainer"></div>
-    <!-- Container onde o conteúdo de aboutPage será inserido -->
-    <div id="aboutPageContainer"></div>
-    <!-- Container onde o conteúdo de contactPage será inserido -->
-    <div id="contactPageContainer"></div>
-    <!-- Container onde o conteúdo de accountPage será inserido -->
-    <div id="accountPageContainer"></div>
-    <!-- Container onde o conteúdo de cartPage será inserido -->
-    <div id="cartPageContainer"></div>
-    <!-- Container onde o conteúdo de faqPage será inserido-->
-    <div id="faqPageContainer"></div>
+    <div id="page-loader" class="loader-container">
+        <div class="loader"></div>
+    </div>
 
-  </main>
-  <footer>
-    <div id="footerPageContainer"></div>
-  </footer>
+    <header>
+        <div id="headerPageContainer"></div>
+    </header>
 
-  <!-- importação dos scripts de carregamento das paginas-->
-  <script src="script.js"></script>
-  <script src="loadComponents.js"></script>
+    <main id="mainContent">
+        <!-- Home Page -->
+        <div class="page active" id="homePage">
+            <div id="homePageContainer">
+                <!-- Conteúdo inicial da home mantido aqui -->
+                <section class="hero">
+                    <div class="container">
+                        <div class="hero-content">
+                            <h1>
+                                Soluções prontas para treinar sua equipe com zero dor de cabeça
+                            </h1>
+                            <p>
+                                E-books e conteúdos aplicáveis em minutos, criados para donos de
+                                pequenas e médias empresas que não têm tempo a perder.
+                            </p>
+                            <div class="hero-buttons">
+                                <button class="btn btn-primary" data-action="scrollToSection" data-section="categories">
+                                    Explorar E-books
+                                </button>
+                                <button class="btn btn-secondary" data-action="scrollToSection" data-section="packages">
+                                    Ver Pacotes Completos
+                                </button>
+                            </div>
+                        </div>
+                        <div class="hero-image">
+                            <i class="fas fa-book-open"> </i>
+                        </div>
+                    </div>
+                </section>
+                <!-- Home Page -->
+
+                <!-- Container onde o conteúdo de productCategoriesPage.html será inserido -->
+                <div id="productCategoriesContainer"></div>
+
+                <!-- Packages Section -->
+                <section class="packages" id="packages">
+                    <div class="container">
+                        <h2>Pacotes Completos de Formação</h2>
+                        <div class="loading" id="packagesLoading">
+                            A carregar pacotes...
+                        </div>
+                        <div class="packages-grid" id="packagesGrid" style="display: none">
+                            <!-- Packages will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+                <!-- Newsletter Section -->
+                <section class="newsletter">
+                    <div class="container">
+                        <div class="newsletter-content">
+                            <h2>Mantenha-se Atualizado</h2>
+                            <p>
+                                Receba as últimas novidades sobre Gestão de SST e lançamentos de
+                                novos e-books.
+                            </p>
+                            <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
+                                <input placeholder="Seu e-mail" required="" type="email" />
+                                <button class="btn btn-primary" type="submit">
+                                    Subscrever
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <div class="page hidden" id="ebooksPage">
+            <div id="ebooksPageContainer"></div>
+        </div>
+        <div class="page hidden" id="packagesPage">
+            <div id="packagesPageContainer"></div>
+        </div>
+        <div class="page hidden" id="aboutPage">
+            <div id="aboutPageContainer"></div>
+        </div>
+        <div class="page hidden" id="contactPage">
+            <div id="contactPageContainer"></div>
+        </div>
+        <div class="page hidden" id="accountPage">
+            <div id="accountPageContainer"></div>
+        </div>
+        <div class="page hidden" id="cartPage">
+            <div id="cartPageContainer"></div>
+        </div>
+        <div class="page hidden" id="faqPage">
+            <div id="faqPageContainer"></div>
+        </div>
+    </main>
+
+    <footer>
+        <div id="footerPageContainer"></div>
+    </footer>
+
+    <script src="src/js/main.js" type="module"></script>
+
 </body>
 
 </html>

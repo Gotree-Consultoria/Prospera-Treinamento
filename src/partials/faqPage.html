@@ -46,13 +46,13 @@
           <h2>Suporte Técnico</h2>
           <div class="container">
             <p>Se você tiver qualquer dúvida ou problema com sua compra, preencha o formulário abaixo e entraremos em contato:</p>
-            <form onsubmit="sendMessage(event)">
+            <form id="contactForm">
               <label for="nome">Nome:</label><br />
-              <input type="text" id="nome" required /><br />
-              <label for="email">E-mail:</label><br />
-              <input type="email" id="email" required /><br />
+              <input type="text" id="nome" name="name" required /><br />
+              <label for="faqEmail">E-mail:</label><br />
+              <input type="email" id="faqEmail" name="email" required /><br />
               <label for="mensagem">Mensagem:</label><br />
-              <textarea id="mensagem" required></textarea><br />
+              <textarea id="mensagem" name="message" required></textarea><br />
               <button type="submit">Enviar</button>
             </form>
           </div>
@@ -62,8 +62,8 @@
 
     <!-- Controles do carrossel -->
     <div class="carousel-controls">
-      <button onclick="prevCard()">Anterior</button>
-      <button onclick="nextCard()">Próximo</button>
+      <button id="prevCardBtn">Anterior</button>
+      <button id="nextCardBtn">Próximo</button>
     </div>
   </div>
 </div>
