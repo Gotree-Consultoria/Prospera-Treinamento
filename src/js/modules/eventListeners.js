@@ -1,14 +1,16 @@
 // Importa todas as funções de outros módulos que precisam ser chamadas por eventos
 import { showPage, showAccountSection, scrollToSection } from './navigation.js';
-import { handleLogin, handleRegister, logout, checkUserLoggedIn } from './auth.js';
+import { handleLogin, handleRegister, logout, checkUserLoggedIn, handlePageLogin } from './auth.js';
 import { addToCart, removeFromCart, updateQuantity, checkout } from './carts.js';
 import { openAuthModal, closeAuthModal, showAuthTab } from './modals.js';
-import { toggleProfileEdit, toggleEmailEdit, togglePasswordEdit, handleEmailChange, handlePasswordChange, updateProfile, handleCompleteProfile, loadUserProfile } from './profile.js';
-import { subscribeNewsletter, sendMessage as sendContactMessage } from './api.js';
+import { toggleProfileEdit, toggleEmailEdit, togglePasswordEdit, handleEmailChange, handlePasswordChange, updateProfile, handleCompleteProfile, loadUserProfile, inviteSubuser, importCSV, exportReport, showCompanyAdminPanel } from './profile.js';
+import { handleCreatePfSubmit, handleOrgCreateSubmit, initOrgMembersPage, handleInviteMemberSubmit } from './profile.js';
+import { subscribeNewsletter, sendMessage as sendContactMessage, getMyOrganizations, addOrgMember } from './api.js';
 import { highlightFilterButton } from './render.js';
 import { nextCard, prevCard } from './carousel.js';
 import { scrollLeft, scrollRight } from './scroll.js';
 import { filterProductsByCategory, searchProducts } from './products.js';
+import { formatCNPJ } from './utils.js';
 
 /**
  * Configura todos os event listeners principais da aplicação.
@@ -112,6 +114,11 @@ export function setupEventListeners() {
             if (actionName === 'showDados') {
                 if (dados) dados.classList.remove('hidden');
                 showAccountSection('profile');
+                // Carregar perfil ao mostrar Dados Cadastrais para garantir que
+                // façamos GET /profile/me com Authorization: Bearer <token>
+                try {
+                    if (typeof loadUserProfile === 'function') await loadUserProfile();
+                } catch (err) { console.warn('Falha ao carregar perfil ao mostrar Dados Cadastrais:', err); }
             } else if (actionName === 'showPayments') {
                 if (payments) payments.classList.remove('hidden');
                 showAccountSection('profile');
@@ -125,6 +132,25 @@ export function setupEventListeners() {
         const dataAction = target.dataset.action;
         if (dataAction === 'closeAuthModal') {
             closeAuthModal();
+        } else if (dataAction === 'cancelCompleteProfile') {
+            // Voltar para a conta e mostrar a subseção Dados Cadastrais
+            try {
+                showPage('account');
+            } catch (e) { /* ignore */ }
+            try {
+                // garantir que a subseção Dados Cadastrais esteja visível
+                showAccountSection('profile');
+                const dados = document.getElementById('dadosCadastrais');
+                const payments = document.getElementById('paymentsSection');
+                const changePwd = document.getElementById('changePasswordSubsection');
+                if (dados) dados.classList.remove('hidden');
+                if (payments) payments.classList.add('hidden');
+                if (changePwd) changePwd.classList.add('hidden');
+                // marcar submenu Dados Cadastrais como ativo
+                document.querySelectorAll('.submenu-item').forEach(it => it.classList.remove('active'));
+                const dadosLink = document.querySelector('.submenu-item[data-action="showDados"]');
+                if (dadosLink) dadosLink.classList.add('active');
+            } catch (e) { /* silencioso */ }
         } else if (dataAction === 'showForgotPassword') {
             // Abrir modal de auth e mostrar aba de login (a implementação de 'forgot' não existe explicitamente)
             openAuthModal();
@@ -148,6 +174,43 @@ export function setupEventListeners() {
             togglePasswordEdit(showPwd);
         } else if (dataAction === 'savePassword') {
             handlePasswordChange();
+        } else if (dataAction === 'inviteSubuser') {
+            inviteSubuser();
+        } else if (dataAction === 'importCSV') {
+            importCSV();
+        } else if (dataAction === 'exportReport') {
+            exportReport(target.dataset.report);
+        } else if (dataAction === 'viewMyOrgs') {
+            // Carregar organizações do usuário e renderizar
+            const container = document.getElementById('myOrgsList');
+            if (!container) return;
+            container.innerHTML = 'Carregando...';
+            const token = localStorage.getItem('jwtToken');
+            try {
+                const orgs = await getMyOrganizations(token);
+                if (!orgs || orgs.length === 0) {
+                    container.innerHTML = '<p>Nenhuma organização encontrada.</p>';
+                } else {
+                    const list = document.createElement('ul');
+                    list.className = 'my-orgs-list';
+                    orgs.forEach(o => {
+                            const li = document.createElement('li');
+                            const pretty = formatCNPJ(o.cnpj || o.CNPJ || '');
+                            li.innerHTML = `<strong>${o.name || o.razaoSocial || o.companyName || '—'}</strong> &nbsp; <span class="muted">${pretty}</span>`;
+                            list.appendChild(li);
+                        });
+                    container.innerHTML = '';
+                    container.appendChild(list);
+                }
+            } catch (err) {
+                console.error('Erro ao carregar organizações:', err);
+                container.innerHTML = '<p>Erro ao carregar organizações.</p>';
+            }
+        } else if (dataAction === 'showCompanyTab') {
+            document.querySelectorAll('.company-tab-content').forEach(c => c.classList.add('hidden'));
+            const tab = target.dataset.tab;
+            const el = document.getElementById('companyTab_' + tab);
+            if (el) el.classList.remove('hidden');
         } else if (dataAction === 'togglePasswordVisibility') {
             // alterna visibilidade do input de senha alvo e icon (fa-eye <-> fa-eye-slash)
             const targetSelector = target.dataset.target;
@@ -167,6 +230,159 @@ export function setupEventListeners() {
                 }
             }
         }
+
+    // Helper para renderizar organizações do usuário (reutilizável)
+    async function renderMyOrganizations() {
+        const container = document.getElementById('myOrgsList');
+        if (!container) return;
+        container.innerHTML = 'Carregando empresas...';
+        const token = localStorage.getItem('jwtToken');
+        try {
+            const orgs = await getMyOrganizations(token);
+            if (!orgs || orgs.length === 0) {
+                container.innerHTML = '<p class="muted">Nenhuma empresa adicionada.</p>';
+            } else {
+                const list = document.createElement('ul');
+                list.className = 'my-orgs-list responsive';
+                orgs.forEach(o => {
+                        const li = document.createElement('li');
+                        const orgId = o.id || o._id || o.organizationId || '';
+                        const orgName = o.name || o.razaoSocial || o.companyName || '—';
+                        const orgCnpj = formatCNPJ(o.cnpj || o.CNPJ || '');
+                        // Card simplificado: o card inteiro é clicável — removemos o botão de três pontos
+                        li.innerHTML = `
+                            <div class="org-item" data-org-id="${orgId}" tabindex="0" role="button" aria-pressed="false">
+                                <div class="org-header">
+                                    <div class="org-name" data-org-id="${orgId}">${orgName}</div>
+                                    <div class="muted small">${orgCnpj}</div>
+                                </div>
+                                <!-- dropdown e inline members mantidos ocultos como fallback -->
+                                <div class="org-actions-dropdown" id="orgActions_${orgId}">
+                                    <button class="btn btn-link add-org-member-btn" data-org-id="${orgId}">Adicionar membro</button>
+                                    <button class="btn btn-link view-org-members-btn" data-org-id="${orgId}">Visualizar membros</button>
+                                </div>
+                                <div class="org-members-inline hidden" id="orgMembersInline_${orgId}"></div>
+                            </div>`;
+                    list.appendChild(li);
+                });
+                container.innerHTML = '';
+                container.appendChild(list);
+            }
+        } catch (err) {
+            console.error('Erro ao carregar organizações:', err);
+            container.innerHTML = '<p>Erro ao carregar empresas.</p>';
+        }
+    }
+
+    // Ouvir evento de página carregada para disparar carregamento automático quando for orgManagement
+    document.addEventListener('page:loaded', (e) => {
+        try {
+            if (e?.detail?.page === 'orgManagement') {
+                renderMyOrganizations();
+            }
+        } catch (err) { /* silencioso */ }
+    });
+
+        // Acessibilidade: permitir ativar o card com Enter ou Space quando receber foco
+        document.body.addEventListener('keydown', (ev) => {
+            const item = ev.target.closest && ev.target.closest('.org-item');
+            if (!item) return;
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                const orgId = item.dataset.orgId;
+                if (!orgId) return;
+                try {
+                    sessionStorage.setItem('currentOrganizationId', orgId);
+                    const nameEl = item.querySelector('.org-name')?.textContent || '';
+                    sessionStorage.setItem('currentOrganizationName', nameEl);
+                    import('./navigation.js').then(m => m.showPage('orgMembers'));
+                } catch (err) { console.error('Erro ao abrir membros da org (keyboard):', err); }
+            }
+        });
+
+    // Delegação adicional: clicar em nome da org ou em 'Adicionar membro' / 'Visualizar membros'
+    document.body.addEventListener('click', async (ev) => {
+    const addBtn = ev.target.closest('.add-org-member-btn');
+    const viewBtn = ev.target.closest('.view-org-members-btn');
+    const nameLink = ev.target.closest('.org-name');
+    const toggleBtn = ev.target.closest('[data-toggle-actions]');
+    const cancelBtn = ev.target.closest('.cancel-invite');
+    const orgItem = ev.target.closest('.org-item');
+    const interactive = addBtn || viewBtn || nameLink || toggleBtn || cancelBtn;
+    // Se não é interação com orgs e não é clique em um card, ignorar
+    if (!interactive && !orgItem) return;
+
+    // helper para restaurar os botões iniciais do dropdown
+    function restoreOrgActions(id) {
+        const dropdown = document.getElementById('orgActions_' + id);
+        if (!dropdown) return;
+        dropdown.innerHTML = `
+            <button class="btn btn-link add-org-member-btn" data-org-id="${id}">Adicionar membro</button>
+            <button class="btn btn-link view-org-members-btn" data-org-id="${id}">Visualizar membros</button>
+        `;
+        dropdown.style.display = '';
+    }
+
+    // Se o clique for no corpo do card (orgItem) e não em um elemento interativo, navegar para a página de membros
+    if (orgItem && !interactive) {
+        const id = orgItem.dataset.orgId;
+        if (!id) return;
+        ev.preventDefault();
+        try {
+            sessionStorage.setItem('currentOrganizationId', id);
+            const nameEl = orgItem.querySelector('.org-name')?.textContent || '';
+            sessionStorage.setItem('currentOrganizationName', nameEl);
+            import('./navigation.js').then(m => m.showPage('orgMembers'));
+        } catch (err) { console.error('Erro ao abrir membros da org (click):', err); }
+        return;
+    }
+
+    ev.preventDefault();
+    const orgId = (addBtn || viewBtn || nameLink || toggleBtn || cancelBtn)?.dataset?.orgId;
+    if (!orgId) return;
+        // Se clicar em 'Adicionar membro' abrir um formulário inline
+    if (addBtn) {
+            const dropdown = document.getElementById('orgActions_' + orgId);
+            if (!dropdown) return;
+            // dentro do dropdown, renderizar o formulário de convite substituindo os botões
+            dropdown.innerHTML = `
+                <form class="inline-invite-form" data-org-id="${orgId}">
+                    <input type="email" name="email" placeholder="E-mail do membro" required style="width:100%;margin-bottom:6px" />
+                    <select name="role" style="width:100%;margin-bottom:6px">
+                        <option value="ORG_MEMBER">Membro</option>
+                        <option value="ORG_ADMIN">Administrador</option>
+                    </select>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn" type="submit">Convidar</button>
+                        <button class="btn btn-link cancel-invite" type="button" data-org-id="${orgId}">Cancelar</button>
+                    </div>
+                </form>
+                <div class="invite-feedback" id="inviteFeedback_${orgId}"></div>
+            `;
+            // garantir visibilidade do dropdown
+            const item = dropdown.closest('.org-item'); if (item) item.classList.add('open');
+            dropdown.style.display = 'block';
+        }
+        if (cancelBtn) {
+            const cid = cancelBtn.dataset?.orgId || cancelBtn.closest('.inline-invite-form')?.dataset?.orgId;
+            if (cid) {
+                // fechar dropdown e restaurar botões
+                const item = document.querySelector('.org-item[data-org-id="' + cid + '"]');
+                if (item) item.classList.remove('open');
+                restoreOrgActions(cid);
+            }
+            return;
+        }
+        // Se clicar em 'Visualizar membros' ou no nome, abrir a página de membros (mantendo sessionStorage) e inicializar
+    if (viewBtn || nameLink) {
+            try {
+                sessionStorage.setItem('currentOrganizationId', orgId);
+                const nameEl = (nameLink && nameLink.textContent) ? nameLink.textContent : '';
+                sessionStorage.setItem('currentOrganizationName', nameEl);
+                import('./navigation.js').then(m => m.showPage('orgMembers'));
+            } catch (err) { console.error('Erro ao abrir membros da org:', err); }
+        }
+    });
 
         // Lógica do carrossel e rolagem
         if (target.id === "prevCardBtn") {
@@ -210,8 +426,49 @@ export function setupEventListeners() {
         } else if (form.id === 'authRegisterForm') {
             e.preventDefault();
             handleRegister(e);
+        } else if (form.id === 'loginPageForm') {
+            e.preventDefault();
+            handlePageLogin(e);
+        } else if (form.id === 'registerPageForm') {
+            e.preventDefault();
+            handleRegister(e);
         } else if (form.id === 'profileCompleteForm') {
             handleCompleteProfile(e);
+        } else if (form.id === 'createPfForm') {
+            e.preventDefault();
+            handleCreatePfSubmit(e);
+        } else if (form.id === 'orgCreateForm') {
+            e.preventDefault();
+            handleOrgCreateSubmit(e);
+        } else if (form.id === 'inviteMemberForm') {
+            e.preventDefault();
+            handleInviteMemberSubmit(e);
+        } else if (form.classList && form.classList.contains('inline-invite-form')) {
+            // inline invite form inside orgManagement list
+            e.preventDefault();
+            const orgId = form.dataset.orgId;
+            const fm = new FormData(form);
+            const email = (fm.get('email') || '').toString().trim();
+            const role = (fm.get('role') || 'ORG_MEMBER').toString();
+            const feedback = document.getElementById('inviteFeedback_' + orgId);
+            if (feedback) feedback.textContent = '';
+            if (!email) {
+                if (feedback) feedback.textContent = 'Informe um e-mail válido.';
+                return;
+            }
+            const token = localStorage.getItem('jwtToken');
+            try {
+                await addOrgMember(token, orgId, { email, role });
+                if (feedback) feedback.textContent = 'Convite enviado com sucesso.';
+                // fechar o form
+                const container = document.getElementById('orgMembersInline_' + orgId);
+                if (container) {
+                    setTimeout(() => { container.innerHTML = ''; container.classList.add('hidden'); }, 900);
+                }
+            } catch (err) {
+                console.error('Erro ao enviar convite inline:', err);
+                if (feedback) feedback.textContent = err.message || 'Erro ao enviar convite.';
+            }
     } else if (form.id === 'changePasswordForm') {
             handlePasswordChange(e);
         } else if (form.id === 'newsletterForm') {
@@ -219,5 +476,59 @@ export function setupEventListeners() {
         }
     });
 
+// Quando a página for carregada, inicializamos páginas específicas
+document.addEventListener('page:loaded', (ev) => {
+    try {
+        const page = ev?.detail?.page;
+        if (page === 'orgMembers') {
+            initOrgMembersPage();
+        }
+    } catch (err) {
+        console.warn('Erro ao tratar page:loaded em eventListeners', err);
+    }
+});
+
     console.log("Event listeners configurados.");
 }
+
+// Pequenos handlers para o modal de termos (link abre, botão fecha, clique no backdrop fecha)
+document.body.addEventListener('click', (e) => {
+    const open = e.target.closest('#viewTermsLink');
+    if (open) {
+        e.preventDefault();
+        const modal = document.getElementById('termsModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            // adicionar listener de backdrop
+            const backdropHandler = (ev) => {
+                if (ev.target === modal) {
+                    modal.classList.add('hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                    document.body.style.overflow = 'auto';
+                    modal.removeEventListener('click', backdropHandler);
+                }
+            };
+            modal.__backdropHandler = backdropHandler;
+            modal.addEventListener('click', backdropHandler);
+            document.body.style.overflow = 'hidden';
+        }
+        return;
+    }
+
+    const close = e.target.closest('#closeTermsBtn');
+    if (close) {
+        e.preventDefault();
+        const modal = document.getElementById('termsModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = 'auto';
+            if (modal.__backdropHandler) {
+                modal.removeEventListener('click', modal.__backdropHandler);
+                delete modal.__backdropHandler;
+            }
+        }
+        return;
+    }
+});

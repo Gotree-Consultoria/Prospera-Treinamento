@@ -398,6 +398,301 @@
     margin-left: 0.5rem;
     margin-top: 0.5rem;
 }
+
+/* Cabeçalho de formulários com área esquerda e direita */
+.form-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+.form-header-left {
+    display: flex;
+    align-items: center;
+}
+.form-header-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Botão compacto para 'Sair da Organização' no cabeçalho */
+.leave-org-header-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--coral);
+    border: 1px solid transparent;
+}
+.leave-org-header-btn:hover {
+    background: rgba(220,20,60,0.06);
+    border-color: rgba(220,20,60,0.12);
+}
+
+/* ===== Estilos específicos: Página de Membros da Organização ===== */
+.org-members-card {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 1.2rem;
+}
+.org-actions {
+    margin-bottom: 1.6rem; /* separação entre o botão de ação e a lista de cards */
+}
+.form-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+.btn-account-secondary {
+    background: transparent;
+    border: 1px solid #d6dfe1;
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.btn-account-secondary:hover { background: rgba(0,0,0,0.03); }
+.btn-back {
+    background: transparent;
+    border: 1px solid #e6ebec;
+    color: #6b6f72;
+    padding: 0.32rem 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-back:hover { background: rgba(0,0,0,0.02); }
+.org-title { font-size: 1rem; color: var(--gray-dark); margin-bottom: 0.4rem; }
+.text-center { text-align: center; }
+.members-actions { display:flex; justify-content:center; margin-bottom:0.8rem; }
+.invite-form { width:100%; max-width:720px; display:flex; gap:0.6rem; align-items:center; }
+.input-field { padding:0.56rem 0.6rem; border:1px solid var(--gray-light); border-radius:8px; flex:1; }
+.input-select { padding:0.48rem; border:1px solid var(--gray-light); border-radius:8px; min-width:140px; }
+.table-responsive { overflow-x:auto; }
+.members-table { width:100%; border-collapse:collapse; }
+.members-table thead th { text-align:left; padding:0.6rem 0.8rem; background:var(--off-white); color:var(--gray-dark); }
+.members-table tbody td { padding:0.56rem 0.8rem; border-top:1px solid #f1f3f4; }
+.members-table tbody tr:nth-child(even) { background: #fbfcfd; }
+.members-table .action-btn { color: var(--coral); border:none; background:transparent; cursor:pointer; padding:0.2rem 0.4rem; }
+
+/* Small action buttons for members table */
+.btn-small {
+    display: inline-block;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+}
+.btn-small:focus { outline: 2px solid rgba(0,0,0,0.08); outline-offset: 2px; }
+
+.btn-small-remove {
+    background: var(--coral);
+    color: #fff;
+}
+.btn-small-remove:hover { background: var(--coral-dark); }
+
+.btn-small-change {
+    background: var(--verde-claro);
+    color: var(--verde-escuro);
+}
+.btn-small-change:hover { background: var(--verde-claro-dark); }
+
+/* Centralizar conteúdo da coluna Ação na tabela de membros */
+.members-table td:last-child,
+.members-table th:last-child {
+    text-align: center;
+    vertical-align: middle;
+}
+.members-table td:last-child > * {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Forçar botão remover coral com texto branco */
+.btn-small-remove {
+    background: var(--coral);
+    color: #fff !important;
+    border-color: transparent;
+}
+.btn-small-remove:hover { background: var(--coral-dark); }
+/* Botão remover na lista de membros (menor) */
+.remove-org-member-btn {
+    padding: 0.25rem 0.5rem; /* igual a .btn-small */
+    font-size: 0.8rem; /* alinhado com .btn-small */
+    color: #fff;
+    border: none;
+    background: var(--coral);
+    cursor: pointer;
+    border-radius: 4px; /* igual a .btn-small */
+}
+.remove-org-member-btn:hover {
+    background: var(--coral-dark);
+}
+.sr-only { position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden; }
+
+@media (max-width:680px) {
+    .invite-form { flex-direction:column; align-items:stretch; }
+    .input-select { width:100%; }
+    .invite-form .btn { width:100%; }
+}
+
+/* ================================
+   Estilos para Gestão de Empresas
+   ================================ */
+.org-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.8rem;
+    align-items: start;
+    padding: 0;
+    margin: 0 0 2.4rem 0; /* espaço abaixo da lista para separar do botão de ação (aumentado) */
+}
+
+.org-list .org-item {
+    background: var(--off-white);
+    border: 1px solid #e9ecef;
+    border-radius: var(--border-radius-md);
+    padding: 0.8rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.org-list .org-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.06);
+}
+
+.org-item .org-name {
+    font-weight: 700;
+    color: var(--verde-escuro);
+    text-decoration: none;
+    font-size: 1rem;
+}
+.org-item .org-name:hover { text-decoration: underline; }
+
+.org-item .muted.small { font-size: 0.8rem; color: var(--gray-medium); }
+
+.org-item .org-controls {
+    /* esconder controles que continham o botão de três pontos; o card agora é totalmente clicável */
+    display: none;
+}
+
+/* Botões menores para ação dentro do card */
+.org-item .org-controls .btn {
+    padding: 0.28rem 0.5rem;
+    font-size: 0.82rem;
+    border-radius: 6px;
+}
+.org-item .org-controls .btn-link {
+    color: var(--verde-escuro);
+}
+
+/* Dropdown/slide de ações internas do card */
+.org-item .org-actions-dropdown {
+    display: none; /* dropdown removido da UX atual - mantemos como fallback oculto */
+}
+.org-item.open .org-actions-dropdown { display: block; }
+.org-actions-dropdown button { display: block; width: 100%; text-align: left; }
+
+/* Inline members container (quando utilizar formulário inline) */
+.org-members-inline {
+    margin-top: 0.6rem;
+}
+
+/* Remover marcador de lista para os cards de organização */
+.my-orgs-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.8rem;
+}
+
+/* Tornar o card inteiro clicável e acessível */
+.org-item {
+    cursor: pointer;
+}
+
+.org-item:focus-within, .org-item:focus {
+    outline: 3px solid rgba(34,139,34,0.12);
+    outline-offset: 4px;
+}
+
+/* pequena responsividade */
+@media (max-width: 520px) {
+    .org-list { grid-template-columns: 1fr; }
+    .org-item .org-controls { gap: 0.3rem; }
+    .org-item .org-controls .btn { font-size: 0.78rem; padding: 0.24rem 0.44rem; }
+}
+
+/* ======================================================= */
+/* Formulários centralizados e estilizados (Create PF / Create Org) */
+.form-center {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem 0;
+}
+.form-card {
+    width: 100%;
+    max-width: 720px;
+    background: var(--white);
+    border-radius: 12px;
+    padding: 1.6rem;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+    border: 1px solid #eef2f4;
+}
+.form-title {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.35rem;
+    color: var(--gray-dark);
+}
+.styled-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.9rem;
+}
+.styled-form label {
+    font-size: 0.95rem;
+    color: var(--gray-dark);
+}
+.styled-form input[type="text"],
+.styled-form input[type="email"],
+.styled-form input[type="tel"],
+.styled-form input[type="date"],
+.styled-form input {
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid #e6e9eb;
+    font-size: 0.98rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.styled-form input:focus {
+    outline: none;
+    border-color: var(--verde-escuro);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+}
+.input-large { width: 100%; }
+.input-medium { width: 320px; max-width: 100%; }
+.form-actions { display:flex; justify-content: flex-end; margin-top: 0.6rem; }
+.form-actions .btn { padding: 0.65rem 1rem; border-radius: 10px; }
+
+@media (max-width: 700px) {
+    .form-card { padding: 1rem; }
+    .form-actions { justify-content: center; }
+    .input-medium { width: 100%; }
+}
 .submenu-item {
     display: block;
     padding: 0.28rem 0.5rem; /* padding reduzido */

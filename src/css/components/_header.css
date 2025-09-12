@@ -53,6 +53,12 @@
     align-items: center;
 }
 
+/* Garantir que botões de ação usem a família de fonte do projeto */
+.nav-actions .btn-icon,
+.nav-actions .btn-icon span {
+    font-family: var(--font-family);
+}
+
 .cart-count {
     background-color: var(--coral);
     color: var(--white);

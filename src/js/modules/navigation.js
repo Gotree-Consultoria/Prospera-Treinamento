@@ -9,6 +9,12 @@ export async function loadPartial(page) {
         about: "src/partials/aboutPage.html",
         contact: "src/partials/contactPage.html",
         account: "src/partials/accountPage.html",
+    login: "src/partials/loginPage.html",
+    register: "src/partials/registerPage.html",
+    createPf: "src/partials/createPfPage.html",
+    organizationsNew: "src/partials/organizationsNew.html",
+    orgManagement: "src/partials/orgManagement.html",
+    orgMembers: "src/partials/orgMembersPage.html",
         cart: "src/partials/cartPage.html",
         faq: "src/partials/faqPage.html"
     };
@@ -19,6 +25,12 @@ export async function loadPartial(page) {
         about: "aboutPageContainer",
         contact: "contactPageContainer",
         account: "accountPageContainer",
+    login: "loginPageContainer",
+    register: "registerPageContainer",
+    createPf: "createPfPageContainer",
+    organizationsNew: "organizationsNewPageContainer",
+    orgManagement: "orgManagementPageContainer",
+    orgMembers: "orgMembersPageContainer",
         cart: "cartPageContainer",
         faq: "faqPageContainer"
     };
@@ -55,6 +67,12 @@ const pageMap = {
     about: "aboutPage",
     contact: "contactPage",
     account: "accountPage",
+    login: "loginPage",
+    register: "registerPage",
+    createPf: "createPfPage",
+    organizationsNew: "organizationsNewPage",
+    orgManagement: "orgManagementPage",
+    orgMembers: "orgMembersPage",
     cart: "cartPage",
     faq: "faqPage",
 };
@@ -80,6 +98,23 @@ export async function showPage(page) {
         targetPage.classList.remove("hidden");
         currentPage = page;
         window.scrollTo({ top: 0, behavior: "smooth" });
+        // Se a página requer autenticação, verificar token antes de carregar o partial
+    const authRequiredPages = ['account', 'createPf', 'organizationsNew', 'orgMembers', 'orgManagement'];
+        const token = localStorage.getItem('jwtToken');
+        if (authRequiredPages.includes(page) && !token) {
+            // redirecionar para login e abortar carregamento da página atual
+            try { await loadPartial('login'); } catch (e) { /* ignore */ }
+            const loginEl = document.getElementById('loginPage');
+            if (loginEl) {
+                document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+                loginEl.classList.remove('hidden');
+                loginEl.classList.add('active');
+            }
+            // dispatch evento de página carregada para login
+            try { document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page: 'login' } })); } catch (e) { }
+            return;
+        }
+
         await loadPartial(page); // Carrega o conteúdo do partial sob demanda e aguarda
         // Notifica outros módulos que a página foi carregada e injetada no DOM
         try {

@@ -3,6 +3,8 @@
 
 <head>
     <meta charset="utf-8" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <!-- meta CSP de desenvolvimento removida para evitar interferência em Live Server -->
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Prospera - Capacitação Continuada</title>
     <link href="src/css/styles.css" rel="stylesheet" />
@@ -29,10 +31,11 @@
     <div id="authModal" class="modal-auth hidden">
         <div class="modal-auth-content">
             <button class="modal-auth-close" data-action="closeAuthModal">&times;</button>
-            <div id="authTabs" class="hidden">
+            <div id="authTabs">
                 <button id="tabLogin" class="active" data-auth-tab="login">Entrar</button>
                 <button id="tabRegister" data-auth-tab="register">Cadastrar</button>
             </div>
+
             <div id="authLoginForm" class="hidden">
                 <form id="authLoginForm" class="login-form">
                     <div class="login-fields">
@@ -62,21 +65,15 @@
                     <button type="submit" class="btn btn-primary">Entrar</button>
                 </form>
             </div>
-            <!-- Formulário de Registro -->
-            <div id="authRegisterForm" class="hidden">
+
+            <div id="authRegisterContainer" class="hidden">
                 <form id="authRegisterForm" class="register-form">
                     <div class="register-fields">
-                        <div>
-                            <label for="registerName">Nome completo</label>
-                            <input type="text" id="registerName" name="name" autocomplete="name" required />
-                        </div>
+                        <!-- accountType removido: backend espera somente email e password no registro -->
+
                         <div>
                             <label for="registerEmail">E-mail</label>
                             <input type="email" id="registerEmail" name="email" autocomplete="email" required />
-                        </div>
-                        <div>
-                            <label for="registerEmailConfirm">Repita o E-mail</label>
-                            <input type="email" id="registerEmailConfirm" name="emailConfirm" required />
                         </div>
                         <div class="password-field">
                             <label for="registerPassword">Senha</label>
@@ -85,16 +82,34 @@
                                 <span class="password-toggle" role="button" tabindex="0" data-action="togglePasswordVisibility" data-target="#registerPassword" aria-pressed="false" aria-label="Mostrar senha"><i class="fas fa-eye"></i></span>
                             </div>
                         </div>
-                        <div class="password-field">
-                            <label for="registerPasswordConfirm">Repita a Senha</label>
-                            <div class="password-input-wrap">
-                                <input type="password" id="registerPasswordConfirm" name="passwordConfirm" required />
-                                <span class="password-toggle" role="button" tabindex="0" data-action="togglePasswordVisibility" data-target="#registerPasswordConfirm" aria-pressed="false" aria-label="Mostrar senha"><i class="fas fa-eye"></i></span>
+                    </div>
+
+                    <div class="consent-field">
+                        <label>
+                            <input type="checkbox" id="acceptTermsCheckbox" />
+                            Eu concordo com o tratamento dos meus dados (LGPD) e os <a href="#" id="viewTermsLink">termos de uso</a>.
+                        </label>
+                    </div>
+
+                    <!-- Modal de termos de uso / contrato -->
+                    <div id="termsModal" class="popup hidden terms-popup" aria-hidden="true">
+                        <div class="popup-content" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
+                            <h3 id="termsTitle">Termos de Uso e Consentimento</h3>
+                            <div class="terms-body" id="termsBody">
+                                <!-- Texto do contrato será inserido pelo JS ou backend; placeholder abaixo -->
+                                <p>Contrato de Consentimento: ao aceitar você concorda com o tratamento dos seus dados para fins de cadastro e uso da plataforma. (Substitua por texto legal real.)</p>
+                            </div>
+                            <div class="terms-actions">
+                                <button id="closeTermsBtn" type="button" class="btn btn-secondary">Fechar</button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Container de mensagens (sucesso/erro) exibido dentro do modal -->
+                    <div id="authRegisterMessages" class="form-messages" role="status" aria-live="polite" aria-atomic="true"></div>
+
                     <div>
-                        <button type="submit" class="btn btn-primary">Cadastrar</button>
+                        <button id="registerSubmitBtn" type="submit" class="btn btn-primary">Cadastrar</button>
                     </div>
                 </form>
             </div>
@@ -177,6 +192,24 @@
         </div>
         <div class="page hidden" id="ebooksPage">
             <div id="ebooksPageContainer"></div>
+        </div>
+        <div class="page hidden" id="loginPage">
+            <div id="loginPageContainer"></div>
+        </div>
+        <div class="page hidden" id="registerPage">
+            <div id="registerPageContainer"></div>
+        </div>
+        <div class="page hidden" id="createPfPage">
+            <div id="createPfPageContainer"></div>
+        </div>
+        <div class="page hidden" id="organizationsNewPage">
+            <div id="organizationsNewPageContainer"></div>
+        </div>
+        <div class="page hidden" id="orgManagementPage">
+            <div id="orgManagementPageContainer"></div>
+        </div>
+        <div class="page hidden" id="orgMembersPage">
+            <div id="orgMembersPageContainer"></div>
         </div>
         <div class="page hidden" id="packagesPage">
             <div id="packagesPageContainer"></div>

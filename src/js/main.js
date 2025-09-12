@@ -25,6 +25,15 @@ async function initializeApp() {
     try {
         await loadAllComponents(); // Aguarda o carregamento dos componentes HTML
 
+        // garantir que os handlers de termos sejam inicializados após os partials do modal existirem
+        try {
+            await waitForElement('#authRegisterForm', 5000);
+            try { initTermsFlow(); } catch (e) { /* ignore */ }
+        } catch (e) {
+            // se timeouts, tentar inicializar na mesma página (fallback)
+            try { initTermsFlow(); } catch (e) { /* ignore */ }
+        }
+
         // Carrega produtos e pacotes de forma tolerante a falhas (API local pode não existir)
         const results = await Promise.allSettled([
             fetch('src/products.json').then(res => res.json()),
@@ -79,3 +88,34 @@ async function initializeApp() {
 }
 
 document.addEventListener("DOMContentLoaded", initializeApp);
+
+// Defensive attachment: ensure authRegisterForm calls handleRegister on submit
+// defensive local handler removed - rely on central event delegation in `eventListeners.js`
+
+// Inicializa handlers do fluxo de termos/registro após garantir que o formulário exista.
+function waitForElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const el = document.querySelector(selector);
+        if (el) return resolve(el);
+        const interval = 100;
+        let waited = 0;
+        const id = setInterval(() => {
+            const found = document.querySelector(selector);
+            if (found) {
+                clearInterval(id);
+                return resolve(found);
+            }
+            waited += interval;
+            if (waited >= timeout) {
+                clearInterval(id);
+                return reject(new Error('timeout'));
+            }
+        }, interval);
+    });
+}
+
+function initTermsFlow() {
+    // Terms flow removed per user request.
+    // Keep a safe no-op stub so other modules can call initTermsFlow() without errors.
+    return;
+}

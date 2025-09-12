@@ -12,11 +12,13 @@
     --verde-claro: #bed737;
     --off-white: #f5f0eb;
     --coral: #e65f3c;
+    --coral-dark: #d54a2a; /* tom mais escuro para hover */
     --white: #ffffff;
     --black: #000000;
     --gray-light: #d4d4d4;
     --gray-medium: #6c757d;
     --gray-dark: #343a40;
+    --verde-claro-dark: #9bb82b; /* tom mais escuro para hover */
     
     /* Typography */
     --font-family: 'Montserrat', sans-serif;
@@ -144,27 +146,19 @@ p {
     gap: var(--spacing-xs);
 }
 
-.btn-primary {
+.btn-primary,
+.btn-secondary {
     background-color: var(--verde-escuro);
     color: var(--white);
 }
 
-.btn-primary:hover {
-    background-color: #004025;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-secondary {
-    background-color: var(--verde-claro);
-    color: var(--verde-escuro);
-}
-
+.btn-primary:hover,
 .btn-secondary:hover {
-    background-color: #a8c42a;
+    background-color: var(--verde-claro);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
+
 
 .btn-coral {
     background-color: var(--coral);

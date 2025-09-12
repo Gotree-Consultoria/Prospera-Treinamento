@@ -19,6 +19,8 @@ export function openAuthModal(tab = 'login') {
         // armazenar referência para poder remover depois
         authModal.__backdropHandler = backdropHandler;
         authModal.addEventListener('click', backdropHandler);
+    // inicializar comportamentos do modal (toggle de campos, listeners de submissão)
+    try { initAuthModalBehavior(); } catch (e) { /* silencioso */ }
     }
 }
 
@@ -45,11 +47,13 @@ export function closeAuthModal() {
 export function showAuthTab(tab) {
     const authTabs = document.getElementById('authTabs');
     const authLoginForm = document.getElementById('authLoginForm');
+    // authRegisterForm é o <form>; authRegisterContainer é o wrapper div
     const authRegisterForm = document.getElementById('authRegisterForm');
+    const authRegisterContainer = document.getElementById('authRegisterContainer');
     
     if (authTabs) authTabs.classList.remove('hidden');
     if (authLoginForm) authLoginForm.classList.add('hidden');
-    if (authRegisterForm) authRegisterForm.classList.add('hidden');
+    if (authRegisterContainer) authRegisterContainer.classList.add('hidden');
     
     const tabLogin = document.getElementById('tabLogin');
     const tabRegister = document.getElementById('tabRegister');
@@ -57,10 +61,21 @@ export function showAuthTab(tab) {
     if (tab === 'login') {
         if (tabLogin) tabLogin.classList.add('active');
         if (tabRegister) tabRegister.classList.remove('active');
-        if (authLoginForm) authLoginForm.classList.remove('hidden');
+    if (authLoginForm) authLoginForm.classList.remove('hidden');
     } else {
         if (tabRegister) tabRegister.classList.add('active');
         if (tabLogin) tabLogin.classList.remove('active');
-        if (authRegisterForm) authRegisterForm.classList.remove('hidden');
+    if (authRegisterContainer) authRegisterContainer.classList.remove('hidden');
     }
+}
+
+/**
+ * Inicializa comportamento específico do modal de autenticação
+ * - alterna campos de cadastro PJ
+ * - no futuro pode anexar validações inline
+ */
+export function initAuthModalBehavior() {
+    // Atualmente o modal de registro foi simplificado para coletar apenas email e senha.
+    // Este método existe para futura inicialização de comportamento do modal (placeholders,
+    // máscaras, validações inline). Por enquanto não há lógica ativa.
 }

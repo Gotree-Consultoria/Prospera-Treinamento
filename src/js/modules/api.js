@@ -9,6 +9,23 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
     API_BASE_URL = "https://j6h5i7c1kjn6.manus.space";
 }
 
+// Helper: parse response body defensivamente
+async function safeParseResponse(response) {
+    // 204 No Content
+    if (!response) return null;
+    if (response.status === 204) return null;
+    const ct = (response.headers && response.headers.get) ? (response.headers.get('content-type') || '') : '';
+    // ler como texto primeiro (defensivo contra body vazio)
+    const text = await response.text();
+    if (!text) return null;
+    // se for JSON declarado, tentar parsear
+    if (ct.toLowerCase().includes('application/json')) {
+        try { return JSON.parse(text); } catch (e) { /* fallback para text */ }
+    }
+    // tentar parsear mesmo sem content-type
+    try { return JSON.parse(text); } catch (e) { return text; }
+}
+
 // =======================================================
 // FUNÇÕES DE DADOS E CARREGAMENTO
 // =======================================================
@@ -27,8 +44,8 @@ export async function loadData() {
         throw new Error("Erro ao carregar os dados da API.");
     }
 
-    const products = await productsResponse.json();
-    const packages = await packagesResponse.json();
+    const products = await safeParseResponse(productsResponse);
+    const packages = await safeParseResponse(packagesResponse);
     
     return { products, packages };
 }
@@ -52,11 +69,11 @@ export async function loginUser(email, password) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.erro || errorData.message || 'E-mail ou senha inválidos.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && (errorData.erro || errorData.message)) || 'E-mail ou senha inválidos.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -72,11 +89,43 @@ export async function registerUser(userData) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao cadastrar.');
+        let errorData = null;
+        try { errorData = await safeParseResponse(response); } catch (e) { /* ignore parse errors */ }
+        // construir mensagem base
+        let message = (errorData && (errorData.message || errorData.erro)) || 'Erro ao cadastrar.';
+        const err = new Error(message);
+
+        // Normalizar códigos quando possível
+        if (errorData && errorData.code) {
+            err.code = errorData.code;
+        }
+
+        // Heurística adicional: inspecionar texto cru para detectar unique/duplicate key do banco
+        try {
+            const raw = await response.text();
+            const rawLower = (raw || '').toLowerCase();
+            if (rawLower.includes('duplicate entry') || rawLower.includes('duplicate key') || rawLower.includes('unique constraint') || rawLower.includes('uk')) {
+                err.code = 'EMAIL_IN_USE';
+                // Prefer more amigável
+                err.message = 'Este e-mail já está cadastrado. Use Entrar ou recupere a senha.';
+                return Promise.reject(err);
+            }
+        } catch (e) { /* ignore reading raw body */ }
+
+        // fallback para status HTTP comuns
+        if (!err.code) {
+            if (response.status === 409) {
+                err.code = 'EMAIL_IN_USE';
+                err.message = 'Este e-mail já está cadastrado. Use Entrar ou recupere a senha.';
+            } else if (response.status === 400) {
+                err.code = 'BAD_REQUEST';
+            }
+        }
+
+        throw err;
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -85,7 +134,7 @@ export async function registerUser(userData) {
  * @returns {Promise<Object>} Os dados do perfil do usuário.
  */
 export async function fetchUserProfile(token) {
-    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+    const response = await fetch(`${API_BASE_URL}/profile/me`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -97,11 +146,11 @@ export async function fetchUserProfile(token) {
         if (response.status === 401 || response.status === 403) {
             throw new Error('Sessão expirada. Faça login novamente.');
         }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao buscar perfil.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || 'Erro ao buscar perfil.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -112,7 +161,9 @@ export async function fetchUserProfile(token) {
  * @returns {Promise<Object>} Os dados do perfil atualizado.
  */
 export async function updateUserProfile(token, data) {
-    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+    // Atualiza campos genéricos do perfil do usuário autenticado.
+    // Backend expõe o recurso canônico em /profile/me com PATCH para atualizações.
+    const response = await fetch(`${API_BASE_URL}/profile/me`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -122,11 +173,11 @@ export async function updateUserProfile(token, data) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao atualizar o perfil.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || 'Erro ao atualizar o perfil.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -136,7 +187,9 @@ export async function updateUserProfile(token, data) {
  * @returns {Promise<Object>} Os dados do perfil atualizado.
  */
 export async function updateUserEmail(token, email) {
-    const response = await fetch(`${API_BASE_URL}/auth/profile/email`, {
+    // Solicitação de alteração de e-mail: mantemos um endpoint de request-change e
+    // um endpoint para aplicar a mudança, ambos sob /profile.
+    const response = await fetch(`${API_BASE_URL}/profile/email`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -146,11 +199,11 @@ export async function updateUserEmail(token, email) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao atualizar o e-mail.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || 'Erro ao atualizar o e-mail.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -161,7 +214,7 @@ export async function updateUserEmail(token, email) {
  */
 export async function updateUserPassword(token, password, oldPassword = null) {
     const body = oldPassword ? { oldPassword, password } : { password };
-    const response = await fetch(`${API_BASE_URL}/auth/profile/password`, {
+    const response = await fetch(`${API_BASE_URL}/profile/password`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -171,11 +224,11 @@ export async function updateUserPassword(token, password, oldPassword = null) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao atualizar a senha.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || 'Erro ao atualizar a senha.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 // =======================================================
@@ -195,11 +248,11 @@ export async function sendMessage(messageData) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao enviar a mensagem.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || 'Erro ao enviar a mensagem.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -215,11 +268,11 @@ export async function subscribeNewsletter(email) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erro na subscrição.");
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || "Erro na subscrição.");
     }
     
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -228,8 +281,10 @@ export async function subscribeNewsletter(email) {
  * @param {Object} data
  */
 export async function completeUserProfile(token, data) {
-    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-        method: 'PATCH',
+    // Para completar o perfil PF preferimos o endpoint específico /profile/pf
+    // que cria/atualiza os dados PF (fullName, cpf, birthDate, phone).
+    const response = await fetch(`${API_BASE_URL}/profile/pf`, {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -238,11 +293,11 @@ export async function completeUserProfile(token, data) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao completar perfil.');
+        const errorData = await safeParseResponse(response);
+        throw new Error((errorData && errorData.message) || 'Erro ao completar perfil.');
     }
 
-    return response.json();
+    return safeParseResponse(response);
 }
 
 /**
@@ -251,7 +306,7 @@ export async function completeUserProfile(token, data) {
  * O backend deve enviar a mensagem para o e-mail atual do usuário.
  */
 export async function requestEmailChange(token, newEmail) {
-    const response = await fetch(`${API_BASE_URL}/auth/profile/email/request-change`, {
+    const response = await fetch(`${API_BASE_URL}/profile/email/request-change`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -266,4 +321,180 @@ export async function requestEmailChange(token, newEmail) {
     }
 
     return response.json();
+}
+
+// =======================================================
+// Roteiro 3,4,5 - Endpoints para PF e Organizações
+// =======================================================
+
+/**
+ * Cria perfil PF para usuário logado
+ */
+export async function createPFProfile(token, data) {
+    const response = await fetch(`${API_BASE_URL}/profile/pf`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        let err = null;
+        try { err = await safeParseResponse(response); } catch (e) { /* sem body */ }
+        throw new Error((err && err.message) || 'Erro ao criar perfil PF');
+    }
+    // Alguns endpoints respondem com 201 sem body. Evitar chamar response.json() em body vazio.
+    if (response.status === 201) {
+        return safeParseResponse(response);
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Cria uma nova organização (PJ)
+ */
+export async function createOrganization(token, data) {
+    const response = await fetch(`${API_BASE_URL}/organizations`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        let err = null;
+        try { err = await response.json(); } catch (e) { /* sem body */ }
+        throw new Error((err && err.message) || 'Erro ao criar organização');
+    }
+    // tratar caso de 201 Created com ou sem body
+    if (response.status === 201) {
+        try {
+            const text = await response.text();
+            if (!text) return null;
+            return JSON.parse(text);
+        } catch (e) {
+            return null;
+        }
+    }
+    try {
+        return await response.json();
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Lista todas as organizações (requer SYSTEM_ADMIN)
+ */
+export async function getAllOrganizations(token) {
+    const response = await fetch(`${API_BASE_URL}/organizations`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && err.message) || 'Erro ao listar organizações');
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista organizações do usuário logado
+ */
+export async function getMyOrganizations(token) {
+    const response = await fetch(`${API_BASE_URL}/profile/me/organizations`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && err.message) || 'Erro ao listar organizações do usuário');
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista membros de uma organização
+ */
+export async function getOrgMembers(token, organizationId) {
+    const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/members`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && err.message) || 'Erro ao obter membros');
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Adiciona um membro por convite
+ */
+export async function addOrgMember(token, organizationId, body) {
+    const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/members`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && err.message) || 'Erro ao adicionar membro');
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Remove membro da organização
+ */
+export async function removeOrgMember(token, organizationId, membershipId) {
+    const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/members/${membershipId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && err.message) || 'Erro ao remover membro');
+    }
+    return response.status === 204 ? null : safeParseResponse(response);
+}
+
+/**
+ * Atualiza a função (role) de um membro da organização
+ */
+export async function updateOrgMemberRole(token, organizationId, membershipId, newRole) {
+    const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/members/${membershipId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newRole })
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        let err = null;
+        try { err = await safeParseResponse(response); } catch(e) { /* ignore */ }
+        throw new Error((err && (err.message || err.erro)) || 'Erro ao atualizar função do membro');
+    }
+    // retornar dados atualizados do membro
+    return safeParseResponse(response);
 }

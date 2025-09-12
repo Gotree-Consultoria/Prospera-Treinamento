@@ -45,6 +45,57 @@
     opacity: 0.8;
 }
 
+/* Responsividade específica para a hero: empilhar conteúdo em telas pequenas */
+@media (max-width: 720px) {
+    .hero {
+        padding: calc(var(--spacing-lg)) 0;
+    }
+    .hero .container {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+        align-items: start;
+    }
+    .hero-content h1 {
+        font-size: 1.6rem; /* reduzir título em mobile */
+        line-height: 1.25;
+    }
+    .hero-content p {
+        font-size: 0.98rem;
+        margin-bottom: var(--spacing-md);
+    }
+    .hero-buttons {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+    .hero-buttons .btn {
+        width: 100%;
+        padding: 0.7rem 0.9rem;
+    }
+    .hero-image {
+    justify-content: center;
+    margin-top: 0.6rem;
+    }
+    .hero-image i {
+        font-size: 4.4rem; /* reduzir ícone para não apertar o texto */
+        opacity: 0.9;
+        margin-top: 0.2rem;
+    }
+}
+
+/* Ajuste adicional para telas muito pequenas (tel.) */
+@media (max-width: 420px) {
+    .hero-content h1 {
+        font-size: 1.25rem;
+    }
+    .hero-content p {
+        font-size: 0.95rem;
+    }
+    .hero-image i {
+        font-size: 3.6rem;
+    }
+}
+
 /* Sections */
 section {
     padding: var(--spacing-xxl) 0;

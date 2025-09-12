@@ -21,6 +21,7 @@
                      <a class="submenu-item" href="#" data-section="profile" data-action="showDados">Dados Cadastrais</a>
                      <a class="submenu-item" href="#" data-section="profile" data-action="showPayments">Pagamentos</a>
                      <a class="submenu-item" href="#" data-section="profile" data-action="togglePasswordEdit">Trocar Senha</a>
+                     <a class="submenu-item" href="#" data-page="orgManagement">Gestão de empresas</a>
                   </div>
                   <a class="menu-item" href="#" data-section="orders">
                      <i class="fas fa-shopping-bag">
@@ -45,11 +46,6 @@
                      <div id="profileView" class="profile-infos">
                         <ul class="profile-view">
                            <li>
-                              <strong>Nome:</strong>
-                              <span id="userName"></span>
-                           </li>
-                           
-                           <li>
                               <strong>E-mail:</strong>
                               <span id="userEmail"></span>
                               <!-- botão inline para alterar e-mail -->
@@ -61,21 +57,21 @@
                               </div>
                            </li>
 
-                           <!-- Seção Verificado (dados pessoais parcialmente mascarados) -->
+                           <!-- Dados pessoais parcialmente mascarados -->
                            <li class="verified-section">
                               <hr class="verified-separator" />
-                              <div class="verified-header">
-                                 <strong class="verified-title">Verificado</strong>
-                                 <span class="info-circle" role="note" tabindex="0" aria-label="Informação">i
-                                    <span class="info-tooltip">Identidade verificada. Só poderá alterar entrando em contato com o atendimento ao cliente.</span>
-                                 </span>
-                              </div>
                               <ul class="verified-list">
-                                 <li><strong>Telefone:</strong> <span id="userPhone" class="masked">—</span></li>
+                                 <li><strong>Nome completo:</strong> <span id="userName"></span></li>
                                  <li><strong>CPF:</strong> <span id="userCPF" class="masked">—</span></li>
                                  <li><strong>Data de Nascimento:</strong> <span id="userBirth" class="masked">—</span></li>
+                                 <li><strong>Telefone:</strong> <span id="userPhone" class="masked">—</span></li>
                               </ul>
                            </li>
+                              <li>
+                                 <div id="completeProfileNotice" class="inline-notice hidden">
+                                    <small>Seu perfil está incompleto. <a href="#" data-page="createPf">Complete seu perfil</a>.</small>
+                                 </div>
+                              </li>
                         </ul>
                      </div>
 
@@ -132,7 +128,7 @@
                         </div>
                      </div>
                      <div class="payment-actions">
-                        <button class="btn btn-secondary btn-small">Adicionar Método de Pagamento</button>
+                        <button class="btn btn-account-secondary btn-small">Adicionar Método de Pagamento</button>
                      </div>
                   </div>
 
@@ -152,6 +148,58 @@
                            <button type="submit" data-action="savePassword">Salvar Nova Senha</button>
                         </div>
                      </form>
+                  </div>
+
+                  <!-- Seção Empresa (apenas para Admin PJ) -->
+                  <div id="companyAdminSection" class="account-section hidden">
+                     <h2>Administração da Empresa</h2>
+                     <p class="muted">Painel para administradores: gerenciar subusuários e relatórios (mock).</p>
+
+                     <section class="company-info">
+                        <div><strong>Empresa:</strong> <span id="companyNameDisplay">—</span></div>
+                        <div><strong>CNPJ:</strong> <span id="companyCNPJDisplay">—</span></div>
+                        <div><strong>Plano:</strong> <span id="companyPlanDisplay">—</span></div>
+                     </section>
+
+                     <hr />
+
+                     <div class="company-tabs">
+                        <button class="btn btn-small" data-action="showCompanyTab" data-tab="users">Subusuários</button>
+                        <button class="btn btn-small" data-action="showCompanyTab" data-tab="import">Importar (CSV)</button>
+                        <button class="btn btn-small" data-action="showCompanyTab" data-tab="reports">Relatórios</button>
+                     </div>
+
+                     <div id="companyTab_users" class="company-tab-content">
+                        <h3>Subusuários</h3>
+                        <p>Convide funcionários para criar contas vinculadas à empresa.</p>
+                        <div class="invite-row">
+                           <input type="email" id="inviteEmail" placeholder="email@funcionario.com" />
+                           <button class="btn btn-account-secondary" data-action="inviteSubuser">Convidar</button>
+                        </div>
+                        <div class="import-preview">
+                           <label class="sr-only" for="importCsvInput">Importar CSV</label>
+                           <input type="file" id="importCsvInput" accept=".csv" />
+                           <button class="btn btn-small" data-action="importCSV">Processar CSV</button>
+                        </div>
+                        <h4>Lista de subusuários</h4>
+                        <ul id="subusersList" class="subusers-list"></ul>
+                     </div>
+
+                     <div id="companyTab_import" class="company-tab-content hidden">
+                        <h3>Importar CSV</h3>
+                        <p>Formato esperado: nome,email,cpf (uma linha por funcionário)</p>
+                        <div id="importPreviewContainer"></div>
+                     </div>
+
+                     <div id="companyTab_reports" class="company-tab-content hidden">
+                        <h3>Relatórios</h3>
+                        <p>Relatórios mock com exportação CSV.</p>
+                        <div class="reports-actions">
+                           <button class="btn btn-small" data-action="exportReport" data-report="progress">Exportar Progresso por Curso (CSV)</button>
+                           <button class="btn btn-small" data-action="exportReport" data-report="employees">Exportar Lista de Funcionários (CSV)</button>
+                        </div>
+                        <div id="reportsPreview"></div>
+                     </div>
                   </div>
 
 

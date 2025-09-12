@@ -47,3 +47,14 @@ export function getCategoryIcon(category) {
     };
     return iconMap[category] || "fas fa-book";
 }
+
+/**
+ * Formata um CNPJ para o padrão 00.000.000/0000-00.
+ * Aceita strings com ou sem formatação prévia.
+ */
+export function formatCNPJ(value) {
+    if (!value) return '';
+    const digits = String(value).replace(/\D/g, '');
+    if (digits.length !== 14) return value; // se não tiver 14 dígitos, retorna original
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}

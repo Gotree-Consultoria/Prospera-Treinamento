@@ -116,12 +116,84 @@
 .register-fields input,
 .login-fields input {
     width: 100%;
-    padding: 0.15rem;
+    padding: 0.6rem 0.75rem; /* mais espaço interno para evitar sensação "colado" */
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.3s ease;
 }
+
+/* Modal de termos/contrato - reaproveita estrutura .popup */
+.terms-popup .popup-content {
+  max-width: 720px;
+  text-align: left;
+  padding: 1.25rem;
+}
+.terms-popup .popup-content .terms-body {
+  max-height: 50vh;
+  overflow: auto;
+  margin-bottom: 1rem;
+  white-space: pre-wrap;
+}
+
+.terms-actions {
+  display:flex;
+  gap:0.5rem;
+  justify-content:center; /* centralizar os botões */
+  align-items:center;
+}
+
+/* Botões menores especificamente no modal de termos */
+.terms-actions .btn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  /* remover min-width para evitar conflito com botões menores; controlar largura por display */
+  text-align: center;
+  display: inline-block; /* evita que o botão cresça 100% em containers flex quando espaço limitado */
+}
+
+/* Botão aceitar específico, menor que o padrão de actions */
+.btn-accept {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.8rem;
+  min-width: 80px;
+  display: inline-block; /* garantir que não ocupe largura total */
+}
+
+/* Em telas muito pequenas, garantir que botões possam quebrar linha e manter tamanhos mínimos razoáveis */
+@media (max-width: 420px) {
+  .terms-actions {
+    gap: 0.4rem;
+  }
+  .terms-actions .btn,
+  .btn-accept {
+    min-width: 72px;
+  }
+}
+/* Cores específicas para os botões do modal de termos */
+.terms-actions .btn-secondary {
+  background-color: var(--coral);
+  color: var(--white);
+  border: none;
+}
+.terms-actions .btn-secondary:hover,
+.terms-actions .btn-secondary:focus {
+  background-color: var(--coral-dark);
+  transform: translateY(-1px);
+}
+
+.terms-actions .btn-accept {
+  background-color: var(--verde-claro);
+  color: var(--white);
+  border: none;
+}
+.terms-actions .btn-accept:hover,
+.terms-actions .btn-accept:focus {
+  background-color: var(--verde-claro-dark);
+  transform: translateY(-1px);
+}
+
 
 /* Coloca o ícone de visualização dentro do input */
 .password-input-wrap {
@@ -152,8 +224,6 @@
 }
 
 
-/* Pop-up*/
-
 .popup {
   position: fixed;
   top: 0;
@@ -165,6 +235,37 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
+}
+
+.modal-auth .form-messages {
+  margin-bottom: 0.5rem;
+  text-align: center;
+  color: var(--verde-escuro);
+  font-weight: 600;
+}
+
+/* Mensagem de sucesso no modal (usar coral-dark da paleta) */
+.modal-auth .form-messages.success {
+  color: var(--coral-dark);
+}
+
+/* Mensagem de erro no modal */
+.modal-auth .form-messages.error {
+  color: var(--coral);
+}
+
+/* regras diretas para o elemento de mensagens do modal (fallback) */
+#authRegisterMessages.success {
+  color: var(--coral-dark);
+}
+
+#authRegisterMessages.error {
+  color: var(--coral);
+}
+
+/* Specificidade extra para garantir cor correta dentro do modal */
+.modal-auth #authRegisterMessages.form-messages.success {
+  color: var(--coral-dark) !important;
 }
 
 .popup-content {
