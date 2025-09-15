@@ -478,6 +478,23 @@ export async function removeOrgMember(token, organizationId, membershipId) {
 }
 
 /**
+ * Remove a afiliação do usuário logado com uma organização (auto-remoção)
+ * Endpoint: DELETE /profile/me/organizations/{organizationId}
+ */
+export async function removeMyOrgMembership(token, organizationId) {
+    const response = await fetch(`${API_BASE_URL}/profile/me/organizations/${organizationId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && err.message) || 'Erro ao sair da organização');
+    }
+    return response.status === 204 ? null : safeParseResponse(response);
+}
+
+/**
  * Atualiza a função (role) de um membro da organização
  */
 export async function updateOrgMemberRole(token, organizationId, membershipId, newRole) {

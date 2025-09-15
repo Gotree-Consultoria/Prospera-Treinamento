@@ -249,20 +249,33 @@ export function setupEventListeners() {
                         const orgId = o.id || o._id || o.organizationId || '';
                         const orgName = o.name || o.razaoSocial || o.companyName || '—';
                         const orgCnpj = formatCNPJ(o.cnpj || o.CNPJ || '');
-                        // Card simplificado: o card inteiro é clicável — removemos o botão de três pontos
-                        li.innerHTML = `
-                            <div class="org-item" data-org-id="${orgId}" tabindex="0" role="button" aria-pressed="false">
-                                <div class="org-header">
-                                    <div class="org-name" data-org-id="${orgId}">${orgName}</div>
-                                    <div class="muted small">${orgCnpj}</div>
-                                </div>
-                                <!-- dropdown e inline members mantidos ocultos como fallback -->
-                                <div class="org-actions-dropdown" id="orgActions_${orgId}">
-                                    <button class="btn btn-link add-org-member-btn" data-org-id="${orgId}">Adicionar membro</button>
-                                    <button class="btn btn-link view-org-members-btn" data-org-id="${orgId}">Visualizar membros</button>
-                                </div>
-                                <div class="org-members-inline hidden" id="orgMembersInline_${orgId}"></div>
-                            </div>`;
+                        const myRole = sessionStorage.getItem('myOrgRole_' + orgId) || '';
+                        const isCompanyAdmin = sessionStorage.getItem('isCompanyAdmin') === 'true';
+                        // Se o usuário for ADMIN global ou ADMIN local, mostrar card com ações.
+                        if (isCompanyAdmin || myRole === 'ORG_ADMIN') {
+                            li.innerHTML = `
+                                <div class="org-item" data-org-id="${orgId}" tabindex="0" role="button" aria-pressed="false">
+                                    <div class="org-header">
+                                        <div class="org-name" data-org-id="${orgId}">${orgName}</div>
+                                        <div class="muted small">${orgCnpj}</div>
+                                    </div>
+                                    <!-- ações disponíveis para administradores -->
+                                    <div class="org-actions-dropdown" id="orgActions_${orgId}">
+                                        <button class="btn btn-link add-org-member-btn" data-org-id="${orgId}">Adicionar membro</button>
+                                        <button class="btn btn-link view-org-members-btn" data-org-id="${orgId}">Visualizar membros</button>
+                                    </div>
+                                    <div class="org-members-inline hidden" id="orgMembersInline_${orgId}"></div>
+                                </div>`;
+                        } else {
+                            // Usuário é apenas membro: mostrar apenas o card com nome, sem ações e sem ser clicável
+                            li.innerHTML = `
+                                <div class="org-item simple" data-org-id="" tabindex="-1">
+                                    <div class="org-header">
+                                        <div class="org-name">${orgName}</div>
+                                        <div class="muted small">${orgCnpj}</div>
+                                    </div>
+                                </div>`;
+                        }
                     list.appendChild(li);
                 });
                 container.innerHTML = '';
@@ -278,9 +291,46 @@ export function setupEventListeners() {
     document.addEventListener('page:loaded', (e) => {
         try {
             if (e?.detail?.page === 'orgManagement') {
-                renderMyOrganizations();
+                // permitir que o fragmento seja injetado e então renderizar
+                requestAnimationFrame(() => {
+                    try {
+                        // esconder botão de criar organização para usuários que não são company_admin
+                        const isAdmin = sessionStorage.getItem('isCompanyAdmin') === 'true';
+                        const hasMembership = sessionStorage.getItem('hasMembership') === 'true';
+                        // detectar se o usuário é admin em alguma organização (myOrgRole_<orgId> === 'ORG_ADMIN')
+                        let isOrgAdminAny = false;
+                        for (let i = 0; i < sessionStorage.length; i++) {
+                            const key = sessionStorage.key(i);
+                            if (key && key.startsWith('myOrgRole_')) {
+                                const val = sessionStorage.getItem(key);
+                                if (val === 'ORG_ADMIN') { isOrgAdminAny = true; break; }
+                            }
+                        }
+                        const addBtn = document.getElementById('addOrganizationBtn');
+                        // Mostrar o botão para usuários sem afiliações OU para administradores (globais ou de org).
+                        // Esconder somente quando o usuário é membro simples (hasMembership true) e não é admin.
+                        if (addBtn) {
+                            if (hasMembership && !isAdmin && !isOrgAdminAny) {
+                                addBtn.style.display = 'none';
+                            } else {
+                                addBtn.style.display = '';
+                            }
+                        }
+                        // esconder opção de "Sair da Organização" para não-admins
+                        const leaveBtn = document.getElementById('leaveOrgButton');
+                        if (leaveBtn && !isAdmin) {
+                            leaveBtn.style.display = 'none';
+                        }
+                    } catch (err) { /* silencioso */ }
+                    renderMyOrganizations();
+                });
             }
         } catch (err) { /* silencioso */ }
+    });
+
+    // Re-renderizar organizações quando roles forem atualizadas (por exemplo, promoção)
+    document.addEventListener('org:roles:updated', () => {
+        try { renderMyOrganizations(); } catch (e) { console.warn('Falha ao re-renderizar organizações após atualização de roles:', e); }
     });
 
         // Acessibilidade: permitir ativar o card com Enter ou Space quando receber foco
@@ -477,10 +527,16 @@ export function setupEventListeners() {
     });
 
 // Quando a página for carregada, inicializamos páginas específicas
-document.addEventListener('page:loaded', (ev) => {
+document.addEventListener('page:loaded', async (ev) => {
     try {
         const page = ev?.detail?.page;
         if (page === 'orgMembers') {
+            // Garantir que o perfil do usuário esteja carregado (contendo organizations[]) antes de inicializar a página de membros
+            try {
+                if (typeof loadUserProfile === 'function') {
+                    await loadUserProfile();
+                }
+            } catch (e) { console.warn('Falha ao carregar profile antes de initOrgMembersPage:', e); }
             initOrgMembersPage();
         }
     } catch (err) {

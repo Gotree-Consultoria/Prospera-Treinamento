@@ -77,6 +77,53 @@ const pageMap = {
     faq: "faqPage",
 };
 
+// Mapeamento reverso para resolver paths/hashes para chaves de página
+const pathToPage = {
+    '/': 'home',
+    '/home': 'home',
+    '/ebooks': 'ebooks',
+    '/packages': 'packages',
+    '/about': 'about',
+    '/contact': 'contact',
+    '/account': 'account',
+    '/login': 'login',
+    '/register': 'register',
+    '/create-pf': 'createPf',
+    '/organizations/new': 'organizationsNew',
+    '/organizations': 'orgManagement',
+    '/organizations/members': 'orgMembers',
+    '/cart': 'cart',
+    '/faq': 'faq'
+};
+
+/**
+ * Resolve a rota atual (hash ou pathname) para a chave de página usada internamente.
+ * @returns {string|null} - chave de página ou null se não for possível resolver
+ */
+export function resolveRouteFromLocation() {
+    // preferir hash se presente (ex: #about)
+    const hash = window.location.hash ? window.location.hash.replace(/^#/, '') : null;
+    if (hash) return hash;
+
+    const pathname = window.location.pathname || '/';
+    // Normalizar algumas variações simples
+    const normalized = pathname.replace(/\/+$/, ''); // remove trailing slash
+    if (pathToPage[normalized]) return pathToPage[normalized];
+
+    // tentar mapear segmentos conhecidos (ex: /organizations/123/members)
+    const segments = normalized.split('/').filter(Boolean);
+    if (segments.length === 0) return 'home';
+    // engenharia simples: checar primeiros dois segmentos compõem rota conhecida
+    const firstTwo = '/' + segments.slice(0, 2).join('/');
+    if (pathToPage[firstTwo]) return pathToPage[firstTwo];
+
+    // checar primeiro segmento
+    const first = '/' + segments[0];
+    if (pathToPage[first]) return pathToPage[first];
+
+    return null;
+}
+
 /**
  * Exibe a página principal especificada.
  * @param {string} page - O nome da página a ser exibida.

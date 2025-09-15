@@ -1,6 +1,6 @@
 import { loadAllComponents } from './loadComponents.js';
 import { setupEventListeners } from './modules/eventListeners.js';
-import { showPage, scrollToSection } from './modules/navigation.js';
+import { showPage, scrollToSection, resolveRouteFromLocation } from './modules/navigation.js';
 import { renderProducts, renderPackages, renderCategories, updateData } from './modules/render.js';
 import { initCarousel } from './modules/carousel.js';
 import { checkUserLoggedIn } from './modules/auth.js';
@@ -55,12 +55,26 @@ async function initializeApp() {
         // Sempre configura os listeners, mesmo que os dados falhem
         setupEventListeners();
 
-        const hash = window.location.hash.substring(1);
-        if (hash) {
-            showPage(hash);
-            scrollToSection(hash);
+        // Ao inicializar, se houver token, tentar carregar a rota presente na barra de endereço
+        const token = localStorage.getItem('jwtToken');
+        if (token) {
+            const resolved = resolveRouteFromLocation();
+            if (resolved) {
+                showPage(resolved);
+                // se a rota veio via hash, a função resolve já retornou o hash sem '#'
+                scrollToSection(resolved);
+            } else {
+                // fallback para home quando não for possível resolver
+                showPage('home');
+            }
         } else {
-            showPage("home");
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                showPage(hash);
+                scrollToSection(hash);
+            } else {
+                showPage("home");
+            }
         }
         
         initCarousel();

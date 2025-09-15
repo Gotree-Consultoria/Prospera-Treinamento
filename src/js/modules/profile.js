@@ -1,5 +1,5 @@
 // As funções do api.js que lidam com a lógica de negócio real
-import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, updateOrgMemberRole } from './api.js';
+import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole } from './api.js';
 
 let currentProfile = null;
 
@@ -72,6 +72,12 @@ export async function loadUserProfile() {
                     const mem = o.membershipId || o.membership_id || o.id || o._id || '';
                     if (mem) sessionStorage.setItem('myMembershipId_' + orgId, mem);
                 });
+                // marcar que o usuário possui ao menos uma afiliação (é membro de alguma org)
+                if (orgs.length > 0) {
+                    sessionStorage.setItem('hasMembership', 'true');
+                } else {
+                    sessionStorage.removeItem('hasMembership');
+                }
             }
         } catch (e) { console.warn('Falha ao persistir organizations em sessionStorage:', e); }
     // se o backend retorna um subobjeto com dados pessoais, priorizar esses campos
@@ -112,6 +118,14 @@ export async function loadUserProfile() {
         }
     // caso seja admin de empresa, exibir painel específico
     try { showCompanyAdminPanel(profile); } catch (e) { /* silencioso se não existir */ }
+    // Expor flag simples para templates/JS: se usuário for company_admin
+    try {
+        if (profile && profile.role === 'company_admin') {
+            sessionStorage.setItem('isCompanyAdmin', 'true');
+        } else {
+            sessionStorage.removeItem('isCompanyAdmin');
+        }
+    } catch (e) { /* silencioso */ }
     } catch (err) {
         console.error('Erro ao carregar perfil:', err);
         // Fallback: preencher o mínimo de UI com o e-mail salvo localmente para evitar que a conta fique vazia
@@ -586,13 +600,46 @@ export async function initOrgMembersPage() {
     }
 
     const token = localStorage.getItem('jwtToken');
-    // Garantir que temos o perfil do usuário (com suas afiliações) para obter membershipId
-    try { await loadUserProfile(); } catch (e) { /* não fatal */ }
+    // Carregamento único: só pedir perfil se ainda não tivermos em memória
+    try {
+        if (!currentProfile) {
+            await loadUserProfile();
+        }
+    } catch (e) { /* não fatal */ }
+
     try {
         const members = await getOrgMembers(token, orgId);
-        const tbody = document.querySelector('#orgMembersTable tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+        renderOrgMembers(members, orgId);
+    } catch (err) {
+        console.error('Erro ao carregar membros:', err);
+        if (messages) messages.textContent = err.message || 'Erro ao carregar membros.';
+    }
+}
+
+// Função responsável apenas por renderizar a tabela de membros a partir de um array já obtido
+async function renderOrgMembers(members, orgId) {
+    const messages = document.getElementById('orgMembersMessages');
+    const tbody = document.querySelector('#orgMembersTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    // verificar meu papel nesta organização (persistido por loadUserProfile em myOrgRole_<orgId>)
+    const myRole = sessionStorage.getItem('myOrgRole_' + orgId) || '';
+    const inviteForm = document.getElementById('inviteMemberForm');
+    const leaveBtn = document.getElementById('leaveOrgButton');
+    const membersTable = document.getElementById('orgMembersTable');
+    // Somente ORG_ADMIN tem acesso às ações administrativas (ver membros, convidar, sair)
+    if (myRole !== 'ORG_ADMIN') {
+        // usuário não é admin: acesso apenas de visualização
+        if (membersTable) membersTable.classList.add('hidden');
+        if (inviteForm) inviteForm.classList.add('hidden');
+        if (leaveBtn) leaveBtn.style.display = 'none';
+        if (messages) messages.textContent = 'Você pode visualizar a organização, mas não tem permissões administrativas. Contate um administrador para alterações.';
+        return;
+    } else {
+        if (membersTable) membersTable.classList.remove('hidden');
+        if (inviteForm) inviteForm.classList.remove('hidden');
+        if (leaveBtn) leaveBtn.style.display = '';
+    }
     (members || []).forEach(m => {
             const tr = document.createElement('tr');
             // Preferir fullName retornado pela API; suportar diferentes formatos (m.fullName ou m.user.fullName)
@@ -611,51 +658,87 @@ export async function initOrgMembersPage() {
             // armazenar membership id para referência posterior
             if (membershipId) roleTd.dataset.membershipId = membershipId;
             const actionTd = document.createElement('td');
-            const btn = document.createElement('button');
-            btn.className = 'btn-small btn-small-remove remove-org-member-btn';
-            btn.textContent = 'Remover';
-            // membership id já calculado acima
-            btn.dataset.membershipId = membershipId || '';
-            btn.addEventListener('click', async (ev) => {
-                ev.preventDefault();
-                if (!btn.dataset.membershipId) return;
-                try {
-                    await removeOrgMember(token, orgId, btn.dataset.membershipId);
-                    tr.remove();
-                } catch (err) {
-                    console.error('Erro ao remover membro:', err);
-                    if (messages) messages.textContent = 'Erro ao remover membro: ' + (err.message || 'Tente novamente');
-                }
-            });
-            // agrupar botões em um wrapper para permitir alinhamento em coluna
-            const wrap = document.createElement('div');
-            wrap.className = 'action-wrap';
-            wrap.style.display = 'inline-flex';
-            wrap.style.flexDirection = 'column';
-            wrap.style.alignItems = 'center';
-            wrap.style.gap = '6px';
-            wrap.appendChild(btn);
-            // adicionar botão 'Alterar' abaixo de 'Remover'
-            const changeBtn = document.createElement('button');
-            changeBtn.className = 'btn-small btn-small-change change-org-member-role-btn';
-            changeBtn.textContent = 'Alterar';
-            // anexar dados úteis para o handler
-            changeBtn.dataset.membershipId = membershipId || '';
-            changeBtn.dataset.memberName = displayName || '';
-            changeBtn.dataset.currentRole = m.role || m.userRole || '';
-            changeBtn.addEventListener('click', (ev) => {
-                ev.preventDefault();
-                openInlineRolePopup({ membershipId: membershipId, name: displayName, currentRole: m.role || m.userRole || '' }, changeBtn);
-            });
-            wrap.appendChild(changeBtn);
-            actionTd.appendChild(wrap);
+            // não permitir ações sobre o próprio usuário (evitar remoção/alteração de si mesmo)
+            const myMembershipStored = sessionStorage.getItem('myMembershipId_' + orgId) || '';
+            // possíveis campos que a API pode retornar para identificar o usuário
+            const possibleAuthUserId = m.authUserId || m.auth_user_id || m.userId || m.user_id || (m.user && (m.user.id || m.user._id || m.user.userId)) || '';
+            const possibleMembershipId = membershipId || m.membershipId || m.id || m._id || '';
+            const currentUserId = (currentProfile && (currentProfile.userId || currentProfile.id || currentProfile.user_id || currentProfile.authUserId)) || '';
+            const isOwnMembership = (possibleMembershipId && myMembershipStored && String(possibleMembershipId) === String(myMembershipStored)) || (currentUserId && possibleAuthUserId && String(possibleAuthUserId) === String(currentUserId));
+            console.debug('[members] own-check', { possibleMembershipId, myMembershipStored, possibleAuthUserId, currentUserId, isOwnMembership });
+            if (!isOwnMembership) {
+                // criar botões normalmente
+                const btn = document.createElement('button');
+                btn.className = 'btn-small btn-small-remove remove-org-member-btn';
+                btn.textContent = 'Remover';
+                btn.dataset.membershipId = membershipId || '';
+                btn.addEventListener('click', async (ev) => {
+                    ev.preventDefault();
+                    if (!btn.dataset.membershipId) {
+                        console.debug('[members] remove clicked but no membershipId on button', btn);
+                        return;
+                    }
+                    console.debug('[members] attempting remove, membershipId=', btn.dataset.membershipId, 'orgId=', orgId);
+                    // Remoção otimista
+                    const originalBtnText = btn.textContent;
+                    btn.disabled = true;
+                    btn.textContent = 'Removendo...';
+                    const parent = tr.parentElement;
+                    let nextSibling = tr.nextSibling;
+                    parent && parent.removeChild(tr);
+                    try {
+                        await removeOrgMember(token, orgId, btn.dataset.membershipId);
+                        console.debug('[members] removeOrgMember succeeded for', btn.dataset.membershipId);
+                            try {
+                                // apenas recarregar os membros (evita chamar loadUserProfile novamente)
+                                const refreshed = await getOrgMembers(token, orgId);
+                                await renderOrgMembers(refreshed, orgId);
+                            } catch (e) { console.warn('[members] refresh failed after delete', e); }
+                    } catch (err) {
+                        console.error('Erro ao remover membro (revertendo UI):', err);
+                        try {
+                            if (parent) {
+                                if (nextSibling) parent.insertBefore(tr, nextSibling); else parent.appendChild(tr);
+                            }
+                        } catch (re) { console.error('Falha ao reverter linha removida:', re); }
+                        if (messages) messages.textContent = 'Erro ao remover membro: ' + (err.message || 'Tente novamente');
+                    } finally {
+                        try { btn.disabled = false; btn.textContent = originalBtnText; } catch(e) { /* ignore */ }
+                    }
+                });
+                const wrap = document.createElement('div');
+                wrap.className = 'action-wrap';
+                wrap.style.display = 'inline-flex';
+                wrap.style.flexDirection = 'column';
+                wrap.style.alignItems = 'center';
+                wrap.style.gap = '6px';
+                wrap.appendChild(btn);
+                const changeBtn = document.createElement('button');
+                changeBtn.className = 'btn-small btn-small-change change-org-member-role-btn';
+                changeBtn.textContent = 'Alterar';
+                changeBtn.dataset.membershipId = membershipId || '';
+                changeBtn.dataset.memberName = displayName || '';
+                changeBtn.dataset.currentRole = m.role || m.userRole || '';
+                changeBtn.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    openInlineRolePopup({ membershipId: membershipId, name: displayName, currentRole: m.role || m.userRole || '' }, changeBtn);
+                });
+                wrap.appendChild(changeBtn);
+                actionTd.appendChild(wrap);
+            } else {
+                // manter célula vazia para alinhamento
+                actionTd.innerHTML = '&nbsp;';
+            }
+            // se for próprio usuário, adicionar badge "Você (administrador)" ao nome
+            if (isOwnMembership) {
+                const badge = document.createElement('small');
+                badge.className = 'you-badge';
+                badge.textContent = 'Você (administrador)';
+                nameTd.appendChild(badge);
+            }
             tr.appendChild(nameTd); tr.appendChild(emailTd); tr.appendChild(roleTd); tr.appendChild(actionTd);
             tbody.appendChild(tr);
         });
-    } catch (err) {
-        console.error('Erro ao carregar membros:', err);
-        if (messages) messages.textContent = err.message || 'Erro ao carregar membros.';
-    }
 }
 
 // --- Fluxo de sair da organização ---
@@ -669,64 +752,49 @@ document.addEventListener('page:loaded', (e) => {
                     ev.preventDefault();
                     const orgId = sessionStorage.getItem('currentOrganizationId');
                     const token = localStorage.getItem('jwtToken');
-                    // primeiro, garantir que temos o perfil mais recente com lista de afiliações
-                    try { await loadUserProfile(); } catch (e) { /* silent */ }
-                    // tentar obter meu membershipId a partir do profile (backend retorna 'organizations')
-                    let myMembershipId = '';
-                    try {
-                        const orgs = (currentProfile && currentProfile.organizations) || [];
-                        if (Array.isArray(orgs) && orgs.length) {
-                            const found = orgs.find(o => String(o.organizationId) === String(orgId));
-                            if (found) {
-                                // o payload de organizations não tem membershipId no exemplo fornecido,
-                                // então usamos sessionStorage (salvo anteriormente em loadUserProfile) ou outros ids
-                                myMembershipId = found.membershipId || found.membership_id || sessionStorage.getItem('myMembershipId_' + orgId) || '';
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Erro ao extrair membershipId de currentProfile.organizations:', e);
-                    }
-                    // se não temos membershipId, buscar via membros da org comparando e-mail/ids
-                    if (!myMembershipId) {
-                        try {
-                            const members = await getOrgMembers(token, orgId);
-                            const myEmail = (currentProfile && (currentProfile.email || currentProfile.userEmail)) || localStorage.getItem('loggedInUserEmail') || '';
-                            // tentar encontrar por email primeiro
-                            const found = (members || []).find(m => {
-                                const mEmail = m.email || m.userEmail || m.user?.email || '';
-                                if (mEmail && myEmail && mEmail.toLowerCase() === myEmail.toLowerCase()) return true;
-                                // comparar user ids quando disponíveis
-                                const userId = currentProfile && (currentProfile.id || currentProfile._id || currentProfile.userId);
-                                const mUserId = m.user && (m.user.id || m.user._id || m.user.userId);
-                                if (userId && mUserId && String(userId) === String(mUserId)) return true;
-                                return false;
-                            });
-                            if (found) {
-                                myMembershipId = found.id || found._id || found.membershipId || (found.user && (found.user.id || found.user._id)) || '';
-                            }
-                        } catch (err) {
-                            console.warn('Não foi possível buscar membros para derivar meu membershipId:', err);
-                        }
-                    }
-                    if (!orgId || !myMembershipId) {
+                    if (!orgId || !token) {
                         const messages = document.getElementById('orgMembersMessages');
                         if (messages) messages.textContent = 'Informações da organização indisponíveis.';
                         return;
                     }
                     try {
-                        // tentar deletar — backend retornará 204 ou erro específico
-                        await removeOrgMember(token, orgId, myMembershipId);
-                        // sucesso: redirecionar para conta
-                        try { import('./navigation.js').then(m => m.showPage('account')); } catch (e) { window.location.href = '/'; }
+                        // garantir que somos ORG_ADMIN localmente antes de tentar a operação
+                        const myRole = sessionStorage.getItem('myOrgRole_' + orgId) || '';
+                        if (myRole !== 'ORG_ADMIN') {
+                            const messages = document.getElementById('orgMembersMessages');
+                            if (messages) messages.textContent = 'Apenas administradores podem sair da organização.';
+                            return;
+                        }
+
+
+                        // Agora usamos o endpoint de auto-remoção que requer apenas o organizationId
+                        // Endpoint: DELETE /profile/me/organizations/{organizationId}
+                        try {
+                            await removeMyOrgMembership(token, orgId);
+                        } catch (e) {
+                            throw e; // rethrow para ser tratado no bloco externo
+                        }
+                        // limpeza local: remover chaves relacionadas a essa org para evitar estado stale
+                        try {
+                            sessionStorage.removeItem('myMembershipId_' + orgId);
+                            sessionStorage.removeItem('myOrgRole_' + orgId);
+                            const cur = sessionStorage.getItem('currentOrganizationId');
+                            if (cur && String(cur) === String(orgId)) {
+                                sessionStorage.removeItem('currentOrganizationId');
+                                sessionStorage.removeItem('currentOrganizationName');
+                            }
+                        } catch (e) { /* ignore */ }
+                        // recarregar perfil para atualizar flags (hasMembership, isCompanyAdmin, myOrgRole_...)
+                        try { await loadUserProfile(); } catch (e) { console.warn('Falha ao recarregar perfil após leave:', e); }
+                        // Navegar para Gestão de Empresas para mostrar claramente que a organização não aparece mais
+                        try { const m = await import('./navigation.js'); await m.showPage('orgManagement'); } catch (e) { try { window.location.href = '/organizations'; } catch(_) { /* silent */ } }
                     } catch (err) {
                         console.error('Erro ao sair da organização:', err);
                         const rawMsg = (err && (err.message || err.error || err.msg)) ? (err.message || err.error || err.msg) : '';
                         const msg = rawMsg || 'Erro ao sair da organização.';
-                        // detectar erro de último administrador e exibir mensagem clara em PT-BR
                         if (msg && (msg.toLowerCase().includes('ultimo') || msg.toLowerCase().includes('último') || msg.toLowerCase().includes('administrador') || msg.toLowerCase().includes('last admin'))) {
                             const messagesEl = document.getElementById('orgMembersMessages');
                             if (messagesEl) messagesEl.textContent = 'Não é possível sair da organização. Adicione outro administrador antes de sair.';
-                            // abrir modal de promoção para facilitar ação do usuário (opcional)
                             try { openPromoteModal(msg); } catch (e) { /* silent */ }
                         } else {
                             const messages = document.getElementById('orgMembersMessages');
@@ -840,11 +908,16 @@ function openInlineRolePopup(member, anchorEl) {
         const newRole = selected.value;
         const token = localStorage.getItem('jwtToken');
         try {
-            await updateOrgMemberRole(token, sessionStorage.getItem('currentOrganizationId'), member.membershipId, newRole);
+                await updateOrgMemberRole(token, sessionStorage.getItem('currentOrganizationId'), member.membershipId, newRole);
             // recarregar a lista de membros para refletir a alteração rapidamente
             try {
-                await initOrgMembersPage();
+                const refreshed = await getOrgMembers(token, sessionStorage.getItem('currentOrganizationId'));
+                await renderOrgMembers(refreshed, sessionStorage.getItem('currentOrganizationId'));
             } catch (e) { /* se falhar, ainda tentamos atualizar a célula abaixo */ }
+                // Recarregar perfil canônico para atualizar sessionStorage (myOrgRole_...)
+                try { await loadUserProfile(); } catch (e) { console.warn('Falha ao recarregar perfil apos mudança de role', e); }
+                // Notificar que roles foram atualizadas para re-renderizar listas de orgs
+                try { document.dispatchEvent(new Event('org:roles:updated')); } catch (e) { /* silent */ }
             const messages = document.getElementById('orgMembersMessages');
             if (messages) messages.textContent = 'Função alterada com sucesso.';
             popup.remove();
@@ -906,8 +979,11 @@ export async function handleInviteMemberSubmit(event) {
     try {
         await addOrgMember(token, orgId, { email, role });
         if (messages) messages.textContent = 'Convite enviado com sucesso.';
-        // recarregar lista
-        await initOrgMembersPage();
+        // recarregar lista de membros apenas
+        try {
+            const refreshed = await getOrgMembers(token, orgId);
+            await renderOrgMembers(refreshed, orgId);
+        } catch (e) { console.warn('Falha ao recarregar membros após convite:', e); }
     } catch (err) {
         console.error('Erro ao convidar membro:', err);
         if (messages) messages.textContent = err.message || 'Erro ao convidar membro.';
