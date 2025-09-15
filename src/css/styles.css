@@ -16,6 +16,7 @@
     --white: #ffffff;
     --black: #000000;
     --gray-light: #d4d4d4;
+    --gray-lighter: #efefef; /* lighter gray for subtle backgrounds */
     --gray-medium: #6c757d;
     --gray-dark: #343a40;
     --verde-claro-dark: #9bb82b; /* tom mais escuro para hover */

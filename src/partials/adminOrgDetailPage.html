@@ -1,0 +1,30 @@
+<div class="page adminOrgDetailPage" id="adminOrgDetailPage">
+  <div class="container">
+  <h3>Detalhe da Organização</h3>
+    <div id="adminOrgDetailMessages" class="form-messages"></div>
+    <div class="org-detail-card">
+  <h3 id="detailOrgName">—</h3>
+      <div id="detailOrgMain">
+        <p><strong>ID:</strong> <span id="detailOrgId">—</span></p>
+        <p><strong>Razão Social:</strong> <span id="detailOrgRazao">—</span></p>
+  <p><strong>CNPJ:</strong> <span id="detailOrgCnpj">—</span></p>
+      </div>
+
+      <section id="detailOrgMembersSection">
+        <h3>Membros da Organização</h3>
+        <div class="table-responsive">
+          <table id="detailOrgMembersTable" class="table">
+            <thead>
+              <tr><th>ID do Usuário</th><th>Email</th><th>Role</th></tr>
+            </thead>
+            <tbody id="detailOrgMembersTbody">
+              <!-- membros serão injetados pelo JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="detailOrgRaw" class="raw-json"></div>
+    </div>
+  </div>
+</div>

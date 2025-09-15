@@ -1,15 +1,15 @@
 <div class="page adminUsersPage" id="adminUsersPage">
   <div class="container">
-    <h1>Painel de Administração</h1>
+  <h2 class="admin-panel-title">Painel de Administração</h2>
     <div id="adminUsersMessages" class="form-messages"></div>
 
     <div class="admin-cards-grid">
       <!-- Card 1: Gestão de Usuários -->
       <section class="admin-card" id="adminUsersCard">
-        <h2>
+        <h3>
           <span>Ações de Gestão de Usuários</span>
           <button class="card-toggle" aria-expanded="false" aria-controls="adminUsersCardBody" aria-label="Alternar conteúdo"></button>
-        </h2>
+        </h3>
         <p class="muted">Listagem de contas e ações administrativas (ativar/inativar, ver detalhes).</p>
         <div class="card-body" id="adminUsersCardBody">
           <div class="admin-users-filters">
@@ -47,10 +47,10 @@
 
       <!-- Card 2: Gestão de Organizações -->
       <section class="admin-card" id="adminOrgsCard">
-        <h2>
+        <h3>
           <span>Gestão de Organizações</span>
           <button class="card-toggle" aria-expanded="false" aria-controls="adminOrgsCardBody" aria-label="Alternar conteúdo"></button>
-        </h2>
+        </h3>
         <p class="muted">Listar e gerenciar organizações; ver membros e ativar/inativar empresas.</p>
         <div class="card-body" id="adminOrgsCardBody">
           <div id="adminOrgsContainer">
@@ -70,6 +70,7 @@
                     <th>Razão Social</th>
                     <th>CNPJ</th>
                     <th>Nº de Membros</th>
+                    <th>Status</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -84,10 +85,10 @@
 
       <!-- Card 3: Gestão de Conteúdo -->
       <section class="admin-card" id="adminContentCard">
-        <h2>
+        <h3>
           <span>Gestão de Conteúdo (CRUD)</span>
           <button class="card-toggle" aria-expanded="false" aria-controls="adminContentCardBody" aria-label="Alternar conteúdo"></button>
-        </h2>
+        </h3>
         <p class="muted">Gerenciar cursos, módulos e lições (criar, editar, excluir).</p>
         <div class="card-body" id="adminContentCardBody">
           <div id="adminContentContainer"><!-- Conteúdo carregado pelo módulo adminContent.js -->
@@ -97,10 +98,10 @@
 
       <!-- Card 4: Analytics & Relatórios -->
       <section class="admin-card" id="adminAnalyticsCard">
-        <h2>
+        <h3>
           <span>Analytics e Relatórios</span>
           <button class="card-toggle" aria-expanded="false" aria-controls="adminAnalyticsCardBody" aria-label="Alternar conteúdo"></button>
-        </h2>
+        </h3>
         <p class="muted">Dashboard com métricas da plataforma (usuários, matrículas, atividades).</p>
         <div class="card-body" id="adminAnalyticsCardBody">
           <div id="adminAnalyticsContainer"><!-- Conteúdo carregado pelo módulo adminAnalytics.js -->

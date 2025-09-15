@@ -18,6 +18,7 @@ export async function loadPartial(page) {
     adminUsers: "src/partials/adminUsersPage.html",
     adminUserDetail: "src/partials/adminUserDetailPage.html",
     adminOrgs: "src/partials/adminOrgsPage.html",
+    adminOrgDetail: "src/partials/adminOrgDetailPage.html",
     adminContent: "src/partials/adminContentPage.html",
     adminAnalytics: "src/partials/adminAnalyticsPage.html",
         cart: "src/partials/cartPage.html",
@@ -39,6 +40,7 @@ export async function loadPartial(page) {
     adminUsers: "adminUsersPageContainer",
     adminUserDetail: "adminUserDetailPageContainer",
     adminOrgs: "adminOrgsPageContainer",
+    adminOrgDetail: "adminOrgDetailPageContainer",
     adminContent: "adminContentPageContainer",
     adminAnalytics: "adminAnalyticsPageContainer",
         cart: "cartPageContainer",
@@ -85,6 +87,7 @@ const pageMap = {
     orgMembers: "orgMembersPage",
     adminUsers: "adminUsersPage",
     adminUserDetail: "adminUserDetailPage",
+    adminOrgDetail: "adminOrgDetailPage",
     cart: "cartPage",
     faq: "faqPage",
 };

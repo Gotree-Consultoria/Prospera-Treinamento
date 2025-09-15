@@ -4,8 +4,108 @@
 }
 
 .adminUsersPage h1 {
-  margin-bottom: 12px;
-  font-size: 1.5rem;
+  margin-bottom: 10px;
+  /* reduzido para um visual mais compacto */
+  font-size: 1.25rem;
+}
+
+/* títulos do painel agora não têm estilos dedicados; usamos tipografia global */
+/* Re-adicionando classe admin-panel-title para centralização consistente */
+.admin-panel-title {
+  text-align: center;
+  display: block;
+  width: 100%;
+  margin: 0.25rem 0 0.6rem 0;
+  /* mantém o tamanho padrão de h2 (deferido para styles.css) */
+  font-weight: 600;
+  color: var(--verde-escuro);
+}
+
+/* Alinhar conteúdo de cada card para uma grade consistente */
+.admin-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-card h3 {
+  margin: 0;
+  padding: 14px 18px; /* maior padding para não encostar nas bordas */
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.admin-card .card-body {
+  padding: 12px 16px;
+}
+
+.admin-card .muted {
+  padding: 0 16px 8px 16px;
+  color: #666;
+  font-size: 0.88rem;
+}
+
+/* Reduzir subtítulos H2 nas páginas de administração para visual mais compacto */
+/* Subtítulos de página agora usam h3 nas partials */
+.page.adminUsersPage h3,
+.page.adminOrgsPage h3,
+.page.adminContentPage h3,
+.page.adminAnalyticsPage h3,
+.page.adminUserDetailPage h3,
+.page.adminOrgDetailPage h3 {
+  font-size: 0.95rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+  color: #333; /* mantém contraste suficiente */
+}
+
+/* H2s dentro de seções do detalhe de usuário podem ficar ainda menores */
+.adminUserDetailPage section h3,
+.adminOrgDetailPage section h3 {
+  font-size: 0.9rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+
+/* Fallback com maior especificidade e !important para garantir aplicação
+   mesmo que o styles.css defina h2 maiores por padrão */
+.page.adminUsersPage h3, .page.adminOrgsPage h3, .page.adminContentPage h3,
+.page.adminAnalyticsPage h3, .page.adminUserDetailPage h3, .page.adminOrgDetailPage h3 {
+  font-size: 0.95rem !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.6rem !important;
+  font-weight: 600 !important;
+}
+
+.page.adminUserDetailPage section h3, .page.adminOrgDetailPage section h3 {
+  font-size: 0.9rem !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.45rem !important;
+  font-weight: 600 !important;
+}
+
+/* Page-level secondary title for admin pages */
+.adminUsersPage h3,
+.adminOrgsPage h3,
+.adminContentPage h3,
+.adminAnalyticsPage h3,
+.adminUserDetailPage h3,
+.adminOrgDetailPage h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
 }
 
 .form-messages {
@@ -14,6 +114,9 @@
   background: rgba(220,20,60,0.04);
   padding: 8px 10px;
   border-radius: 4px;
+.org-status-filter {
+  padding: 6px 8px;
+}
 }
 
 .table-responsive {
@@ -85,20 +188,47 @@
   box-shadow: 0 4px 10px rgba(20,20,30,0.03);
   margin-bottom: 12px;
 }
-.admin-card h2 {
+.admin-card h3 {
   margin: 0;
   padding: 8px 14px;
-  font-size: 1.0rem;
+  /* subtítulos dos cards ligeiramente menores */
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.admin-card .muted { padding: 0 16px 8px 16px; color: #666; font-size: 0.95rem; }
+.admin-card .muted { padding: 0 16px 8px 16px; color: #666; font-size: 0.85rem; }
 .admin-card .card-body { padding: 10px 14px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 280ms ease, opacity 260ms ease, padding 200ms ease; }
 .admin-card.expanded .card-body { max-height: 600px; opacity: 1; }
-.admin-card .card-toggle { cursor: pointer; background: transparent; border: none; width: 36px; height: 36px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
-.admin-card .card-toggle::after { content: '\25BE'; display: inline-block; transition: transform 260ms ease; color: #666; }
-.admin-card.expanded .card-toggle::after { transform: rotate(180deg); color: #333; }
+.admin-card .card-toggle {
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* círculo */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+.admin-card .card-toggle:hover {
+  background: #f7f7f7;
+  transform: translateY(-1px);
+}
+.admin-card .card-toggle::after {
+  content: '\25BE'; /* triângulo para baixo */
+  display: inline-block;
+  transition: transform 260ms ease, color 180ms ease;
+  color: #666;
+  font-size: 22px; /* aumentado para melhor visualização */
+  line-height: 1;
+}
+.admin-card.expanded .card-toggle::after {
+  transform: rotate(180deg);
+  color: #333;
+}
 
 /* Filters UI for admin users */
 .admin-users-filters { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
@@ -127,4 +257,61 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   background: #fff;
+}
+
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.switch input { display:none; }
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #d3d3d3; /* neutral background (lighter) */
+  transition: .2s;
+  border-radius: 24px;
+}
+.switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--coral); /* knob color when OFF */
+  transition: .2s;
+  border-radius: 50%;
+  z-index: 2;
+}
+.switch input:checked + .slider {
+  /* keep background neutral when ON */
+  background-color: #d3d3d3;
+}
+.switch input:checked + .slider:before { transform: translateX(20px); background-color: var(--verde-escuro); }
+
+/* Limitar a visualização do card de usuários a ~10 registros e habilitar scroll
+   Mantemos os filtros fora da área rolável (eles ficam acima da tabela). */
+#adminUsersCard .card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+#adminUsersCard .card-body .table-responsive {
+  /* Aproximação: 10 linhas * ~42px por linha = 420px (ajuste fino se necessário) */
+  max-height: 420px;
+  overflow: auto;
+  /* Mantém o layout compacto removendo margin inferior desnecessária */
+  margin-bottom: 0;
+}
+
+/* Deixa o cabeçalho da tabela fixo dentro da área rolável para melhor usabilidade */
+#adminUsersCard .table-responsive thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fafafa; /* mesmo fundo já usado para cabeçalho */
 }

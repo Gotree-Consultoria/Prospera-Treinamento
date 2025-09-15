@@ -3,6 +3,7 @@ import { setupEventListeners } from './modules/eventListeners.js';
 // Import admin modules that register page-level handlers (ensures page:loaded listeners are attached)
 import './modules/adminUsers.js';
 import './modules/adminOrgs.js';
+import './modules/adminOrgDetail.js';
 import { showPage, scrollToSection, resolveRouteFromLocation } from './modules/navigation.js';
 import { renderProducts, renderPackages, renderCategories, updateData } from './modules/render.js';
 import { initCarousel } from './modules/carousel.js';

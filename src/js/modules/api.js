@@ -599,13 +599,29 @@ export async function getAdminOrganizations(token) {
 
 /**
  * Ativa/Inativa uma organização
- * PATCH /admin/organizations/{orgId}/status  body: { enabled: true|false }
+ * PATCH /admin/organizations/{orgId}/status  body: { newStatus: 'ACTIVE'|'INACTIVE' }
+ *
+ * Compatível com chamada passando boolean (true -> ACTIVE, false -> INACTIVE)
+ * ou string ('ACTIVE'|'INACTIVE'|other variants).
  */
-export async function patchAdminOrganizationStatus(token, orgId, enabled) {
+export async function patchAdminOrganizationStatus(token, orgId, enabledOrStatus) {
+    // normalize to backend expected string
+    let newStatus = null;
+    if (typeof enabledOrStatus === 'boolean') {
+        newStatus = enabledOrStatus ? 'ACTIVE' : 'INACTIVE';
+    } else if (typeof enabledOrStatus === 'string') {
+        const s = enabledOrStatus.trim().toLowerCase();
+        if (s === 'active' || s === 'enabled' || s === 'true') newStatus = 'ACTIVE';
+        else if (s === 'inactive' || s === 'disabled' || s === 'false') newStatus = 'INACTIVE';
+        else newStatus = enabledOrStatus.toUpperCase();
+    } else {
+        throw new Error('Invalid status parameter for patchAdminOrganizationStatus');
+    }
+
     const response = await fetch(`${API_BASE_URL}/admin/organizations/${encodeURIComponent(orgId)}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ enabled })
+        body: JSON.stringify({ newStatus })
     });
     if (!response.ok) {
         const errorData = await safeParseResponse(response);

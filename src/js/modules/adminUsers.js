@@ -65,7 +65,7 @@ function renderAdminUsers(users) {
             if (col === 'userId' || col === '_id' || col === 'id') label = 'ID do usuário';
             if (col === 'email') label = 'Email';
             if (col === 'role' || col === 'systemRole') label = 'Role';
-            if (col === 'enabled') label = 'Enabled';
+            if (col === 'enabled') label = 'Status';
             const th = document.createElement('th'); th.textContent = label; trh.appendChild(th);
         });
         // coluna de ações
@@ -86,8 +86,12 @@ function renderAdminUsers(users) {
             if (col === 'enabled' && (val === true || val === false)) val = val ? 'Ativo' : 'Inativo';
             td.textContent = (val === null || val === undefined) ? '' : String(val);
             // friendly data-label for responsive view
-            if (col === 'userId' || col === '_id' || col === 'id') td.setAttribute('data-label', 'ID do usuário');
-            else td.setAttribute('data-label', col);
+            let dataLabel = col;
+            if (col === 'userId' || col === '_id' || col === 'id') dataLabel = 'ID do usuário';
+            else if (col === 'email') dataLabel = 'Email';
+            else if (col === 'role' || col === 'systemRole') dataLabel = 'Role';
+            else if (col === 'enabled') dataLabel = 'Status';
+            td.setAttribute('data-label', dataLabel);
             tr.appendChild(td);
         });
         // ações
@@ -96,8 +100,21 @@ function renderAdminUsers(users) {
         const btn = document.createElement('button'); btn.className = 'btn-small view-user'; btn.setAttribute('data-userid', idVal); btn.textContent = 'Ver Detalhes';
         tdActions.appendChild(btn);
         const enabledState = (u.enabled === false) ? false : true;
-        const toggleBtn = document.createElement('button'); toggleBtn.className = 'btn-small toggle-status'; toggleBtn.setAttribute('data-userid', idVal); toggleBtn.setAttribute('data-enabled', enabledState ? 'true' : 'false'); toggleBtn.textContent = enabledState ? 'Inativar' : 'Ativar';
-        tdActions.appendChild(toggleBtn);
+        // create a checkbox switch similar to card 2
+        const switchLabel = document.createElement('label');
+        switchLabel.className = 'switch';
+        const switchInput = document.createElement('input');
+        switchInput.type = 'checkbox';
+        switchInput.className = 'toggle-user-switch';
+        switchInput.setAttribute('data-userid', idVal);
+        switchInput.checked = enabledState;
+        switchInput.setAttribute('data-enabled', enabledState ? 'true' : 'false');
+        switchInput.setAttribute('aria-label', enabledState ? 'Inativar usuário' : 'Ativar usuário');
+        const slider = document.createElement('span'); slider.className = 'slider';
+        switchLabel.appendChild(switchInput);
+        switchLabel.appendChild(slider);
+        tdActions.appendChild(document.createTextNode(' '));
+        tdActions.appendChild(switchLabel);
         tdActions.setAttribute('data-label', 'Ações');
         tr.appendChild(tdActions);
         tbody.appendChild(tr);
@@ -162,6 +179,19 @@ function attachListHandlers() {
             return;
         }
 
+        // New-style checkbox toggle (preferred)
+        const switchInput = ev.target.closest('input.toggle-user-switch');
+        if (switchInput) {
+            const userId = switchInput.getAttribute('data-userid');
+            const enabledAttr = switchInput.getAttribute('data-enabled');
+            const currentEnabled = enabledAttr === 'true';
+            const tr = switchInput.closest('tr');
+            const statusTd = tr ? tr.querySelector('td[data-label="Status"]') : null;
+            handleToggleUserStatus(userId, currentEnabled, switchInput, statusTd);
+            return;
+        }
+
+        // legacy button toggle (fallback)
         const toggleBtn = ev.target.closest('.toggle-status');
         if (toggleBtn) {
             const userId = toggleBtn.getAttribute('data-userid');
@@ -307,15 +337,7 @@ async function initAdminUsersPage() {
     window._adminUsersCache = list;
     renderAdminUsers(list);
         attachListHandlers();
-        // garantir que o card de usuários esteja aberto por padrão para não ficar tudo em branco
-        try {
-            const adminCardEl = document.getElementById('adminUsersCard');
-            if (adminCardEl) {
-                adminCardEl.classList.add('expanded');
-                const tb = adminCardEl.querySelector('.card-toggle');
-                if (tb) tb.setAttribute('aria-expanded', 'true');
-            }
-        } catch (e) { /* silencioso */ }
+        // manter todos os cards fechados por padrão; o usuário decide expandir
     // carregar conteúdo dos outros cards
     // Nota: a função `loadAdminOrgs()` era um renderer legado que sobrescrevia
     // o container do Card 2 com uma <ul>. Para preservar a marcação do
