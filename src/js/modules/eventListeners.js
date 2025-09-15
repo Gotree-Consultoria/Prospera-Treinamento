@@ -17,6 +17,34 @@ import { formatCNPJ } from './utils.js';
  */
 export function setupEventListeners() {
 
+    // Inserir link para painel de admin quando o usuário for SYSTEM_ADMIN (normalizar formatos)
+    try {
+        function normalizeRoleLocal(v) {
+            if (v === null || v === undefined) return '';
+            try { return String(v).trim().toUpperCase().replace(/[-_\s]+/g, '_'); } catch (e) { return String(v); }
+        }
+        const rawSysRole = localStorage.getItem('systemRole');
+        const rawUserRole = localStorage.getItem('userRole');
+        const profileRole = (window && window.profileData && (window.profileData.role || window.profileData.systemRole)) ? (window.profileData.role || window.profileData.systemRole) : null;
+        const source = rawSysRole || rawUserRole || profileRole || '';
+        const norm = normalizeRoleLocal(source);
+        const tokenPresent = !!localStorage.getItem('jwtToken');
+        console.debug('[ensureAdminLink] token=', tokenPresent, 'rawSystemRole=', rawSysRole, 'rawUserRole=', rawUserRole, 'profileRole=', profileRole, 'normalized=', norm);
+        const allowed = (norm === 'SYSTEM_ADMIN' || norm === 'ADMIN' || norm === 'SYSTEMADMIN');
+        if (tokenPresent && allowed) {
+            const navMenu = document.querySelector('.nav-menu');
+            if (navMenu && !navMenu.querySelector('[data-page="adminUsers"]')) {
+                const a = document.createElement('a');
+                a.className = 'nav-link';
+                a.href = '#';
+                a.setAttribute('data-page', 'adminUsers');
+                a.textContent = 'Admin';
+                // colocar antes dos itens de contato
+                navMenu.appendChild(a);
+            }
+        }
+    } catch (e) { console.warn('ensureAdminLink failed', e); }
+
     // === LISTENERS DE CLIQUE (Delegação de Eventos) ===
     // Centraliza todos os eventos de clique da aplicação
     document.body.addEventListener("click", async (e) => {
@@ -522,7 +550,21 @@ export function setupEventListeners() {
     } else if (form.id === 'changePasswordForm') {
             handlePasswordChange(e);
         } else if (form.id === 'newsletterForm') {
-            subscribeNewsletter(e);
+            e.preventDefault();
+            try {
+                const fm = new FormData(form);
+                const email = (fm.get('email') || '').toString().trim();
+                if (!email) {
+                    alert('Informe um e-mail válido para subscrever.');
+                    return;
+                }
+                await subscribeNewsletter(email);
+                alert('Inscrição realizada com sucesso. Obrigado!');
+                form.reset();
+            } catch (err) {
+                console.error('Erro ao subscrever newsletter:', err);
+                alert(err && err.message ? err.message : 'Erro ao subscrever newsletter.');
+            }
         }
     });
 
@@ -546,6 +588,55 @@ document.addEventListener('page:loaded', async (ev) => {
 
     console.log("Event listeners configurados.");
 }
+
+// Função pública para garantir que o link Admin esteja visível para SYSTEM_ADMIN
+export function ensureAdminLink() {
+    try {
+        // Ler possíveis fontes onde a role pode ter sido salva
+        const rawSystemRole = localStorage.getItem('systemRole');
+        const rawUserRole = localStorage.getItem('userRole');
+        const profileRole = (window && window.profileData && (window.profileData.role || window.profileData.systemRole)) ? (window.profileData.role || window.profileData.systemRole) : null;
+
+        // Normalizar e escolher primeira fonte válida
+        const sourceValue = rawSystemRole || rawUserRole || profileRole || '';
+        const sysRole = (typeof sourceValue === 'string') ? sourceValue.trim() : String(sourceValue);
+
+        // Debug: logar os valores para depuração
+        console.debug('[ensureAdminLink] rawSystemRole=', rawSystemRole, 'rawUserRole=', rawUserRole, 'profileRole=', profileRole, '=> sysRole=', sysRole);
+
+        const navMenu = document.querySelector('.nav-menu');
+        const already = navMenu && navMenu.querySelector('[data-page="adminUsers"]');
+
+        if (sysRole === 'SYSTEM_ADMIN') {
+            if (navMenu && !already) {
+                const a = document.createElement('a');
+                a.className = 'nav-link';
+                a.href = '#';
+                a.setAttribute('data-page', 'adminUsers');
+                a.textContent = 'Admin';
+                navMenu.appendChild(a);
+            }
+        } else {
+            // Se não for admin, remover o link existente por segurança
+            try {
+                if (already && already.parentNode) already.parentNode.removeChild(already);
+            } catch (e) { /* ignore */ }
+        }
+    } catch (e) {
+        console.error('ensureAdminLink error:', e);
+    }
+}
+
+// Reagir ao evento de login para atualizar dinamicamente o menu
+document.addEventListener('user:loggedin', () => {
+    try {
+        console.debug('user:loggedin event received');
+        ensureAdminLink();
+    } catch (e) { console.error('Error handling user:loggedin', e); }
+});
+
+// Expor helper para debugging via console
+try { window.appEnsureAdminLink = ensureAdminLink; } catch (e) { /* ignore */ }
 
 // Pequenos handlers para o modal de termos (link abre, botão fecha, clique no backdrop fecha)
 document.body.addEventListener('click', (e) => {

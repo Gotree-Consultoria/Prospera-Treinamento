@@ -15,6 +15,11 @@ export async function loadPartial(page) {
     organizationsNew: "src/partials/organizationsNew.html",
     orgManagement: "src/partials/orgManagement.html",
     orgMembers: "src/partials/orgMembersPage.html",
+    adminUsers: "src/partials/adminUsersPage.html",
+    adminUserDetail: "src/partials/adminUserDetailPage.html",
+    adminOrgs: "src/partials/adminOrgsPage.html",
+    adminContent: "src/partials/adminContentPage.html",
+    adminAnalytics: "src/partials/adminAnalyticsPage.html",
         cart: "src/partials/cartPage.html",
         faq: "src/partials/faqPage.html"
     };
@@ -31,6 +36,11 @@ export async function loadPartial(page) {
     organizationsNew: "organizationsNewPageContainer",
     orgManagement: "orgManagementPageContainer",
     orgMembers: "orgMembersPageContainer",
+    adminUsers: "adminUsersPageContainer",
+    adminUserDetail: "adminUserDetailPageContainer",
+    adminOrgs: "adminOrgsPageContainer",
+    adminContent: "adminContentPageContainer",
+    adminAnalytics: "adminAnalyticsPageContainer",
         cart: "cartPageContainer",
         faq: "faqPageContainer"
     };
@@ -73,6 +83,8 @@ const pageMap = {
     organizationsNew: "organizationsNewPage",
     orgManagement: "orgManagementPage",
     orgMembers: "orgMembersPage",
+    adminUsers: "adminUsersPage",
+    adminUserDetail: "adminUserDetailPage",
     cart: "cartPage",
     faq: "faqPage",
 };
@@ -92,6 +104,8 @@ const pathToPage = {
     '/organizations/new': 'organizationsNew',
     '/organizations': 'orgManagement',
     '/organizations/members': 'orgMembers',
+    '/admin/users': 'adminUsers',
+    // detalhe ficará com rota dinâmica em SPA (mapeamento por hash)
     '/cart': 'cart',
     '/faq': 'faq'
 };

@@ -17,6 +17,11 @@
     padding: var(--spacing-md) 0;
 }
 
+/* Permitir overflow visível na página de conta para tooltips que escapam do container */
+#accountPage .container {
+    overflow: visible;
+}
+
 /* Layout de grade para a página da conta */
 .account-grid {
     display: grid;
@@ -219,6 +224,44 @@
 .inline-controls button:focus {
     outline: 2px solid rgba(34,139,34,0.15);
     outline-offset: 2px;
+}
+
+/* Info dot (pequena bolinha com i) e tooltip */
+.info-dot {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    border-radius: 50%;
+    background: var(--gray-light);
+    color: var(--white);
+    text-align: center;
+    font-size: 0.75rem;
+    margin-left: 8px;
+    position: relative;
+    cursor: default;
+}
+.info-dot:focus {
+    outline: 2px solid rgba(0,0,0,0.08);
+}
+.info-tooltip {
+    display: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(100% + 8px);
+    background: #222;
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    max-width: 220px;
+    text-align: center;
+    z-index: 2000;
+}
+.info-dot:hover .info-tooltip,
+.info-dot:focus .info-tooltip {
+    display: block;
 }
 
 

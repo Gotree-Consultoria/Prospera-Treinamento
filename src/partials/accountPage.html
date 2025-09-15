@@ -42,26 +42,19 @@
                <div class="account-section active" id="profileSection">
                   <!-- Dados Cadastrais (contém a lógica de 'Meu Perfil') -->
                   <div id="dadosCadastrais" class="dados-cadastrais">
-                     <h2>Dados Cadastrais</h2>
+                     <h2>Dados Cadastrais <span class="info-dot" tabindex="0" aria-label="Informação">i
+                        <span class="info-tooltip">Para alterações, entre em contato com a central de atendimento ao cliente.</span>
+                     </span></h2>
                      <div id="profileView" class="profile-infos">
                         <ul class="profile-view">
-                           <li>
-                              <strong>E-mail:</strong>
-                              <span id="userEmail"></span>
-                              <!-- botão inline para alterar e-mail -->
-                              <button id="showEmailButton" class="btn-inline" data-action="toggleEmailEdit" aria-label="Alterar e-mail" aria-expanded="false">Alterar</button>
-                              <div id="email-controls" class="hidden-controls inline-controls" aria-hidden="true">
-                                 <input type="email" id="editEmail" name="email" placeholder="Novo e-mail" disabled />
-                                 <button type="button" data-action="saveEmail">Salvar</button>
-                                 <button type="button" data-action="toggleEmailEdit">Cancelar</button>
-                              </div>
-                           </li>
+                           <!-- Email movido para a lista abaixo; apenas exibição e tooltip de contato -->
 
                            <!-- Dados pessoais parcialmente mascarados -->
                            <li class="verified-section">
                               <hr class="verified-separator" />
                               <ul class="verified-list">
                                  <li><strong>Nome completo:</strong> <span id="userName"></span></li>
+                                 <li><strong>E-mail:</strong> <span id="userEmail"></span></li>
                                  <li><strong>CPF:</strong> <span id="userCPF" class="masked">—</span></li>
                                  <li><strong>Data de Nascimento:</strong> <span id="userBirth" class="masked">—</span></li>
                                  <li><strong>Telefone:</strong> <span id="userPhone" class="masked">—</span></li>

@@ -126,6 +126,32 @@ export async function loadUserProfile() {
             sessionStorage.removeItem('isCompanyAdmin');
         }
     } catch (e) { /* silencioso */ }
+    // Persistir role de sistema (se existir) para permitir acesso a painéis de admin
+    try {
+        const sysRole = (profile && (profile.systemRole || profile.role)) || '';
+        if (sysRole) {
+            localStorage.setItem('systemRole', sysRole);
+        } else {
+            localStorage.removeItem('systemRole');
+        }
+    } catch (e) { /* silencioso */ }
+    try {
+        // Notificar outros módulos que a role do usuário foi atualizada (útil para atualizar UI)
+        document.dispatchEvent(new CustomEvent('user:loggedin', { detail: { source: 'profile' } }));
+    } catch (e) { /* silent */ }
+    // Mostrar ou esconder o ícone de informação na seção Dados Cadastrais
+    try {
+        const infoDot = document.querySelector('#dadosCadastrais .info-dot');
+        // considerar perfil completo quando tiver nome e CPF não vazio
+        const profileComplete = Boolean(resolvedName && cpfValue);
+        if (infoDot) {
+            if (profileComplete) {
+                infoDot.classList.remove('hidden');
+            } else {
+                infoDot.classList.add('hidden');
+            }
+        }
+    } catch (e) { /* silent */ }
     } catch (err) {
         console.error('Erro ao carregar perfil:', err);
         // Fallback: preencher o mínimo de UI com o e-mail salvo localmente para evitar que a conta fique vazia
@@ -300,47 +326,14 @@ export function toggleProfileEdit() {
  * @param {boolean} show - Se true, mostra os campos; se false, esconde.
  */
 export function toggleEmailEdit(show) {
-    const showButton = document.getElementById('showEmailButton');
-    const controls = document.getElementById('email-controls');
-
-    if (!controls || !showButton) return;
-
-    if (show) {
-        showButton.classList.add('hidden');
-        showButton.setAttribute('aria-expanded', 'true');
-        controls.classList.remove('hidden-controls');
-        controls.classList.add('active');
-        controls.setAttribute('aria-hidden', 'false');
-        const input = controls.querySelector('input');
-        if (input) {
-            input.disabled = false;
-            input.focus();
-        }
-        // permitir fechar com ESC
-        const escHandler = (ev) => {
-            if (ev.key === 'Escape') toggleEmailEdit(false);
-        };
-        controls._escHandler = escHandler;
-        document.addEventListener('keydown', escHandler);
-    } else {
-        showButton.classList.remove('hidden');
-        showButton.setAttribute('aria-expanded', 'false');
-        controls.classList.add('hidden-controls');
-        controls.classList.remove('active');
-        controls.setAttribute('aria-hidden', 'true');
-        // remover feedback inline quando fechar
-        const fb = controls.querySelector('.inline-feedback');
-        if (fb) fb.remove();
-        const input = controls.querySelector('input');
-        if (input) {
-            input.value = '';
-            input.disabled = true;
-        }
-        // remover listener de ESC se houver
-        if (controls._escHandler) {
-            document.removeEventListener('keydown', controls._escHandler);
-            delete controls._escHandler;
-        }
+    // Os controles de edição de e-mail foram removidos do HTML por decisão de UX.
+    // Esta função permanece como "safe no-op" para evitar erros caso outros módulos ainda a invoquem.
+    try {
+        const showButton = document.getElementById('showEmailButton');
+        const controls = document.getElementById('email-controls');
+        if (!controls || !showButton) return;
+    } catch (e) {
+        // silencioso
     }
 }
 
@@ -368,8 +361,13 @@ export function togglePasswordEdit(show) {
 export async function handleEmailChange() {
     const emailInput = document.getElementById('editEmail');
     const controls = document.getElementById('email-controls');
+    const messages = document.getElementById('orgMembersMessages');
+    // Se os controles foram removidos, não há nada a salvar desde a UI
+    if (!emailInput || !controls) {
+        if (messages) messages.textContent = 'Para alterar o e-mail, por favor contate a central de atendimento ao cliente.';
+        return;
+    }
     const emailValue = emailInput ? emailInput.value.trim() : '';
-    if (!controls) return;
 
     // garantir feedback element
     let feedback = controls.querySelector('.inline-feedback');

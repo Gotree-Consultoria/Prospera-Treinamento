@@ -1,0 +1,130 @@
+/* Styles específicos para o painel de Admin (Gerenciamento de Usuários) */
+.adminUsersPage .container {
+  padding: 24px 16px;
+}
+
+.adminUsersPage h1 {
+  margin-bottom: 12px;
+  font-size: 1.5rem;
+}
+
+.form-messages {
+  margin-bottom: 12px;
+  color: #b33;
+  background: rgba(220,20,60,0.04);
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+.table th, .table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e6e6e6;
+  vertical-align: middle;
+}
+.table thead th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.btn-small {
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+.btn-small:hover { background: #f4f4f4; }
+
+/* Responsive: transformar tabela em cards simples em telas pequenas */
+@media (max-width: 720px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { margin-bottom: 12px; border: 1px solid #eee; padding: 8px; border-radius: 6px; }
+  .table td { padding: 8px 10px; border: none; position: relative; }
+  .table td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #666;
+  }
+  .table td:last-child { text-align: right; }
+}
+
+/* Small improvements for empty state */
+.adminUsersPage .empty-state { padding: 18px; color: #666; text-align: center; }
+
+/* Make sure page isn't cramped */
+.adminUsersPage .container { max-width: 1100px; margin: 0 auto; }
+
+/* Grid de cards do painel */
+.admin-cards-grid {
+  display: block; /* um abaixo do outro */
+  gap: 12px;
+  margin-top: 12px;
+}
+.admin-card {
+  border: 1px solid rgba(30,30,30,0.06);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #fbfbfb);
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(20,20,30,0.03);
+  margin-bottom: 12px;
+}
+.admin-card h2 {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 1.0rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-card .muted { padding: 0 16px 8px 16px; color: #666; font-size: 0.95rem; }
+.admin-card .card-body { padding: 10px 14px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 280ms ease, opacity 260ms ease, padding 200ms ease; }
+.admin-card.expanded .card-body { max-height: 600px; opacity: 1; }
+.admin-card .card-toggle { cursor: pointer; background: transparent; border: none; width: 36px; height: 36px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+.admin-card .card-toggle::after { content: '\25BE'; display: inline-block; transition: transform 260ms ease; color: #666; }
+.admin-card.expanded .card-toggle::after { transform: rotate(180deg); color: #333; }
+
+/* Filters UI for admin users */
+.admin-users-filters { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.admin-users-input { padding:8px; border:1px solid #ccc; border-radius:4px; min-width:220px; }
+.admin-users-select { padding:8px; border:1px solid #ccc; border-radius:4px; background:#fff; }
+
+@media (max-width: 900px) {
+  .admin-cards-grid { grid-template-columns: 1fr; }
+}
+
+/* Controls for admin organizations page */
+.admin-orgs-controls {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.admin-orgs-controls .org-search-input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.admin-orgs-controls .org-status-filter {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}

@@ -2,7 +2,7 @@
 // (Não importa funções de navegação, renderização, etc.)
 // Apenas os dados estáticos que você precisa, como a URL base
 
-let API_BASE_URL;
+export let API_BASE_URL;
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     API_BASE_URL = "http://localhost:8080";
 } else {
@@ -513,5 +513,138 @@ export async function updateOrgMemberRole(token, organizationId, membershipId, n
         throw new Error((err && (err.message || err.erro)) || 'Erro ao atualizar função do membro');
     }
     // retornar dados atualizados do membro
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista todos os usuários (requer SYSTEM_ADMIN)
+ */
+export async function getAdminUsers(token) {
+    const url = `${API_BASE_URL}/admin/users`;
+    console.debug('[api] getAdminUsers request to', url, 'token present=', !!token);
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        const errorData = await safeParseResponse(response);
+        const err = new Error((errorData && errorData.message) || 'Erro ao buscar usuários.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Busca detalhe de um usuário por ID (requer SYSTEM_ADMIN)
+ */
+export async function getAdminUserById(token, userId) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        const errorData = await safeParseResponse(response);
+        const err = new Error((errorData && errorData.message) || 'Erro ao buscar detalhe do usuário.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Ativa ou inativa um usuário (requer SYSTEM_ADMIN)
+ * Endpoint esperado: PATCH /admin/users/{userId}/status  body: { enabled: true|false }
+ */
+export async function patchAdminUserStatus(token, userId, enabled) {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ enabled })
+    });
+    if (!response.ok) {
+        const errorData = await safeParseResponse(response);
+        const err = new Error((errorData && errorData.message) || 'Erro ao atualizar status do usuário.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista organizações (requer SYSTEM_ADMIN)
+ */
+export async function getAdminOrganizations(token) {
+    const response = await fetch(`${API_BASE_URL}/admin/organizations`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        const errorData = await safeParseResponse(response);
+        const err = new Error((errorData && errorData.message) || 'Erro ao listar organizações.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Ativa/Inativa uma organização
+ * PATCH /admin/organizations/{orgId}/status  body: { enabled: true|false }
+ */
+export async function patchAdminOrganizationStatus(token, orgId, enabled) {
+    const response = await fetch(`${API_BASE_URL}/admin/organizations/${encodeURIComponent(orgId)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ enabled })
+    });
+    if (!response.ok) {
+        const errorData = await safeParseResponse(response);
+        const err = new Error((errorData && errorData.message) || 'Erro ao atualizar status da organização.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Stubs para CRUD de conteúdo e analytics — podem ser implementados conforme backend
+ */
+export async function getAdminContentSummary(token) {
+    const response = await fetch(`${API_BASE_URL}/admin/content/summary`, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+    if (!response.ok) throw new Error('Erro ao buscar resumo de conteúdo');
+    return safeParseResponse(response);
+}
+
+export async function getAdminAnalyticsSummary(token) {
+    const response = await fetch(`${API_BASE_URL}/admin/analytics/summary`, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+    if (!response.ok) throw new Error('Erro ao buscar analytics');
+    return safeParseResponse(response);
+}
+
+/**
+ * Busca detalhe de uma organização pelo ID (requer SYSTEM_ADMIN)
+ * Endpoint: GET /admin/organizations/{organizationId}
+ */
+export async function getAdminOrganizationById(token, organizationId) {
+    const response = await fetch(`${API_BASE_URL}/admin/organizations/${encodeURIComponent(organizationId)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        const errorData = await safeParseResponse(response);
+        const err = new Error((errorData && errorData.message) || 'Erro ao buscar detalhe da organização.');
+        err.status = response.status;
+        throw err;
+    }
     return safeParseResponse(response);
 }

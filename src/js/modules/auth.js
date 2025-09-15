@@ -24,6 +24,8 @@ export async function handleLogin(event) {
         if (data && data.token) {
             localStorage.setItem('jwtToken', data.token);
             localStorage.setItem('loggedInUserEmail', data.email || email);
+            // persistir role do backend (campo `role` esperado)
+            try { if (data.role) localStorage.setItem('systemRole', data.role); } catch(e) {}
         }
 
         let profile = null;
@@ -32,8 +34,9 @@ export async function handleLogin(event) {
             try { profile = await fetchUserProfile(data && data.token); } catch (err) { /* ignore */ }
         }
 
-        closeAuthModal();
-        showPage('account');
+    closeAuthModal();
+    showPage('account');
+    try { document.dispatchEvent(new CustomEvent('user:loggedin', { detail: { source: 'auth' } })); } catch (e) {}
 
         if (profile && (!profile.cpf || !profile.phone || !profile.birth)) {
             const completeSection = document.getElementById('profileCompleteSection');
@@ -130,9 +133,11 @@ export async function handlePageLogin(event) {
         if (data && data.token) {
             localStorage.setItem('jwtToken', data.token);
             localStorage.setItem('loggedInUserEmail', data.email || email);
+            try { if (data.role) localStorage.setItem('systemRole', data.role); } catch(e) {}
         }
         if (messages) messages.textContent = 'Login realizado com sucesso.';
-        showPage('account');
+    showPage('account');
+    try { document.dispatchEvent(new CustomEvent('user:loggedin', { detail: { source: 'auth' } })); } catch (e) {}
     } catch (err) {
         console.error('Erro no handlePageLogin:', err);
         if (messages) messages.textContent = err && err.message || 'Email ou senha incorretos.';
@@ -142,6 +147,7 @@ export async function handlePageLogin(event) {
 export function logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('loggedInUserEmail');
+    localStorage.removeItem('systemRole');
     alert('Você saiu da sua conta.');
     showPage('home');
 }
