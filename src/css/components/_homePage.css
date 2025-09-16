@@ -45,6 +45,15 @@
     opacity: 0.8;
 }
 
+/* Logo image used in hero (replaces font-awesome icon) */
+.hero-image .hero-logo {
+    max-width: 320px;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    opacity: 0.95;
+}
+
 /* Responsividade específica para a hero: empilhar conteúdo em telas pequenas */
 @media (max-width: 720px) {
     .hero {
@@ -81,6 +90,9 @@
         opacity: 0.9;
         margin-top: 0.2rem;
     }
+    .hero-image .hero-logo {
+        max-width: 220px;
+    }
 }
 
 /* Ajuste adicional para telas muito pequenas (tel.) */
@@ -93,6 +105,9 @@
     }
     .hero-image i {
         font-size: 3.6rem;
+    }
+    .hero-image .hero-logo {
+        max-width: 160px;
     }
 }
 

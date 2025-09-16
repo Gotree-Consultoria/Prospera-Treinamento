@@ -27,6 +27,18 @@
     margin-top: -4px;
 }
 
+/* Logo image for the site brand (replaces text heading) */
+.nav-brand .site-logo {
+    max-width: 220px;
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+@media (max-width: 720px) {
+  .nav-brand .site-logo { max-width: 160px; }
+}
+
 .nav-menu {
     display: flex;
     gap: var(--spacing-lg);
