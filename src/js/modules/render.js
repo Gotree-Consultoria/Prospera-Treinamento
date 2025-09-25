@@ -76,13 +76,15 @@ export function renderPackages() {
 
     if (packagesGrid && packagesLoading) {
         packagesLoading.style.display = "none";
-        packagesGrid.style.display = "grid";
+        packagesGrid.classList.remove('is-hidden');
+        packagesGrid.style.display = 'grid';
         packagesGrid.innerHTML = packageHTML;
     }
 
     if (packagesPageGrid && packagesPageLoading) {
         packagesPageLoading.style.display = "none";
-        packagesPageGrid.style.display = "grid";
+        packagesPageGrid.classList.remove('is-hidden');
+        packagesPageGrid.style.display = 'grid';
         packagesPageGrid.innerHTML = packageHTML;
     }
 }

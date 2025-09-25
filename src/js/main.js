@@ -4,6 +4,8 @@ import { setupEventListeners } from './modules/eventListeners.js';
 import './modules/adminUsers.js';
 import './modules/adminOrgs.js';
 import './modules/adminOrgDetail.js';
+import './modules/adminPlatformSectors.js';
+import './modules/adminContent.js';
 import { showPage, scrollToSection, resolveRouteFromLocation } from './modules/navigation.js';
 import { renderProducts, renderPackages, renderCategories, updateData } from './modules/render.js';
 import { initCarousel } from './modules/carousel.js';

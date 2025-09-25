@@ -1,4 +1,4 @@
-import { getAdminOrganizationById } from './api.js';
+import { getAdminOrganizationById, getAdminOrganizationSectors } from './api.js';
 import { isSystemAdmin } from './adminUsers.js';
 
 function renderOrgDetail(detail) {
@@ -33,14 +33,40 @@ function renderOrgDetail(detail) {
     if (raw) raw.innerHTML = '<pre style="white-space:pre-wrap">' + JSON.stringify(detail, null, 2) + '</pre>';
 }
 
+function renderOrgSectors(sectors) {
+    const tbody = document.getElementById('detailOrgSectorsTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (Array.isArray(sectors) && sectors.length) {
+        sectors.forEach(s => {
+            const tr = document.createElement('tr');
+            const td1 = document.createElement('td'); td1.textContent = s.id || s._id || s.sectorId || '';
+            const td2 = document.createElement('td'); td2.textContent = s.name || s.nome || s.title || '';
+            tr.appendChild(td1); tr.appendChild(td2);
+            tbody.appendChild(tr);
+        });
+    } else {
+        const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 2; td.textContent = 'Nenhum setor adotado.'; tr.appendChild(td); tbody.appendChild(tr);
+    }
+}
+
 async function initAdminOrgDetailPage(orgId) {
     if (!isSystemAdmin()) {
         const msg = document.getElementById('adminOrgDetailMessages'); if (msg) msg.textContent = 'Acesso negado. Apenas SYSTEM_ADMIN pode acessar.'; return;
     }
     const msg = document.getElementById('adminOrgDetailMessages'); if (msg) msg.textContent = '';
     try {
-        const detail = await getAdminOrganizationById(localStorage.getItem('jwtToken'), orgId);
+        const token = localStorage.getItem('jwtToken');
+        const detail = await getAdminOrganizationById(token, orgId);
         renderOrgDetail(detail);
+        // carregar setores adotados
+        try {
+            const sectors = await getAdminOrganizationSectors(token, orgId);
+            renderOrgSectors(sectors);
+        } catch (se) {
+            console.error('Erro ao listar setores:', se);
+            const msg = document.getElementById('detailOrgSectorsMessages'); if (msg) msg.textContent = se.message || 'Erro ao carregar setores.';
+        }
     } catch (err) {
         console.error('Erro ao buscar detalhe da organização:', err);
         const el = document.getElementById('adminOrgDetailMessages'); if (el) el.textContent = 'Erro ao carregar detalhes da organização.';

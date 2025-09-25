@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="src/css/components/_utilities.css">
     <link rel="stylesheet" href="src/css/components/_suport.css">
     <link rel="stylesheet" href="src/css/components/_admin.css">
+    <link rel="stylesheet" href="src/css/components/_trainingDetail.css">
+    <link rel="stylesheet" href="src/css/components/_adminModals.css">
 </head>
 
 <body>
@@ -166,7 +168,7 @@
                         <div class="loading" id="packagesLoading">
                             A carregar pacotes...
                         </div>
-                        <div class="packages-grid" id="packagesGrid" style="display: none">
+                        <div class="packages-grid is-hidden" id="packagesGrid">
                             <!-- Packages will be loaded here -->
                         </div>
                     </div>
@@ -227,9 +229,20 @@
         <div class="page hidden" id="adminContentPage">
             <div id="adminContentPageContainer"></div>
         </div>
+        <div class="page hidden" id="trainingDetailPage">
+            <div id="trainingDetailPageContainer"></div>
+        </div>
         <div class="page hidden" id="adminAnalyticsPage">
             <div id="adminAnalyticsPageContainer"></div>
         </div>
+        <div class="page hidden" id="platformSectorsPage"><div id="platformSectorsPageContainer"></div></div>
+        <div class="page hidden" id="platformTagsPage"><div id="platformTagsPageContainer"></div></div>
+        <div class="page hidden" id="platformLevelsPage"><div id="platformLevelsPageContainer"></div></div>
+        <div class="page hidden" id="platformEmailsPage"><div id="platformEmailsPageContainer"></div></div>
+        <div class="page hidden" id="platformPoliciesPage"><div id="platformPoliciesPageContainer"></div></div>
+        <div class="page hidden" id="platformIntegrationsPage"><div id="platformIntegrationsPageContainer"></div></div>
+        <div class="page hidden" id="platformAuditPage"><div id="platformAuditPageContainer"></div></div>
+        <div class="page hidden" id="platformCachePage"><div id="platformCachePageContainer"></div></div>
         <div class="page hidden" id="packagesPage">
             <div id="packagesPageContainer"></div>
         </div>

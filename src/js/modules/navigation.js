@@ -21,6 +21,15 @@ export async function loadPartial(page) {
     adminOrgDetail: "src/partials/adminOrgDetailPage.html",
     adminContent: "src/partials/adminContentPage.html",
     adminAnalytics: "src/partials/adminAnalyticsPage.html",
+    platformSectors: "src/partials/platformSectorsPage.html",
+    platformTags: "src/partials/platformTagsPage.html",
+    platformLevels: "src/partials/platformLevelsPage.html",
+    platformEmails: "src/partials/platformEmailsPage.html",
+    platformPolicies: "src/partials/platformPoliciesPage.html",
+    platformIntegrations: "src/partials/platformIntegrationsPage.html",
+    platformAudit: "src/partials/platformAuditPage.html",
+    platformCache: "src/partials/platformCachePage.html",
+    trainingDetail: "src/partials/trainingDetailPage.html",
         cart: "src/partials/cartPage.html",
         faq: "src/partials/faqPage.html"
     };
@@ -43,6 +52,15 @@ export async function loadPartial(page) {
     adminOrgDetail: "adminOrgDetailPageContainer",
     adminContent: "adminContentPageContainer",
     adminAnalytics: "adminAnalyticsPageContainer",
+    platformSectors: "platformSectorsPageContainer",
+    platformTags: "platformTagsPageContainer",
+    platformLevels: "platformLevelsPageContainer",
+    platformEmails: "platformEmailsPageContainer",
+    platformPolicies: "platformPoliciesPageContainer",
+    platformIntegrations: "platformIntegrationsPageContainer",
+    platformAudit: "platformAuditPageContainer",
+    platformCache: "platformCachePageContainer",
+    trainingDetail: "trainingDetailPageContainer",
         cart: "cartPageContainer",
         faq: "faqPageContainer"
     };
@@ -88,6 +106,15 @@ const pageMap = {
     adminUsers: "adminUsersPage",
     adminUserDetail: "adminUserDetailPage",
     adminOrgDetail: "adminOrgDetailPage",
+    platformSectors: "platformSectorsPage",
+    platformTags: "platformTagsPage",
+    platformLevels: "platformLevelsPage",
+    platformEmails: "platformEmailsPage",
+    platformPolicies: "platformPoliciesPage",
+    platformIntegrations: "platformIntegrationsPage",
+    platformAudit: "platformAuditPage",
+    platformCache: "platformCachePage",
+    trainingDetail: "trainingDetailPage",
     cart: "cartPage",
     faq: "faqPage",
 };
@@ -118,9 +145,18 @@ const pathToPage = {
  * @returns {string|null} - chave de página ou null se não for possível resolver
  */
 export function resolveRouteFromLocation() {
-    // preferir hash se presente (ex: #about)
-    const hash = window.location.hash ? window.location.hash.replace(/^#/, '') : null;
-    if (hash) return hash;
+    // preferir hash se presente (ex: #about ou trainingDetail/123)
+    const rawHash = window.location.hash ? window.location.hash.replace(/^#/, '') : null;
+    if (rawHash) {
+        if (rawHash.startsWith('trainingDetail/')) {
+            const parts = rawHash.split('/');
+            if (parts.length === 2 && parts[1]) {
+                try { window._openTrainingId = parts[1]; } catch(_) {}
+                return 'trainingDetail';
+            }
+        }
+        return rawHash;
+    }
 
     const pathname = window.location.pathname || '/';
     // Normalizar algumas variações simples
@@ -145,7 +181,7 @@ export function resolveRouteFromLocation() {
  * Exibe a página principal especificada.
  * @param {string} page - O nome da página a ser exibida.
  */
-export async function showPage(page) {
+export async function showPage(page, opts = {}) {
     document.querySelectorAll(".page").forEach((pageEl) => {
         pageEl.classList.remove("active");
         pageEl.classList.add("hidden");
@@ -158,10 +194,10 @@ export async function showPage(page) {
     const targetLink = document.querySelector(`.nav-link[data-page='${page}']`);
 
     if (targetPage) {
-        targetPage.classList.add("active");
-        targetPage.classList.remove("hidden");
-        currentPage = page;
-        window.scrollTo({ top: 0, behavior: "smooth" });
+    targetPage.classList.add("active");
+    targetPage.classList.remove("hidden");
+    currentPage = page;
+    // Removido scroll automático ao topo para não interromper o usuário em páginas longas
         // Se a página requer autenticação, verificar token antes de carregar o partial
     const authRequiredPages = ['account', 'createPf', 'organizationsNew', 'orgMembers', 'orgManagement'];
         const token = localStorage.getItem('jwtToken');
@@ -180,6 +216,18 @@ export async function showPage(page) {
         }
 
         await loadPartial(page); // Carrega o conteúdo do partial sob demanda e aguarda
+        if (page === 'trainingDetail') {
+            // aceitar id vindo de opts ou já setado previamente
+            const id = opts.trainingId || window._openTrainingId;
+            if (opts.trainingId) { try { window._openTrainingId = opts.trainingId; } catch(_) {} }
+            // atualizar hash para deep link
+            if (id) {
+                const newHash = `#trainingDetail/${encodeURIComponent(id)}`;
+                if (window.location.hash !== newHash) {
+                    try { history.replaceState(null, '', newHash); } catch(_) { window.location.hash = newHash; }
+                }
+            }
+        }
         // Notifica outros módulos que a página foi carregada e injetada no DOM
         try {
             document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));

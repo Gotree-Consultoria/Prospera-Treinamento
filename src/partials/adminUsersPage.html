@@ -91,7 +91,8 @@
         </h3>
         <p class="muted">Gerenciar cursos, módulos e lições (criar, editar, excluir).</p>
         <div class="card-body" id="adminContentCardBody">
-          <div id="adminContentContainer"><!-- Conteúdo carregado pelo módulo adminContent.js -->
+          <div id="adminContentMessages" class="form-messages is-hidden-msg"></div>
+          <div id="adminContentContainer"><!-- Conteúdo será carregado dinamicamente pelo módulo adminContent.js -->
           </div>
         </div>
       </section>
@@ -105,6 +106,56 @@
         <p class="muted">Dashboard com métricas da plataforma (usuários, matrículas, atividades).</p>
         <div class="card-body" id="adminAnalyticsCardBody">
           <div id="adminAnalyticsContainer"><!-- Conteúdo carregado pelo módulo adminAnalytics.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 5: Gestão da Plataforma -->
+      <section class="admin-card" id="adminPlatformCard">
+        <h3>
+          <span>Gestão da Plataforma</span>
+          <button class="card-toggle" aria-expanded="false" aria-controls="adminPlatformCardBody" aria-label="Alternar conteúdo"></button>
+        </h3>
+        <p class="muted">Configuração estrutural, comportamento global e ferramentas de manutenção.</p>
+        <div class="card-body" id="adminPlatformCardBody">
+          <div class="platform-subcards" id="platformSubcards">
+            <!-- Subcard 1: Taxonomia e Estrutura -->
+            <div class="admin-subcard" id="platformTaxonomyCard">
+              <div class="admin-subcard-header">
+                <h4>Taxonomia e Estrutura</h4>
+                <p class="subtitle">Como a informação é organizada</p>
+              </div>
+              <div class="platform-tabs nav-mode" aria-label="Taxonomia e Estrutura Navegação">
+                <a class="platform-tab" href="#platformSectors" data-nav="platformSectors">Gerenciar Setores</a>
+                <a class="platform-tab" href="#platformTags" data-nav="platformTags">Tags / Habilidades</a>
+                <a class="platform-tab" href="#platformLevels" data-nav="platformLevels">Níveis de Dificuldade</a>
+              </div>
+            </div>
+
+            <!-- Subcard 2: Configurações Globais -->
+            <div class="admin-subcard" id="platformGlobalsCard">
+              <div class="admin-subcard-header">
+                <h4>Configurações Globais</h4>
+                <p class="subtitle">Como a plataforma se comporta</p>
+              </div>
+              <div class="platform-tabs nav-mode" aria-label="Configurações Globais Navegação">
+                <a class="platform-tab" href="#platformEmails" data-nav="platformEmails">Modelos de E-mail</a>
+                <a class="platform-tab" href="#platformPolicies" data-nav="platformPolicies">Termos & Políticas</a>
+                <a class="platform-tab" href="#platformIntegrations" data-nav="platformIntegrations">Integrações</a>
+              </div>
+            </div>
+
+            <!-- Subcard 3: Ferramentas Administrativas -->
+            <div class="admin-subcard" id="platformToolsCard">
+              <div class="admin-subcard-header">
+                <h4>Ferramentas Administrativas</h4>
+                <p class="subtitle">Manutenção e Monitoramento</p>
+              </div>
+              <div class="platform-tabs nav-mode" aria-label="Ferramentas Administrativas Navegação">
+                <a class="platform-tab" href="#platformAudit" data-nav="platformAudit">Logs de Auditoria</a>
+                <a class="platform-tab" href="#platformCache" data-nav="platformCache">Gestão de Cache</a>
+              </div>
+            </div>
           </div>
         </div>
       </section>

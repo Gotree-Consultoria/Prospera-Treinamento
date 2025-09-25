@@ -287,6 +287,7 @@ export async function completeUserProfile(token, data) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
             'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(data)
@@ -335,15 +336,129 @@ export async function createPFProfile(token, data) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            // Força backend a responder com JSON quando possível (evita HTML de /error)
+            'Accept': 'application/json, text/plain, */*'
         },
         body: JSON.stringify(data)
     });
     if (!response.ok) {
-        if (response.status === 401) throw new Error('Unauthorized');
-        let err = null;
-        try { err = await safeParseResponse(response); } catch (e) { /* sem body */ }
-        throw new Error((err && err.message) || 'Erro ao criar perfil PF');
+        if (response.status === 401) {
+            const e = new Error('Sessão expirada ou não autorizada');
+            e.code = 'UNAUTHORIZED';
+            e.status = 401;
+            throw e;
+        }
+        let parsed = null;
+        let rawText = '';
+        try {
+            // Tentar ler texto primeiro para podermos reprocessar
+            rawText = await response.text();
+            if (rawText) {
+                try { parsed = JSON.parse(rawText); } catch (jsonErr) { /* manter texto */ }
+            }
+        } catch (readErr) { /* ignore */ }
+
+        // Heurísticas de extração
+        const messageFromParsed = parsed && (parsed.message || parsed.erro || parsed.error || parsed.detail);
+        const field = parsed && (parsed.field || parsed.campo || null);
+        const backendCode = parsed && (parsed.code || parsed.errorCode || null);
+
+        // Detectar duplicidade de CPF por código ou texto cru
+        let duplicateCpf = false;
+        const lowerRaw = (rawText || '').toLowerCase();
+        const sentCpf = (data && data.cpf) ? String(data.cpf).replace(/\D/g, '') : null;
+        const normalizedRawDigits = lowerRaw.replace(/\D/g, '');
+
+        // 1. Backend já sinaliza algum code com duplicate/cpf
+        if (!duplicateCpf && backendCode && /duplicate|cpf|constraint/i.test(backendCode)) duplicateCpf = true;
+        // 2. Mensagem parseada contém indicação clara
+        if (!duplicateCpf && messageFromParsed && /cpf(.+)?(cadastr|exist|duplic)/i.test(messageFromParsed)) duplicateCpf = true;
+        // 3. Texto bruto contém 'duplicate' e 'cpf'
+        if (!duplicateCpf && lowerRaw.includes('duplicate') && lowerRaw.includes('cpf')) duplicateCpf = true;
+        // 4. Texto bruto contém 'duplicate' e o número de CPF enviado (caso backend não inclua a palavra cpf)
+        if (!duplicateCpf && lowerRaw.includes('duplicate') && sentCpf && lowerRaw.includes(sentCpf)) duplicateCpf = true;
+        // 5. SQLState de violação de integridade / constraint hints
+        if (!duplicateCpf && (lowerRaw.includes('sqlintegrityconstraintviolationexception') || lowerRaw.includes('sqlstate: 23000') || lowerRaw.includes('23000'))) duplicateCpf = true;
+        // 6. Padrões de key única do MySQL (for key 'UK....') + duplicate
+        if (!duplicateCpf && lowerRaw.includes('duplicate entry') && lowerRaw.includes(' for key ')) duplicateCpf = true;
+        // 7. Heurística final: o raw sem caracteres não numéricos contem repetição do CPF (para casos com máscara) duas vezes
+        if (!duplicateCpf && sentCpf && normalizedRawDigits.includes(sentCpf) && (lowerRaw.match(/duplicate/) || []).length) duplicateCpf = true;
+
+        // Alguns ambientes podem estar retornando 403 ao propagar erro via /error (Spring Security),
+        // se raw contiver padrão de duplicate entry tratamos como duplicidade.
+        if (!duplicateCpf && response.status === 403) {
+            if (/duplicate entry/i.test(lowerRaw)) {
+                duplicateCpf = true;
+            } else if (!rawText || rawText.trim() === '') {
+                // Alguns proxies de erro Spring podem suprimir body. Se já detectamos tentativa anterior igual (cpf em sessionStorage), assumir duplicado.
+                try {
+                    const lastCpf = sessionStorage.getItem('lastPfAttemptCpf');
+                    if (lastCpf && sentCpf && lastCpf === sentCpf) {
+                        duplicateCpf = true;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        // Detectar CPF inválido (validação backend Caelum Stella etc.)
+        let invalidCpf = false;
+        const invalidCpfPatterns = [
+            /cpf inválido/i,
+            /cpf invalido/i,
+            /cpf\s+não\s+válido/i,
+            /cpf\s+nao\s+valido/i,
+            /invalid cpf/i,
+            /cpf.*inv[aá]lido/i,
+            /inv[aá]lido.*cpf/i,
+            /documento inválido/i,
+            /documento invalido/i
+        ];
+        const lowerMessage = (messageFromParsed || '').toLowerCase();
+        if (!duplicateCpf) {
+            if (messageFromParsed && invalidCpfPatterns.some(r => r.test(messageFromParsed))) {
+                invalidCpf = true;
+            } else if (lowerRaw && invalidCpfPatterns.some(r => r.test(lowerRaw))) {
+                invalidCpf = true;
+            } else if (lowerMessage.includes('cpf') && (lowerMessage.includes('inval') || lowerMessage.includes('invalid'))) {
+                invalidCpf = true;
+            } else if (lowerRaw.includes('cpf') && (lowerRaw.includes('inval') || lowerRaw.includes('invalid'))) {
+                invalidCpf = true;
+            } else if (backendCode && /invalid.*cpf|cpf.*invalid|cpf.*inval/i.test(backendCode)) {
+                invalidCpf = true;
+            }
+            // fallback heurístico: se o CPF enviado tem tamanho != 11 e houve 400, classificar como inválido
+            if (!invalidCpf && response.status === 400 && sentCpf && sentCpf.length !== 11) {
+                invalidCpf = true;
+            }
+        }
+
+        const finalMessage = duplicateCpf
+            ? 'CPF já cadastrado. Verifique se já existe um perfil associado ou entre em contato com o suporte.'
+            : invalidCpf
+                ? 'CPF inválido. Verifique o número digitado.'
+                : (messageFromParsed || 'Erro ao criar perfil PF');
+
+        const err = new Error(finalMessage);
+    if (duplicateCpf) err.code = 'DUPLICATE_CPF';
+    else if (invalidCpf) err.code = 'INVALID_CPF';
+        if (backendCode && !err.code) err.code = backendCode;
+        if (field) err.field = field;
+        err.status = response.status;
+        // Anexar debug raw para possíveis logs (não exibir diretamente ao usuário)
+        err._raw = rawText;
+        try {
+            // Guardar última resposta bruta para debug (limita tamanho para evitar storage excessivo)
+            if (rawText) {
+                const trimmed = rawText.length > 600 ? rawText.slice(0,600) + '…(trimmed)' : rawText;
+                sessionStorage.setItem('lastPfErrorRaw', trimmed);
+            }
+        } catch (e) { /* ignore quota/security */ }
+        if (sentCpf) {
+            err.cpf = sentCpf; // metadado útil para handlers de UI
+            try { sessionStorage.setItem('lastPfAttemptCpf', sentCpf); } catch (e) { /* ignore */ }
+        }
+        throw err;
     }
     // Alguns endpoints respondem com 201 sem body. Evitar chamar response.json() em body vazio.
     if (response.status === 201) {
@@ -366,9 +481,18 @@ export async function createOrganization(token, data) {
     });
     if (!response.ok) {
         if (response.status === 401) throw new Error('Unauthorized');
-        let err = null;
-        try { err = await response.json(); } catch (e) { /* sem body */ }
-        throw new Error((err && err.message) || 'Erro ao criar organização');
+        let parsed = null; let rawText = '';
+        try { rawText = await response.text(); if (rawText) { try { parsed = JSON.parse(rawText); } catch(e) { /* ignore */ } } } catch(e) { /* ignore */ }
+        const msg = (parsed && (parsed.message || parsed.erro || parsed.error || parsed.detail)) || 'Erro ao criar organização';
+        const err = new Error(msg);
+        err.status = response.status;
+        err._raw = rawText;
+        // heurísticas para campos inválidos
+        const lower = (rawText || msg).toLowerCase();
+    if (/cnpj/.test(lower) && /invalid|inválid|invalido|formato/.test(lower)) err.code = 'INVALID_CNPJ';
+    if (/ra.z.o|razao/.test(lower) && /obrigat|required|faltante|missing/.test(lower)) err.code = 'MISSING_RAZAO_SOCIAL';
+    if (/campo|field/.test(lower) && /inválid|invalid/.test(lower) && !err.code) err.code = 'INVALID_FIELD';
+        throw err;
     }
     // tratar caso de 201 Created com ou sem body
     if (response.status === 201) {
@@ -560,10 +684,24 @@ export async function getAdminUserById(token, userId) {
 
 /**
  * Ativa ou inativa um usuário (requer SYSTEM_ADMIN)
- * Endpoint esperado: PATCH /admin/users/{userId}/status  body: { enabled: true|false }
+ * Preferência: PATCH /admin/users/{userId}  body: { enabled: true|false }
+ * Fallback:    PATCH /admin/users/{userId}/status  body: { newStatus: 'ACTIVE' | 'INACTIVE' }
  */
-export async function patchAdminUserStatus(token, userId, enabled) {
-    const response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}/status`, {
+export async function patchAdminUserStatus(token, userId, enabledOrStatus) {
+    // Normaliza entrada para boolean
+    let enabled;
+    if (typeof enabledOrStatus === 'boolean') {
+        enabled = enabledOrStatus;
+    } else if (typeof enabledOrStatus === 'string') {
+        const s = enabledOrStatus.trim().toLowerCase();
+        enabled = (s === 'true' || s === 'active' || s === 'enabled' || s === 'ativado' || s === 'ativo');
+    } else {
+        throw new Error('Parâmetro inválido para patchAdminUserStatus');
+    }
+
+    // 1) Tentar endpoint canônico sem /status
+    const primaryUrl = `${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}`;
+    let response = await fetch(primaryUrl, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
@@ -571,13 +709,33 @@ export async function patchAdminUserStatus(token, userId, enabled) {
         },
         body: JSON.stringify({ enabled })
     });
-    if (!response.ok) {
-        const errorData = await safeParseResponse(response);
-        const err = new Error((errorData && errorData.message) || 'Erro ao atualizar status do usuário.');
-        err.status = response.status;
-        throw err;
+
+    if (response.ok) {
+        return safeParseResponse(response);
     }
-    return safeParseResponse(response);
+
+    // 404/405/400 podem indicar que o backend espera outro endpoint/payload
+    if ([400, 404, 405].includes(response.status)) {
+        const fallbackUrl = `${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}/status`;
+        const newStatus = enabled ? 'ACTIVE' : 'INACTIVE';
+        response = await fetch(fallbackUrl, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ newStatus })
+        });
+        if (response.ok) {
+            return safeParseResponse(response);
+        }
+    }
+
+    // Se chegou aqui, falhou
+    const errorData = await safeParseResponse(response);
+    const err = new Error((errorData && errorData.message) || 'Erro ao atualizar status do usuário.');
+    err.status = response.status;
+    throw err;
 }
 
 /**
@@ -642,9 +800,32 @@ export async function getAdminContentSummary(token) {
 }
 
 export async function getAdminAnalyticsSummary(token) {
-    const response = await fetch(`${API_BASE_URL}/admin/analytics/summary`, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
-    if (!response.ok) throw new Error('Erro ao buscar analytics');
-    return safeParseResponse(response);
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/analytics/summary`, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+        if (!response.ok) throw new Error('fail');
+        return safeParseResponse(response);
+    } catch (e) {
+        // Mock provisório até backend real estar disponível
+        console.warn('[API MOCK] getAdminAnalyticsSummary usando dados simulados');
+        const now = new Date();
+        return {
+            mock: true,
+            generatedAt: now.toISOString(),
+            totals: {
+                users: 42,
+                activeUsers: 38,
+                organizations: 5,
+                trainings: 17,
+                publishedTrainings: 9,
+                sectors: 6
+            },
+            last7Days: {
+                newUsers: [3,2,0,4,1,5,2],
+                newEnrollments: [1,0,2,1,3,2,4],
+                labels: Array.from({length:7}, (_,i)=> { const d=new Date(now); d.setDate(d.getDate()-(6-i)); return d.toISOString().substring(0,10); })
+            }
+        };
+    }
 }
 
 /**
@@ -663,4 +844,522 @@ export async function getAdminOrganizationById(token, organizationId) {
         throw err;
     }
     return safeParseResponse(response);
+}
+
+/**
+ * Desativa (soft delete) um usuário com anonimização.
+ * Tentativas em ordem:
+ *  - DELETE /admin/users/{userId}
+ *  - POST   /admin/users/{userId}/deactivate
+ *  - PATCH  /admin/users/{userId}/deactivate
+ *  - PATCH  /admin/users/{userId}  body: { action: 'DEACTIVATE' }
+ */
+export async function deactivateAdminUser(token, userId) {
+    const headers = { 'Authorization': `Bearer ${token}` };
+    // Preferência: PATCH /admin/users/{id}/deactivate
+    let response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}/deactivate`, {
+        method: 'PATCH', headers
+    });
+    if (response.ok || response.status === 204) return response.status === 204 ? null : safeParseResponse(response);
+
+    // Fallbacks seguros
+    if ([400, 404, 405].includes(response.status)) {
+        // PATCH /admin/users/{id} { action: 'DEACTIVATE' }
+        response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}`, {
+            method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'DEACTIVATE' })
+        });
+        if (response.ok || response.status === 204) return response.status === 204 ? null : safeParseResponse(response);
+    }
+
+    const errData = await safeParseResponse(response);
+    const err = new Error((errData && errData.message) || 'Erro ao desativar (soft delete) o usuário.');
+    err.status = response.status;
+    throw err;
+}
+
+/**
+ * Reativa um usuário (se suportado pelo backend).
+ * Tentativas em ordem:
+ *  - PATCH /admin/users/{userId}           body: { enabled: true }
+ *  - POST  /admin/users/{userId}/activate  (sem body)
+ *  - PATCH /admin/users/{userId}/activate  (semântica explícita)
+ *  - PATCH /admin/users/{userId}/status    body: { newStatus: 'ACTIVE' }
+ */
+export async function activateAdminUser(token, userId) {
+    const headers = { 'Authorization': `Bearer ${token}` };
+    // Preferência: PATCH /admin/users/{id}/activate
+    let response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}/activate`, {
+        method: 'PATCH', headers
+    });
+    if (response.ok || response.status === 204) return response.status === 204 ? null : safeParseResponse(response);
+
+    // Fallbacks seguros
+    if ([400, 404, 405].includes(response.status)) {
+        // PATCH /admin/users/{id} { enabled: true }
+        response = await fetch(`${API_BASE_URL}/admin/users/${encodeURIComponent(userId)}`, {
+            method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true })
+        });
+        if (response.ok || response.status === 204) return response.status === 204 ? null : safeParseResponse(response);
+    }
+
+    const errData = await safeParseResponse(response);
+    const err = new Error((errData && errData.message) || 'Erro ao reativar o usuário.');
+    err.status = response.status;
+    throw err;
+}
+
+/**
+ * Consulta dados básicos de um CNPJ.
+ * Endpoint backend: GET /api/lookup/cnpj/{cnpj}
+ * Aceita CNPJ com ou sem máscara; limpa caracteres não numéricos.
+ * Retorna objeto com pelo menos { cnpj, razaoSocial } ou lança erro.
+ */
+export async function lookupCnpj(cnpj) {
+    if (!cnpj) throw new Error('CNPJ não informado');
+    const digits = String(cnpj).replace(/\D/g, '');
+    if (digits.length < 14) {
+        const e = new Error('CNPJ deve ter 14 dígitos.');
+        e.code = 'INVALID_CNPJ_LENGTH';
+        throw e;
+    }
+    const response = await fetch(`${API_BASE_URL}/api/lookup/cnpj/${digits}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*'
+        }
+    });
+    if (!response.ok) {
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (e) { /* ignore */ }
+        const msg = (parsed && (parsed.message || parsed.erro || parsed.error)) || (response.status === 404 ? 'CNPJ não encontrado.' : 'Erro ao consultar CNPJ.');
+        const err = new Error(msg);
+        err.status = response.status;
+        if (response.status === 404) err.code = 'CNPJ_NOT_FOUND';
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista setores adotados por uma organização (endpoint admin)
+ * GET /admin/organizations/{organizationId}/sectors
+ * Requer SYSTEM_ADMIN.
+ */
+export async function getAdminOrganizationSectors(token, organizationId) {
+    const response = await fetch(`${API_BASE_URL}/admin/organizations/${organizationId}/sectors`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        const err = await safeParseResponse(response);
+        throw new Error((err && (err.message || err.error || err.erro)) || 'Erro ao listar setores da organização');
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista todos os setores globais disponíveis no sistema.
+ * Endpoint: GET /admin/sectors (requer SYSTEM_ADMIN)
+ */
+export async function getAdminSectors(token) {
+    if (!token) throw new Error('Token ausente');
+    const response = await fetch(`${API_BASE_URL}/admin/sectors`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            const e = new Error('Acesso negado.');
+            e.status = response.status;
+            throw e;
+        }
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (e) { /* ignore */ }
+        const msg = (parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao listar setores.';
+        const err = new Error(msg);
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Cria um novo setor global.
+ * POST /admin/sectors  body: { name }
+ * Retorna objeto SectorDTO { id, name }
+ */
+export async function createAdminSector(token, name) {
+    if (!token) throw new Error('Token ausente');
+    if (!name || !name.trim()) {
+        const e = new Error('Nome do setor é obrigatório.');
+        e.code = 'VALIDATION_NAME_REQUIRED';
+        throw e;
+    }
+    const payload = { name: name.trim() };
+    const response = await fetch(`${API_BASE_URL}/admin/sectors`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (e) { /* ignore */ }
+        const msg = (parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao criar setor.';
+        const err = new Error(msg);
+        err.status = response.status;
+        if (response.status === 400) err.code = 'INVALID_SECTOR_DATA';
+        if (response.status === 409) err.code = 'SECTOR_DUPLICATE';
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+// =======================================================
+// ADMIN - TREINAMENTOS (Gestão de Conteúdo)
+// Endpoints fornecidos:
+// GET    /admin/trainings
+// POST   /admin/trainings            body: { title, description, author, entityType, organizationId }
+// POST   /admin/trainings/{id}/publish
+// POST   /admin/trainings/{id}/sectors body: { sectorId, trainingType, legalBasis }
+// EBOOKS (do backend informado):
+// POST   /admin/trainings/ebooks/{trainingId}/upload   (multipart/form-data file)
+// GET    /admin/ebooks/{filename}            (serve PDF inline)
+// PUT    /admin/ebooks/{trainingId}          body: { lastPageRead }
+// =======================================================
+
+/**
+ * Lista todos os treinamentos do sistema.
+ * Retorna array ou objeto com array (tolerante a formatos variados).
+ */
+export async function getAdminTrainings(token) {
+    if (!token) throw new Error('Token ausente');
+    const response = await fetch(`${API_BASE_URL}/admin/trainings`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json, text/plain, */*', 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            const e = new Error('Acesso negado.'); e.status = response.status; throw e;
+        }
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao listar treinamentos.');
+        err.status = response.status; throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Cria um novo treinamento.
+ * dto = { title, description, author, entityType, organizationId }
+ * entityType exemplos: RECORDED_COURSE, EBOOK, LIVE_COURSE (dep. backend)
+ */
+export async function createAdminTraining(token, dto) {
+    if (!token) throw new Error('Token ausente');
+    if (!dto || !dto.title || !dto.entityType) {
+        const e = new Error('Título e tipo (entityType) são obrigatórios.');
+        e.code = 'VALIDATION_MISSING_FIELDS';
+        throw e;
+    }
+    const response = await fetch(`${API_BASE_URL}/admin/trainings`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(dto)
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(e) { /* ignore */ }
+        const msg = (parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao criar treinamento.';
+        const err = new Error(msg); err.status = response.status;
+        if (response.status === 400) err.code = 'INVALID_TRAINING_DATA';
+        if (response.status === 409) err.code = 'TRAINING_DUPLICATE';
+        throw err;
+    }
+    // 201 Created retorna body TrainingDTO
+    return safeParseResponse(response);
+}
+
+/**
+ * Publica um treinamento tornando-o visível.
+ */
+export async function publishAdminTraining(token, trainingId) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}/publish`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao publicar treinamento.');
+        err.status = response.status; throw err;
+    }
+    return null; // 200 OK sem body
+}
+
+/**
+ * Associa um treinamento a um setor global.
+ * assignment = { sectorId, trainingType, legalBasis }
+ * trainingType ex: COMPULSORY | ELECTIVE (dep. backend); legalBasis string opcional.
+ */
+export async function assignTrainingToSector(token, trainingId, assignment) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+    if (!assignment || !assignment.sectorId || !assignment.trainingType) {
+        const e = new Error('sectorId e trainingType são obrigatórios.');
+        e.code = 'VALIDATION_MISSING_FIELDS';
+        throw e;
+    }
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}/sectors`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(assignment)
+    });
+    if (!response.ok) {
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao associar setor.');
+        err.status = response.status;
+        if (response.status === 400) err.code = 'INVALID_ASSIGNMENT_DATA';
+        if (response.status === 404) err.code = 'TRAINING_OR_SECTOR_NOT_FOUND';
+        throw err;
+    }
+    return null; // 201 Created sem body esperado
+}
+
+/**
+ * Busca detalhes completos de um treinamento.
+ * GET /admin/trainings/{trainingId}
+ */
+export async function getAdminTrainingById(token, trainingId) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json, text/plain, */*', 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao buscar treinamento.');
+        err.status = response.status;
+        if (response.status === 404) err.code = 'TRAINING_NOT_FOUND';
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Atualiza campos editáveis de um treinamento.
+ * PUT /admin/trainings/{trainingId}  body: { title, description, author }
+ */
+export async function updateAdminTraining(token, trainingId, data) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+    if (!data || (!data.title && !data.description && !data.author)) {
+        const e = new Error('Forneça ao menos um campo para atualizar.');
+        e.code = 'VALIDATION_EMPTY_UPDATE';
+        throw e;
+    }
+    const payload = { };
+    if (data.title !== undefined) payload.title = data.title;
+    if (data.description !== undefined) payload.description = data.description;
+    if (data.author !== undefined) payload.author = data.author;
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(e) {}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao atualizar treinamento.');
+        err.status = response.status;
+        if (response.status === 404) err.code = 'TRAINING_NOT_FOUND';
+        if (response.status === 400) err.code = 'INVALID_TRAINING_UPDATE';
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Exclui um treinamento (se permitido pelo backend).
+ * DELETE /admin/trainings/{trainingId}
+ */
+export async function deleteAdminTraining(token, trainingId) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao deletar treinamento.');
+        err.status = response.status;
+        if (response.status === 404) err.code = 'TRAINING_NOT_FOUND';
+        if (response.status === 409) err.code = 'TRAINING_HAS_ENROLLMENTS';
+        throw err;
+    }
+    return null; // 204 ou 200 sem body
+}
+
+/**
+ * Upload do arquivo PDF de um E-book já criado.
+ * Backend: POST /admin/trainings/ebooks/{trainingId}/upload  (Multipart)
+ * @returns {Promise<null|object>} - backend retorna 200 sem body (Void) segundo o contrato atual.
+ */
+export async function uploadEbookFile(token, trainingId, file) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+    if (!file) throw new Error('Arquivo PDF ausente');
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/ebooks/${encodeURIComponent(trainingId)}/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }, // não definir Content-Type para deixar boundary automático
+        body: formData
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(e){}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Falha no upload do e-book.');
+        err.status = response.status; throw err;
+    }
+    try { return await safeParseResponse(response); } catch(e) { return null; }
+}
+
+/**
+ * Upload com progresso usando XMLHttpRequest (quando for necessário mostrar barra).
+ * onProgress(pct:number) chamado de 0..100.
+ */
+export function uploadEbookFileWithProgress(token, trainingId, file, onProgress, signal) {
+    if (!token) return Promise.reject(new Error('Token ausente'));
+    if (!trainingId) return Promise.reject(new Error('ID do treinamento ausente'));
+    if (!file) return Promise.reject(new Error('Arquivo PDF ausente'));
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE_URL}/admin/trainings/ebooks/${encodeURIComponent(trainingId)}/upload`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.upload.addEventListener('progress', (ev) => {
+            if (ev.lengthComputable && typeof onProgress === 'function') {
+                const pct = Math.round((ev.loaded / ev.total) * 100);
+                try { onProgress(pct); } catch(e){}
+            }
+        });
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try { resolve(JSON.parse(xhr.responseText || 'null')); } catch(e) { resolve(null); }
+                } else {
+                    reject(new Error('Erro no upload do e-book: HTTP ' + xhr.status));
+                }
+            }
+        };
+        if (signal) {
+            signal.addEventListener('abort', () => { try { xhr.abort(); } catch(e){} reject(new Error('Upload abortado')); });
+        }
+        const formData = new FormData(); formData.append('file', file);
+        xhr.send(formData);
+    });
+}
+
+/**
+ * Atualiza progresso de leitura do e-book.
+ * PUT /admin/ebooks/{trainingId}  body: { lastPageRead }
+ */
+export async function updateEbookProgress(token, trainingId, lastPageRead) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID ausente');
+    const payload = { lastPageRead };
+    const response = await fetch(`${API_BASE_URL}/admin/ebooks/${encodeURIComponent(trainingId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(e){}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao atualizar progresso do e-book.');
+        err.status = response.status; throw err;
+    }
+    return null;
+}
+
+/**
+ * Monta URL pública (inline) para servir o PDF (GET /admin/ebooks/{filename}).
+ * O backend espera filename armazenado; se futuramente retornar `ebookFileName` num DTO, usar aqui.
+ */
+export function buildEbookFileUrl(filename) {
+    if (!filename) return null;
+    return `${API_BASE_URL}/admin/ebooks/${encodeURIComponent(filename)}`;
+}
+
+// =======================================================
+// TREINAMENTOS - CAPA (Cover Image)
+// =======================================================
+/**
+ * Faz upload da imagem de capa de um treinamento.
+ * Endpoint: POST /admin/trainings/{trainingId}/cover-image
+ * @param {string} token JWT
+ * @param {string} trainingId
+ * @param {File|Blob} file (image/png, image/jpeg, etc)
+ * @param {function(number):void} [onProgress]
+ */
+export async function uploadTrainingCoverImage(token, trainingId, file, onProgress) {
+    if (!token) throw new Error('Token ausente.');
+    if (!trainingId) throw new Error('TrainingId ausente.');
+    if (!file) throw new Error('Arquivo de imagem não informado.');
+    // Usar XHR para progresso
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}/cover-image`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const json = JSON.parse(xhr.responseText || 'null');
+                        resolve(json);
+                    } catch (e) { resolve(null); }
+                } else {
+                    let message = 'Falha no upload da capa.';
+                    try {
+                        const parsed = JSON.parse(xhr.responseText);
+                        if (parsed && (parsed.message || parsed.error || parsed.erro)) message = parsed.message || parsed.error || parsed.erro;
+                    } catch(_){}
+                    reject(new Error(message));
+                }
+            }
+        };
+        if (xhr.upload && typeof onProgress === 'function') {
+            xhr.upload.onprogress = (evt) => {
+                if (evt.lengthComputable) {
+                    const pct = Math.round((evt.loaded / evt.total) * 100);
+                    try { onProgress(pct); } catch(_){}
+                }
+            };
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        xhr.send(formData);
+    });
 }

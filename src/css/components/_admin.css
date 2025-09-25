@@ -1,3 +1,23 @@
+.inline-update-badge {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: #374151; /* gray-700 */
+  background: #e5e7eb; /* gray-200 */
+  border-radius: 12px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+/* Centralizar coluna "Ações" no Card 1 (Usuários) e Card 2 (Organizações) */
+#adminUsersTable thead th:last-child,
+#adminUsersTable tbody td:last-child {
+  text-align: center;
+}
+
+#adminOrgsContainer table thead th:last-child,
+#adminOrgsContainer table tbody td:last-child {
+  text-align: center;
+}
 /* Styles específicos para o painel de Admin (Gerenciamento de Usuários) */
 .adminUsersPage .container {
   padding: 24px 16px;
@@ -228,6 +248,59 @@
 .admin-card.expanded .card-toggle::after {
   transform: rotate(180deg);
   color: #333;
+}
+
+/* ===================== Plataforma: Subcards e Tabs ===================== */
+.platform-subcards { display:flex; flex-wrap:nowrap; overflow-x:auto; gap:18px; padding:4px 4px 6px; justify-content:center; align-items:stretch; scroll-behavior:smooth; }
+.platform-subcards .admin-subcard { flex:0 0 280px; width:280px; }
+.platform-subcards::-webkit-scrollbar { height:8px; }
+.platform-subcards::-webkit-scrollbar-track { background:#f1f1f1; border-radius:4px; }
+.platform-subcards::-webkit-scrollbar-thumb { background:#c4c4c4; border-radius:4px; }
+.platform-subcards::-webkit-scrollbar-thumb:hover { background:#a8a8a8; }
+.admin-subcard { border:1px solid rgba(0,0,0,0.06); border-radius:10px; background:#fff; padding:14px 16px 18px; box-shadow:0 2px 6px rgba(0,0,0,0.04); }
+.admin-subcard-header { margin-bottom:12px; }
+.admin-subcard-header h4 { margin:0 0 4px 0; font-size:0.95rem; font-weight:600; color:#222; }
+.admin-subcard-header .subtitle { margin:0; font-size:0.68rem; text-transform:uppercase; letter-spacing:.45px; color:#666; }
+
+/* Tabs */
+.platform-tabs { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 10px 0; border-bottom:1px solid #e5e5e5; padding-bottom:4px; }
+.platform-tab { border:0; background:#f5f5f5; padding:6px 12px; font-size:0.78rem; border-radius:6px; cursor:pointer; color:#444; position:relative; text-decoration:none; }
+.platform-tab:hover { text-decoration:none; }
+.platform-tab:visited { color:#444; }
+.platform-tab:hover { background:#eee; }
+.platform-tab.active { background:var(--verde-escuro); color:#fff; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.08); }
+.platform-tab:focus-visible { outline:2px solid var(--coral); outline-offset:2px; }
+
+/* Versão navegação vertical (tabs empilhadas) */
+.platform-tabs.nav-mode { flex-direction: column; align-items: stretch; border-bottom:0; padding-bottom:0; gap:6px; }
+.platform-tabs.nav-mode .platform-tab { display:block; width:100%; text-align:left; border-radius:6px; font-weight:500; }
+.platform-tabs.nav-mode .platform-tab:not(.active) { box-shadow:0 0 0 1px #e2e2e2 inset; }
+.platform-tabs.nav-mode .platform-tab.active { box-shadow:0 0 0 1px var(--verde-escuro) inset; }
+
+.platform-tab-panels { position:relative; }
+.platform-tab-panel { display:none; animation: fadeInPlatform 260ms ease; }
+.platform-tab-panel.active { display:block; }
+@keyframes fadeInPlatform { from { opacity:0; transform:translateY(4px);} to { opacity:1; transform:translateY(0);} }
+
+.inline-actions { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 10px 0; }
+
+.small-table table.table th, .small-table table.table td { padding:6px 8px; font-size:0.72rem; }
+.small-table table.table thead th { background:#fafafa; }
+
+/* Empty state reutilização */
+.empty-state { padding:14px; background:#fafafa; border:1px dashed #ddd; border-radius:6px; font-size:0.78rem; color:#555; }
+
+/* Mensagens ocultáveis reutilizando classe */
+.is-hidden-msg { display:none; }
+.mt-10 { margin-top:10px; }
+
+/* Responsividade para subcards */
+@media (max-width:760px) {
+  .platform-subcards { gap:14px; }
+  .platform-subcards .admin-subcard { flex:0 0 240px; width:240px; }
+  .admin-subcard { padding:12px 12px 16px; }
+  .platform-tab { font-size:0.72rem; padding:6px 10px; }
+  .small-table table.table th, .small-table table.table td { font-size:0.68rem; }
 }
 
 /* Filters UI for admin users */

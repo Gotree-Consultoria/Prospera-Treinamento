@@ -1,0 +1,54 @@
+:root {
+  --td-gap: 10px;
+}
+
+/* Página Detalhe Treinamento */
+#trainingDetailPageRoot { padding:14px 10px 40px; }
+#trainingDetailPageRoot .training-detail-header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+#trainingDetailPageRoot .training-detail-header .training-title { margin:0; font-size:1.2rem; }
+.td-status { font-size:.7rem; font-weight:600; background:#eef3f0; padding:4px 8px; border-radius:14px; }
+.td-status.is-published { background:#e3f7e7; color:#1d6b2f; }
+.td-status.is-draft { background:#f7efe3; color:#8a4b14; }
+.td-status.is-archived { background:#eee; color:#555; text-decoration:line-through; }
+#trainingDetailPageRoot h1 { font-size:1.2rem; margin:0 0 8px; }
+#trainingDetailActions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+
+.td-loading { font-size:0.8rem; color:#555; }
+.td-error { color:#b33; font-size:0.8rem; }
+.td-empty { font-size:0.75rem; opacity:0.8; }
+
+.td-block { background:#fff; border:1px solid #e3e6e8; border-radius:8px; padding:14px 16px 16px; box-shadow:0 2px 4px rgba(0,0,0,0.04); }
+.td-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px 16px; }
+.td-field { display:flex; flex-direction:column; gap:4px; font-size:0.7rem; }
+.td-label { font-size:0.58rem; text-transform:uppercase; letter-spacing:.5px; font-weight:600; color:#555; }
+.td-value { font-size:0.75rem; line-height:1.2; }
+.td-desc { grid-column:1 / -1; }
+.td-sectors { grid-column:1 / -1; }
+.td-sectors-list { list-style:disc; margin:4px 0 0 18px; padding:0; }
+
+.td-published { color:var(--verde-escuro,#2e7d32); font-weight:600; }
+.td-ok { color:var(--verde-escuro,#2e7d32); font-weight:600; }
+.td-warn { color:#c0392b; font-weight:600; }
+
+.td-box { margin-top:14px; border:1px solid #e2e6e8; border-radius:6px; padding:10px 12px; background:#fafafa; font-size:0.7rem; }
+.td-box-title { display:block; font-size:0.65rem; margin-bottom:4px; text-transform:uppercase; letter-spacing:.5px; }
+.td-box-ebook { background:#f5f9fb; border-color:#d9e5ea; }
+.td-box-cover { background:#faf9f5; border-color:#e9e2d0; }
+
+.td-actions-row { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; }
+
+.td-cover-preview { margin-top:6px; }
+.td-cover-preview img { max-width:140px; max-height:180px; display:block; border:1px solid #ddd; border-radius:4px; }
+.td-cover-row { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:0.65rem; }
+.td-cover-input { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+.td-file-name { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cover-progress { display:none; font-size:0.6rem; color:#333; }
+.td-hint { margin-top:6px; font-size:0.55rem; color:#666; }
+
+.td-raw { margin-top:16px; }
+.td-raw pre { white-space:pre-wrap; font-size:0.62rem; background:#f7f7f7; padding:6px 8px; border:1px solid #e2e2e2; border-radius:4px; max-height:220px; overflow:auto; }
+
+@media (max-width:600px) {
+  #trainingDetailActions { gap:6px; }
+  .td-grid { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }
+}

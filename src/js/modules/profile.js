@@ -285,6 +285,113 @@ document.addEventListener('page:loaded', (e) => {
         if (e?.detail?.page === 'account') {
             if (typeof loadUserProfile === 'function') loadUserProfile();
         }
+        // Auto-consulta de CNPJ na página de criação de organização
+        if (e?.detail?.page === 'organizationsNew') {
+            try {
+                const cnpjInput = document.getElementById('orgCNPJ');
+                const razaoInput = document.getElementById('orgRazaoSocial');
+                const messages = document.getElementById('orgCreateMessages');
+
+                // Flag para controlar o preenchimento automático
+                let isRazaoSocialAutoFilled = false;
+
+                // Listener para detectar digitação manual na Razão Social
+                if (razaoInput) {
+                    razaoInput.addEventListener('input', () => {
+                        isRazaoSocialAutoFilled = false; // Se o usuário digita, o valor passa a ser manual
+                    });
+                }
+
+                if (cnpjInput && !cnpjInput.dataset.lookupBound) {
+                    cnpjInput.dataset.lookupBound = 'true';
+                    // Util: formatação de CNPJ
+                    const formatCNPJ = (val) => {
+                        const digits = (val || '').replace(/\D/g, '').slice(0,14);
+                        if (digits.length <= 2) return digits;
+                        if (digits.length <= 5) return digits.replace(/^(\d{2})(\d+)/, '$1.$2');
+                        if (digits.length <= 8) return digits.replace(/^(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+                        if (digits.length <= 12) return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
+                        return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+                    };
+                    // Cache simples em memória (escopo do listener)
+                    const cnpjCache = new Map();
+                    let lastLookup = null;
+                    // Aplicar máscara enquanto digita preservando posição lógica dos dígitos
+                    cnpjInput.addEventListener('input', () => {
+                        const original = cnpjInput.value;
+                        const caretPos = cnpjInput.selectionStart || 0;
+                        // Quantos dígitos (0-9) existiam antes do caret originalmente
+                        const digitsBeforeCaret = original.slice(0, caretPos).replace(/\D/g,'').length;
+                        // Reformatar
+                        const formatted = formatCNPJ(original);
+                        cnpjInput.value = formatted;
+                        // Calcular nova posição: avançar sobre a string formatada até contar os mesmos digitsBeforeCaret
+                        let newCaret = 0, digitsCount = 0;
+                        while (newCaret < formatted.length && digitsCount < digitsBeforeCaret) {
+                            if (/\d/.test(formatted[newCaret])) digitsCount++;
+                            newCaret++;
+                        }
+                        // Ajuste final: se digitou no final, manter no fim
+                        if (digitsBeforeCaret === formatted.replace(/\D/g,'').length) {
+                            newCaret = formatted.length;
+                        }
+                        try { cnpjInput.setSelectionRange(newCaret, newCaret); } catch(_) { /* ignore */ }
+                    });
+                    const runLookup = async () => {
+                        const raw = cnpjInput.value || '';
+                        const digits = raw.replace(/\D/g,'');
+                        if (digits.length === 0) return; // nada digitado
+                        if (digits.length < 14) {
+                            if (messages) messages.textContent = 'CNPJ deve ter 14 dígitos.';
+                            return;
+                        }
+                        // Não validar DV localmente para evitar conflitos com backend
+                        // evitar sobrescrever se usuário já preencheu manualmente uma razão social não vazia
+                        if (razaoInput && razaoInput.value && razaoInput.value.trim().length > 3 && !isRazaoSocialAutoFilled) {
+                        return; // Só para de executar se o valor for manual
+                        }
+                        // Checar cache
+                        if (cnpjCache.has(digits)) {
+                            const cached = cnpjCache.get(digits);
+                            if (cached && cached.razao_social && razaoInput) razaoInput.value = cached.razao_social;
+                            if (messages) messages.textContent = 'Razão Social preenchida (cache).';
+                            return;
+                        }
+                        // Evitar chamadas duplicadas se o usuário blur repetidamente sem alterar
+                        if (lastLookup === digits) {
+                            return;
+                        }
+                        lastLookup = digits;
+                        if (messages) messages.textContent = 'Consultando CNPJ...';
+                        try {
+                            const mod = await import('./api.js');
+                            const data = await mod.lookupCnpj(digits);
+
+                            if (data && data.razao_social && razaoInput) {
+                                razaoInput.value = data.razao_social;
+                                isRazaoSocialAutoFilled = true; // marcar que o valor foi preenchido automaticamente
+
+                                cnpjCache.set(digits, data);
+                                if (messages) messages.textContent = 'Razão Social preenchida automaticamente.';
+                            } else {
+                                if (messages) messages.textContent = 'Não foi possível obter Razão Social.';
+                            }
+                        } catch (err) {
+                            console.error('[cnpj lookup] erro', err);
+                            if (messages) {
+                                if (err.code === 'CNPJ_NOT_FOUND' || err.status === 404) messages.textContent = 'CNPJ não encontrado.';
+                                else if (err.code === 'INVALID_CNPJ_LENGTH') messages.textContent = err.message;
+                                else messages.textContent = err.message || 'Erro ao consultar CNPJ.';
+                            }
+                            lastLookup = null; // permitir nova tentativa
+                        }
+                    };
+                    cnpjInput.addEventListener('blur', runLookup);
+                    // Opcional: consulta também ao pressionar Enter dentro do campo
+                    cnpjInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); runLookup(); } });
+                }
+            } catch (lookupErr) { console.warn('Falha ao inicializar auto lookup CNPJ', lookupErr); }
+        }
     } catch (err) {
         console.warn('Erro no listener page:loaded em profile.js', err);
     }
@@ -317,7 +424,7 @@ export function toggleProfileEdit() {
 }
 
 
-// =======================================================
+ // =======================================================
 // FUNÇÕES DE EDIÇÃO DO PERFIL (EMAIL E SENHA)
 // =======================================================
 
@@ -537,7 +644,36 @@ export async function handleCreatePfSubmit(event) {
         }, 600);
     } catch (err) {
         console.error('Erro ao criar PF profile:', err);
-        if (messages) messages.textContent = err.message || 'Erro ao salvar perfil PF.';
+        let uiMsg = err && err.message ? err.message : 'Erro ao salvar perfil PF.';
+        if (err && err.code === 'DUPLICATE_CPF') {
+            uiMsg = 'CPF já cadastrado. Verifique se já existe um perfil associado ou entre em contato com o suporte.';
+        } else if (err && err.code === 'INVALID_CPF') {
+            uiMsg = 'CPF inválido. Verifique o número digitado.';
+        } else if (err && err.status === 403 && (!err.code || err.message === 'Erro ao criar perfil PF')) {
+            try {
+                const lastCpf = sessionStorage.getItem('lastPfAttemptCpf');
+                const currentCpf = (document.getElementById('pfCpf') || {}).value || '';
+                if (lastCpf && currentCpf && lastCpf.replace(/\D/g,'') === currentCpf.replace(/\D/g,'')) {
+                    uiMsg = 'CPF já cadastrado. Verifique se já existe um perfil associado ou entre em contato com o suporte.';
+                }
+            } catch (e) { /* ignore */ }
+        } else if (!err?.code) {
+            // Heurística adicional: se a mensagem retornada contém padrões de CPF inválido mas code não foi setado
+            const rawMsg = (err && (err.message || err._raw)) || '';
+            const lower = rawMsg.toLowerCase();
+            if (/cpf/.test(lower) && (lower.includes('inval') || lower.includes('invalid'))) {
+                uiMsg = 'CPF inválido. Verifique o número digitado.';
+            }
+            // fallback: validar client-side comprimento/dígitos básicos
+            const currentCpf = (document.getElementById('pfCpf') || {}).value || '';
+            const digits = currentCpf.replace(/\D/g,'');
+            if (!uiMsg.includes('CPF inválido') && digits && digits.length !== 11) {
+                uiMsg = 'CPF inválido. Verifique o número digitado.';
+            }
+        } else if (uiMsg === 'Erro ao criar perfil PF' && err && err.status) {
+            uiMsg = `Não foi possível salvar (status ${err.status}). Tente novamente ou contate suporte.`;
+        }
+        if (messages) messages.textContent = uiMsg;
     }
 }
 
@@ -548,17 +684,29 @@ export async function handleOrgCreateSubmit(event) {
     event.preventDefault();
     const messages = document.getElementById('orgCreateMessages');
     if (messages) messages.textContent = '';
-    const razaoSocial = (document.getElementById('orgRazaoSocial') || {}).value || '';
-    const cnpj = (document.getElementById('orgCNPJ') || {}).value || '';
+    const razaoSocialInput = (document.getElementById('orgRazaoSocial') || {}).value || '';
+    const razaoSocial = razaoSocialInput.trim();
+    const cnpjRaw = (document.getElementById('orgCNPJ') || {}).value || '';
+    const cleanedCnpj = (cnpjRaw || '').replace(/\D/g,''); // apenas dígitos
 
-    if (!razaoSocial || !cnpj) {
-        if (messages) messages.textContent = 'Preencha Razão Social e CNPJ.';
+    // validações mínimas no cliente
+    if (!razaoSocial) {
+        if (messages) messages.textContent = 'Preencha a Razão Social.';
+        return;
+    }
+    if (!cleanedCnpj) {
+        if (messages) messages.textContent = 'Preencha o CNPJ.';
+        return;
+    }
+    if (cleanedCnpj.length !== 14) {
+        if (messages) messages.textContent = 'CNPJ inválido. Digite os 14 dígitos.';
         return;
     }
 
     const token = localStorage.getItem('jwtToken');
     try {
-        const payload = { razaoSocial, cnpj };
+        // Enviar apenas o campo cnpj com os 14 dígitos limpos
+        const payload = { razaoSocial, cnpj: cleanedCnpj };
         const resp = await createOrganization(token, payload);
         // tentar inferir id da resposta
         const orgId = resp && (resp.id || resp._id || (resp.organization && (resp.organization.id || resp.organization._id)));
@@ -577,7 +725,12 @@ export async function handleOrgCreateSubmit(event) {
         }
     } catch (err) {
         console.error('Erro ao criar organização:', err);
-        if (messages) messages.textContent = err.message || 'Erro ao criar organização.';
+        if (messages) {
+            let uiMsg = err && err.message ? err.message : 'Erro ao criar organização.';
+            if (err && err.code === 'INVALID_CNPJ') uiMsg = 'CNPJ inválido. Verifique os 14 dígitos digitados.';
+            if (err && err.code === 'MISSING_RAZAO_SOCIAL') uiMsg = 'Razão Social é obrigatória.';
+            messages.textContent = uiMsg;
+        }
     }
 }
 

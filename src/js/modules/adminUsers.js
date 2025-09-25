@@ -1,6 +1,8 @@
 // Módulo para gerenciamento de listagem e detalhe de usuários (requisição ao /admin/users)
 import { showPage } from './navigation.js';
-import { getAdminUsers, getAdminUserById, API_BASE_URL, patchAdminUserStatus, getAdminOrganizations, patchAdminOrganizationStatus, getAdminContentSummary, getAdminAnalyticsSummary } from './api.js';
+import { getAdminUsers, getAdminUserById, API_BASE_URL, patchAdminUserStatus, getAdminOrganizations, patchAdminOrganizationStatus, getAdminContentSummary, getAdminAnalyticsSummary, deactivateAdminUser, activateAdminUser } from './api.js';
+import { loadTrainings as loadAdminTrainings } from './adminContent.js';
+import { showToast } from './notifications.js';
 
 // Normaliza strings de role: remove espaços e converte para UPPERCASE para comparações robustas
 function normalizeRole(value) {
@@ -99,22 +101,23 @@ function renderAdminUsers(users) {
         const idVal = u.id || u.userId || u._id || '';
         const btn = document.createElement('button'); btn.className = 'btn-small view-user'; btn.setAttribute('data-userid', idVal); btn.textContent = 'Ver Detalhes';
         tdActions.appendChild(btn);
-        const enabledState = (u.enabled === false) ? false : true;
-        // create a checkbox switch similar to card 2
-        const switchLabel = document.createElement('label');
-        switchLabel.className = 'switch';
-        const switchInput = document.createElement('input');
-        switchInput.type = 'checkbox';
-        switchInput.className = 'toggle-user-switch';
-        switchInput.setAttribute('data-userid', idVal);
-        switchInput.checked = enabledState;
-        switchInput.setAttribute('data-enabled', enabledState ? 'true' : 'false');
-        switchInput.setAttribute('aria-label', enabledState ? 'Inativar usuário' : 'Ativar usuário');
-        const slider = document.createElement('span'); slider.className = 'slider';
-        switchLabel.appendChild(switchInput);
-        switchLabel.appendChild(slider);
-        tdActions.appendChild(document.createTextNode(' '));
-        tdActions.appendChild(switchLabel);
+    const enabledState = (u.enabled === false) ? false : true;
+    // Toggle switch no mesmo padrão do Card 2
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+    const switchInput = document.createElement('input');
+    switchInput.type = 'checkbox';
+    switchInput.className = 'toggle-user-switch';
+    switchInput.setAttribute('data-userid', idVal);
+    switchInput.setAttribute('data-email', u.email || u.userEmail || '');
+    switchInput.checked = enabledState;
+    switchInput.setAttribute('data-enabled', enabledState ? 'true' : 'false');
+    switchInput.setAttribute('aria-label', enabledState ? 'Inativar usuário' : 'Ativar usuário');
+    const slider = document.createElement('span'); slider.className = 'slider';
+    switchLabel.appendChild(switchInput);
+    switchLabel.appendChild(slider);
+    tdActions.appendChild(document.createTextNode(' '));
+    tdActions.appendChild(switchLabel);
         tdActions.setAttribute('data-label', 'Ações');
         tr.appendChild(tdActions);
         tbody.appendChild(tr);
@@ -166,10 +169,78 @@ function showAdminDebugInfo() {
     debugEl.innerHTML = `DEBUG: token=${token ? 'present' : 'missing'} (${tokenShort || '—'}); systemRole(localStorage)=${rawSystemRole || '—'}; userRole(localStorage)=${rawUserRole || '—'}; profileRole=${profileRole || '—'}; isSystemAdmin=${isAdmin}; API_BASE_URL=${API_BASE_URL}`;
 }
 
+// Modal de confirmação simples (retorna Promise<boolean>)
+function confirmAction({ title = 'Confirmar', message = 'Tem certeza?', confirmText = 'Confirmar', cancelText = 'Cancelar' } = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.45)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '9999';
+
+        const dialog = document.createElement('div');
+        dialog.style.background = '#fff';
+        dialog.style.borderRadius = '8px';
+        dialog.style.width = 'min(92vw, 480px)';
+        dialog.style.maxWidth = '480px';
+        dialog.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+        dialog.style.padding = '20px';
+        dialog.innerHTML = `
+            <h3 style="margin:0 0 8px 0; font-size:1.15rem;">${title}</h3>
+            <p style="margin:0 0 16px 0; color:#444;">${message}</p>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button class="confirm-cancel" style="padding:8px 12px; background:#e5e7eb; border:0; border-radius:6px; cursor:pointer;">${cancelText}</button>
+                <button class="confirm-ok" style="padding:8px 12px; background:#0ea5e9; color:white; border:0; border-radius:6px; cursor:pointer;">${confirmText}</button>
+            </div>
+        `;
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        const cleanup = () => overlay.remove();
+        dialog.querySelector('.confirm-cancel').addEventListener('click', () => { cleanup(); resolve(false); });
+        dialog.querySelector('.confirm-ok').addEventListener('click', () => { cleanup(); resolve(true); });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) { cleanup(); resolve(false); }});
+        const onKey = (e) => { if (e.key === 'Escape') { cleanup(); resolve(false); document.removeEventListener('keydown', onKey); } };
+        document.addEventListener('keydown', onKey);
+    });
+}
+
 function attachListHandlers() {
     const tbody = document.getElementById('adminUsersTbody');
     if (!tbody) return;
     tbody.addEventListener('click', (ev) => {
+        // Interceptar clique no switch/label/slider para confirmar antes de alternar
+        const switchWrapper = ev.target.closest('label.switch, .switch .slider, input.toggle-user-switch');
+        if (switchWrapper) {
+            const inputEl = switchWrapper.tagName === 'INPUT'
+                ? switchWrapper
+                : (switchWrapper.querySelector && switchWrapper.querySelector('input.toggle-user-switch')) || (switchWrapper.closest('label.switch') && switchWrapper.closest('label.switch').querySelector('input.toggle-user-switch'));
+            if (inputEl) {
+                const prevEnabled = inputEl.checked;
+                const targetEnabled = !prevEnabled;
+                const email = inputEl.getAttribute('data-email') || 'este usuário';
+                // Previne o toggle padrão e mostra confirmação sem delay visual
+                ev.preventDefault();
+                ev.stopPropagation();
+                confirmAction({
+                    title: targetEnabled ? 'Ativar usuário' : 'Desativar usuário',
+                    message: targetEnabled
+                        ? `Você tem certeza de que deseja ativar o usuário ${email}?`
+                        : `Você tem certeza de que deseja desativar o usuário ${email}? Ele não poderá mais acessar a plataforma.`,
+                    confirmText: targetEnabled ? 'Ativar' : 'Desativar',
+                    cancelText: 'Cancelar'
+                }).then((ok) => {
+                    if (!ok) return;
+                    // Alterna manualmente e disparamos change para seguir o fluxo normal
+                    inputEl.checked = targetEnabled;
+                    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                return;
+            }
+        }
         const viewBtn = ev.target.closest('.view-user');
         if (viewBtn) {
             const userId = viewBtn.getAttribute('data-userid');
@@ -179,29 +250,85 @@ function attachListHandlers() {
             return;
         }
 
-        // New-style checkbox toggle (preferred)
-        const switchInput = ev.target.closest('input.toggle-user-switch');
-        if (switchInput) {
-            const userId = switchInput.getAttribute('data-userid');
-            const enabledAttr = switchInput.getAttribute('data-enabled');
-            const currentEnabled = enabledAttr === 'true';
-            const tr = switchInput.closest('tr');
-            const statusTd = tr ? tr.querySelector('td[data-label="Status"]') : null;
-            handleToggleUserStatus(userId, currentEnabled, switchInput, statusTd);
-            return;
-        }
+        // sem botões; o toggle é tratado no evento change abaixo
+    });
 
-        // legacy button toggle (fallback)
-        const toggleBtn = ev.target.closest('.toggle-status');
-        if (toggleBtn) {
-            const userId = toggleBtn.getAttribute('data-userid');
-            const enabledAttr = toggleBtn.getAttribute('data-enabled');
-            const currentEnabled = enabledAttr === 'true';
-            // localizar coluna de status correspondente (buscar td do mesmo tr)
-            const tr = toggleBtn.closest('tr');
-            const statusTd = tr ? tr.querySelector('td[data-label="Status"]') : null;
-            handleToggleUserStatus(userId, currentEnabled, toggleBtn, statusTd);
-            return;
+    // Suporte a teclado: confirmar antes do toggle em Space/Enter
+    tbody.addEventListener('keydown', (ev) => {
+        const inputEl = ev.target.closest('input.toggle-user-switch');
+        if (!inputEl) return;
+        if (ev.key === ' ' || ev.key === 'Enter') {
+            const prevEnabled = inputEl.checked;
+            const targetEnabled = !prevEnabled;
+            const email = inputEl.getAttribute('data-email') || 'este usuário';
+            ev.preventDefault();
+            ev.stopPropagation();
+            confirmAction({
+                title: targetEnabled ? 'Ativar usuário' : 'Desativar usuário',
+                message: targetEnabled
+                    ? `Você tem certeza de que deseja ativar o usuário ${email}?`
+                    : `Você tem certeza de que deseja desativar o usuário ${email}? Ele não poderá mais acessar a plataforma.`,
+                confirmText: targetEnabled ? 'Ativar' : 'Desativar',
+                cancelText: 'Cancelar'
+            }).then((ok) => {
+                if (!ok) return;
+                inputEl.checked = targetEnabled;
+                inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+    });
+
+    // Evento change do switch
+    tbody.addEventListener('change', async (ev) => {
+        const input = ev.target.closest('input.toggle-user-switch');
+        if (!input) return;
+        const userId = input.getAttribute('data-userid');
+        const email = input.getAttribute('data-email') || 'este usuário';
+        const prevEnabled = input.getAttribute('data-enabled') === 'true';
+        const targetEnabled = input.checked;
+        const tr = input.closest('tr');
+        const statusTd = tr ? tr.querySelector('td[data-label="Status"]') : null;
+        const actionsTd = tr ? tr.querySelector('td[data-label="Ações"]') : null;
+
+        input.disabled = true;
+        // Badge inline para feedback imediato
+        let badge = null;
+        if (actionsTd) {
+            badge = actionsTd.querySelector('.inline-update-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'inline-update-badge';
+                actionsTd.appendChild(badge);
+            }
+            badge.textContent = targetEnabled ? 'Ativando…' : 'Desativando…';
+        }
+        try {
+            const token = localStorage.getItem('jwtToken');
+            if (targetEnabled) {
+                const res = await activateAdminUser(token, userId);
+                if (statusTd) statusTd.textContent = 'Ativo';
+                input.setAttribute('data-enabled', 'true');
+                input.setAttribute('aria-label', 'Inativar usuário');
+                try { const c = window._adminUsersCache || []; const o = c.find(u => (u.id||u.userId||u._id)===userId); if (o) o.enabled = true; } catch(e){}
+                showToast(typeof res === 'string' && res ? res : 'Usuário ativado com sucesso.');
+            } else {
+                const res = await deactivateAdminUser(token, userId);
+                if (statusTd) statusTd.textContent = 'Inativo';
+                input.setAttribute('data-enabled', 'false');
+                input.setAttribute('aria-label', 'Ativar usuário');
+                try { const c = window._adminUsersCache || []; const o = c.find(u => (u.id||u.userId||u._id)===userId); if (o) o.enabled = false; } catch(e){}
+                showToast(typeof res === 'string' && res ? res : 'Usuário desativado com sucesso.');
+            }
+        } catch (err) {
+            console.error(err);
+            // Reverter visualmente
+            input.checked = prevEnabled;
+            input.setAttribute('data-enabled', prevEnabled ? 'true' : 'false');
+            input.setAttribute('aria-label', prevEnabled ? 'Inativar usuário' : 'Ativar usuário');
+            showToast('Ocorreu um erro ao tentar atualizar o usuário.', { type: 'error' });
+        } finally {
+            input.disabled = false;
+            if (badge && badge.parentNode) badge.parentNode.removeChild(badge);
         }
     });
 }
@@ -291,8 +418,18 @@ async function loadAdminOrgs() {
 
 async function loadAdminContent() {
     const container = document.getElementById('adminContentContainer');
+    const msg = document.getElementById('adminContentMessages');
     if (!container) return;
-    container.innerHTML = 'Funcionalidade de gestão de conteúdo não implementada no frontend ainda.';
+    if (!isSystemAdmin()) { container.innerHTML = '<p>Acesso negado.</p>'; return; }
+    container.innerHTML = '<p>Carregando treinamentos...</p>';
+    if (msg) { msg.style.display='none'; msg.textContent=''; }
+    try {
+        await loadAdminTrainings();
+    } catch (e) {
+        console.error('Erro ao carregar treinamentos (card conteúdo):', e);
+        container.innerHTML = '<p>Erro ao carregar treinamentos.</p>';
+        if (msg) { msg.style.display='block'; msg.textContent = e.message || 'Erro.'; }
+    }
 }
 
 async function loadAdminAnalytics() {
@@ -518,6 +655,7 @@ document.addEventListener('page:loaded', (ev) => {
     if (!page) return;
     if (page === 'adminUsers') {
         try { initAdminUsersPage(); } catch (e) { console.error(e); }
+        try { initPlatformManagementCard(); } catch (e) { console.error('Erro initPlatformManagementCard', e); }
     }
     if (page === 'adminUserDetail') {
         // extrair userId do hash (ex: #adminUserDetail/123)
@@ -531,3 +669,22 @@ document.addEventListener('page:loaded', (ev) => {
 });
 
 export { initAdminUsersPage, initAdminUserDetailPage, isSystemAdmin };
+
+// ================== Gestão da Plataforma: Tabs e Subcards ==================
+function initPlatformManagementCard() {
+    const card = document.getElementById('adminPlatformCard');
+    if (!card) return; // card pode não estar na partial
+    setupPlatformLinks(card);
+}
+
+function setupPlatformLinks(scopeEl) {
+    scopeEl.addEventListener('click', (ev) => {
+        const link = ev.target.closest('a.platform-tab');
+        if (!link) return;
+        ev.preventDefault();
+        const target = link.getAttribute('data-nav');
+        if (!target) return;
+        try { window.location.hash = '#' + target; } catch (e) {}
+        try { showPage(target); } catch (e) { console.error('Falha ao navegar para', target, e); }
+    });
+}

@@ -20,6 +20,10 @@
     --gray-medium: #6c757d;
     --gray-dark: #343a40;
     --verde-claro-dark: #9bb82b; /* tom mais escuro para hover */
+    /* Component sizing */
+    --btn-small-equal-width: 92px; /* largura uniforme para botões pequenos de ação */
+    --btn-small-height: 34px; /* altura padrão desktop dos botões pequenos */
+    --btn-small-height-mobile: 44px; /* altura aumentada para melhor toque em mobile */
     
     /* Typography */
     --font-family: 'Montserrat', sans-serif;
@@ -159,6 +163,27 @@ p {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
+
+/* Utilitários de variantes de botão reutilizáveis */
+.btn-variant-remove {
+    background: var(--coral);
+    color: #fff;
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.btn-variant-remove:hover { background: var(--coral-dark); }
+.btn-variant-remove:focus-visible { outline:2px solid var(--coral-dark); outline-offset:2px; }
+
+.btn-variant-change {
+    background: var(--verde-claro);
+    color: #fff;
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.btn-variant-change:hover { background: var(--verde-escuro); }
+.btn-variant-change:focus-visible { outline:2px solid var(--verde-escuro); outline-offset:2px; }
 
 
 .btn-coral {
@@ -317,6 +342,9 @@ p {
 .visible {
     display: block;
 }
+
+/* Estados utilitários adicionais */
+.is-hidden { display:none !important; }
 
 
 /* Classe para esconder elementos */
