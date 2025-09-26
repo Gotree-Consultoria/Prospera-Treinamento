@@ -946,8 +946,9 @@ export async function lookupCnpj(cnpj) {
  * GET /admin/organizations/{organizationId}/sectors
  * Requer SYSTEM_ADMIN.
  */
-export async function getAdminOrganizationSectors(token, organizationId) {
-    const response = await fetch(`${API_BASE_URL}/admin/organizations/${organizationId}/sectors`, {
+export async function getOrganizationSectors(token, organizationId) {
+    // Endpoint voltado ao contexto da organização (sem prefixo /admin) para uso por ORG_ADMIN / membros autorizados
+    const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/sectors`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -960,6 +961,67 @@ export async function getAdminOrganizationSectors(token, organizationId) {
         throw new Error((err && (err.message || err.error || err.erro)) || 'Erro ao listar setores da organização');
     }
     return safeParseResponse(response);
+}
+
+/**
+ * (Compat) Lista setores adotados por uma organização via endpoint ADMIN.
+ * Mantido para páginas de administração que já importam getAdminOrganizationSectors.
+ * GET /admin/organizations/{organizationId}/sectors  (requer SYSTEM_ADMIN)
+ */
+export async function getAdminOrganizationSectors(token, organizationId) {
+    const response = await fetch(`${API_BASE_URL}/admin/organizations/${organizationId}/sectors`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            const e = new Error('Acesso negado.');
+            e.status = response.status;
+            throw e;
+        }
+        const err = await safeParseResponse(response);
+        throw new Error((err && (err.message || err.error || err.erro)) || 'Erro ao listar setores (admin).');
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista setores adotados pela própria organização do usuário ORG_ADMIN.
+ * Caso o backend ainda não possua um endpoint dedicado, tenta reutilizar o admin se o token tiver permissão.
+ * Preferência: GET /admin/organizations/{orgId}/sectors (já existente) – aqui apenas um wrapper semântica.
+ * Se futuramente existir /organizations/{orgId}/sectors sem prefixo admin, adaptar.
+ */
+export async function getMyOrganizationSectors(token, organizationId) {
+    return getOrganizationSectors(token, organizationId);
+}
+
+/**
+ * Desvincula (remove) um setor adotado pela organização.
+ * DELETE /organizations/{orgId}/sectors/{sectorId}
+ */
+export async function removeOrganizationSector(token, orgId, sectorId) {
+    if (!token) throw new Error('Token ausente');
+    if (!orgId) throw new Error('OrgId ausente');
+    if (!sectorId) throw new Error('SectorId ausente');
+    const response = await fetch(`${API_BASE_URL}/organizations/${encodeURIComponent(orgId)}/sectors/${encodeURIComponent(sectorId)}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (_) {}
+        const msg = (parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao remover setor.';
+        const err = new Error(msg);
+        err.status = response.status;
+        throw err;
+    }
+    return true;
 }
 
 /**
@@ -1225,6 +1287,48 @@ export async function deleteAdminTraining(token, trainingId) {
 }
 
 /**
+ * Desvincula um treinamento de um setor (SYSTEM_ADMIN)
+ * DELETE /admin/trainings/{trainingId}/sectors/{sectorId}
+ */
+export async function unlinkTrainingSector(token, trainingId, sectorId) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId || !sectorId) throw new Error('Parâmetros inválidos');
+    const response = await fetch(`${API_BASE_URL}/admin/trainings/${encodeURIComponent(trainingId)}/sectors/${encodeURIComponent(sectorId)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json, text/plain, */*' }
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(e) {}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao desvincular setor.');
+        err.status = response.status;
+        if (response.status === 404) err.code = 'NOT_FOUND';
+        throw err;
+    }
+    return true;
+}
+
+/**
+ * Organização deixa de seguir um setor (ORG_ADMIN)
+ * DELETE /organizations/{orgId}/sectors/{sectorId}
+ */
+export async function orgUnfollowSector(token, orgId, sectorId) {
+    if (!token) throw new Error('Token ausente');
+    if (!orgId || !sectorId) throw new Error('Parâmetros inválidos');
+    const response = await fetch(`${API_BASE_URL}/organizations/${encodeURIComponent(orgId)}/sectors/${encodeURIComponent(sectorId)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json, text/plain, */*' }
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(e) {}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao remover setor da organização.');
+        err.status = response.status;
+        if (response.status === 404) err.code = 'NOT_FOUND';
+        throw err;
+    }
+    return true;
+}
+
+/**
  * Upload do arquivo PDF de um E-book já criado.
  * Backend: POST /admin/trainings/ebooks/{trainingId}/upload  (Multipart)
  * @returns {Promise<null|object>} - backend retorna 200 sem body (Void) segundo o contrato atual.
@@ -1362,4 +1466,172 @@ export async function uploadTrainingCoverImage(token, trainingId, file, onProgre
         formData.append('file', file);
         xhr.send(formData);
     });
+}
+
+/**
+ * Busca detalhes de um setor específico.
+ * GET /admin/sectors/{sectorId}
+ */
+export async function getAdminSectorById(token, sectorId) {
+    if (!token) throw new Error('Token ausente');
+    if (!sectorId) throw new Error('sectorId ausente');
+    const response = await fetch(`${API_BASE_URL}/admin/sectors/${encodeURIComponent(sectorId)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(_){}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao buscar setor.');
+        err.status = response.status;
+        if (response.status === 404) err.code = 'SECTOR_NOT_FOUND';
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista setores públicos disponíveis para o catálogo unificado (acessível sem autenticação).
+ * Tentamos primeiro a rota mais completa (/api/public/catalog/sectors) e, em caso de 404
+ * ou erro de rede, fazemos fallback para (/public/catalog/sectors) para compatibilidade.
+ * @returns {Promise<Array<{id:string,name:string}>>}
+ */
+export async function getPublicCatalogSectors() {
+    const tried = [];
+    const endpoints = [
+        `${API_BASE_URL}/api/public/catalog/sectors`,
+        `${API_BASE_URL}/public/catalog/sectors`
+    ];
+    for (const url of endpoints) {
+        try {
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json, text/plain, */*' } });
+            tried.push({ url, status: resp.status });
+            if (!resp.ok) {
+                if (resp.status === 404) continue; // tenta próximo fallback
+                throw new Error('HTTP '+resp.status);
+            }
+            let data = await safeParseResponse(resp);
+            if (!Array.isArray(data)) {
+                // aceitar envelopes comuns: {items:[]}, {data:[]}
+                if (data && Array.isArray(data.items)) data = data.items; else if (data && Array.isArray(data.data)) data = data.data; else data = [];
+            }
+            return data.filter(Boolean).map(s => ({
+                id: (s.id || s.uuid || s.code || s.slug || '').toString(),
+                name: s.name || s.title || s.label || 'Setor'
+            })).filter(s => s.id);
+        } catch (e) {
+            // continua loop para fallback
+        }
+    }
+    console.warn('[api] Falha ao carregar setores públicos', tried);
+    return [];
+}
+
+/**
+ * Exclui um setor global.
+ * Endpoint: DELETE /admin/sectors/{sectorId}
+ * Papel: SYSTEM_ADMIN
+ */
+export async function deleteAdminSector(token, sectorId) {
+    if (!token) throw new Error('Token ausente');
+    if (!sectorId) throw new Error('sectorId obrigatório');
+    const response = await fetch(`${API_BASE_URL}/admin/sectors/${encodeURIComponent(sectorId)}`, {
+        method: 'DELETE',
+        headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            const e = new Error('Acesso negado.');
+            e.status = response.status;
+            throw e;
+        }
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (e) { /* ignore */ }
+        let backendMsg = 'Erro ao excluir setor.';
+        if (parsed) {
+            if (typeof parsed === 'string') {
+                backendMsg = parsed.trim() || backendMsg;
+            } else {
+                backendMsg = (parsed.message || parsed.error || parsed.erro || backendMsg);
+            }
+        }
+        const lower = backendMsg.toLowerCase();
+        const phrase = 'não é possível excluir este setor';
+        const err = new Error(backendMsg);
+        err.status = response.status;
+        if (response.status === 404) err.code = 'SECTOR_NOT_FOUND';
+        if (response.status === 409) err.code = 'SECTOR_IN_USE';
+        // Alguns backends podem retornar 500 com IllegalStateException contendo a frase
+        if (!err.code && (response.status === 500 || response.status === 400) && lower.includes(phrase)) {
+            err.code = 'SECTOR_IN_USE';
+        }
+        // Forçar código se a frase for detectada mesmo em outro status
+        if (lower.includes(phrase)) err.code = 'SECTOR_IN_USE';
+        throw err;
+    }
+    // Alguns backends retornam 204 sem body
+    try { return await safeParseResponse(response); } catch { return null; }
+}
+
+/**
+ * Adota / vincula um setor existente (global) à organização do usuário.
+ * POST /organizations/{orgId}/sectors  body: { sectorId }
+ */
+export async function addOrganizationSector(token, orgId, sectorId) {
+    if (!token) throw new Error('Token ausente');
+    if (!orgId) throw new Error('OrgId ausente');
+    if (!sectorId) {
+        const e = new Error('Selecione um setor.');
+        e.code = 'SECTOR_REQUIRED';
+        throw e;
+    }
+    const response = await fetch(`${API_BASE_URL}/organizations/${encodeURIComponent(orgId)}/sectors`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ sectorId })
+    });
+    if (!response.ok) {
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (_) {}
+        const msg = (parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao adicionar setor.';
+        const err = new Error(msg);
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista setores públicos (catálogo) usando apenas UMA chamada direta.
+ * Endpoint único: GET /public/catalog/sectors
+ * Retorna array normalizado: [{id,name}]
+ */
+export async function getPublicSectors() {
+    const url = `${API_BASE_URL}/public/catalog/sectors`;
+    try {
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json, text/plain, */*' } });
+        if (!resp.ok) throw new Error('HTTP '+resp.status);
+        let data = await safeParseResponse(resp);
+        if (!Array.isArray(data)) {
+            if (data && Array.isArray(data.items)) data = data.items;
+            else if (data && Array.isArray(data.data)) data = data.data;
+            else data = [];
+        }
+        return data.filter(Boolean).map(s => ({
+            id: (s.id || s.uuid || s.code || s.slug || '').toString(),
+            name: s.name || s.title || s.label || 'Setor'
+        })).filter(s => s.id);
+    } catch (e) {
+        console.warn('[api] Falha ao carregar catálogo público único', e);
+        return [];
+    }
 }

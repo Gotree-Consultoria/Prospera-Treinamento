@@ -12,7 +12,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="src/css/components/_about.css">
     <link rel="stylesheet" href="src/css/components/_account.css">
-    <link rel="stylesheet" href="src/css/components/_cart.css">
     <link rel="stylesheet" href="src/css/components/_contact.css">
     <link rel="stylesheet" href="src/css/components/_ebooks.css">
     <link rel="stylesheet" href="src/css/components/_faq.css">
@@ -143,11 +142,11 @@
                                 pequenas e médias empresas que não têm tempo a perder.
                             </p>
                             <div class="hero-buttons">
-                                <button class="btn btn-primary" data-action="scrollToSection" data-section="categories">
+                                <button class="btn btn-primary" data-page="ebooks">
                                     Explorar E-books
                                 </button>
-                                <button class="btn btn-secondary" data-action="scrollToSection" data-section="packages">
-                                    Ver Pacotes Completos
+                                <button class="btn btn-secondary" data-page="packages">
+                                    Ver Treinamentos
                                 </button>
                             </div>
                         </div>
@@ -162,14 +161,41 @@
                 <div id="productCategoriesContainer"></div>
 
                 <!-- Packages Section -->
-                <section class="packages" id="packages">
+                <section class="packages trainings-highlight" id="packages">
                     <div class="container">
-                        <h2>Pacotes Completos de Formação</h2>
-                        <div class="loading" id="packagesLoading">
-                            A carregar pacotes...
+                        <div class="trainings-intro intro-bg">
+                            <h2>Treinamentos para Evoluir sua Equipe em Ritmo Contínuo</h2>
+                            <p class="trainings-lead">Centralizamos formatos diferentes para acelerar aprendizado prático: conteúdos rápidos (E-books), aprofundamento estruturado (Cursos Gravados) e aplicação guiada (Sessões Ao Vivo).</p>
+                            <ul class="trainings-benefits">
+                                <li><i class="fas fa-bolt"></i> Ganho rápido de conhecimento aplicável</li>
+                                <li><i class="fas fa-layer-group"></i> Trilhas combinando formatos</li>
+                                <li><i class="fas fa-user-shield"></i> Conformidade e atualização contínua</li>
+                                <li><i class="fas fa-chart-line"></i> Foco em resultado e retenção</li>
+                            </ul>
+                            <div class="trainings-cta-buttons">
+                                <button class="btn btn-primary" data-page="catalog">Explorar Catálogo Completo</button>
+                                <button class="btn btn-secondary" data-page="packages">Ver Apenas Treinamentos</button>
+                            </div>
                         </div>
-                        <div class="packages-grid is-hidden" id="packagesGrid">
-                            <!-- Packages will be loaded here -->
+                        <div class="training-formats-cards" id="packagesGrid">
+                            <div class="format-card" data-page="ebooks">
+                                <div class="format-icon"><i class="fas fa-book"></i></div>
+                                <h3>E-books</h3>
+                                <p>Guias objetivos e rápidos para consulta e implementação imediata.</p>
+                                <button class="btn btn-small" data-page="ebooks">Ver E-books</button>
+                            </div>
+                            <div class="format-card" data-page="packages">
+                                <div class="format-icon"><i class="fas fa-film"></i></div>
+                                <h3>Cursos Gravados</h3>
+                                <p>Conteúdos estruturados sob demanda para evolução progressiva.</p>
+                                <button class="btn btn-small" data-page="packages">Ver Cursos</button>
+                            </div>
+                            <div class="format-card" data-page="catalog" data-filter="LIVE_TRAINING">
+                                <div class="format-icon"><i class="fas fa-podcast"></i></div>
+                                <h3>Treinamentos Ao Vivo</h3>
+                                <p>Interação direta, dúvidas em tempo real e foco aplicado ao contexto.</p>
+                                <button class="btn btn-small" data-page="catalog">Próximas Sessões</button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -255,11 +281,11 @@
         <div class="page hidden" id="accountPage">
             <div id="accountPageContainer"></div>
         </div>
-        <div class="page hidden" id="cartPage">
-            <div id="cartPageContainer"></div>
-        </div>
         <div class="page hidden" id="faqPage">
             <div id="faqPageContainer"></div>
+        </div>
+        <div class="page hidden" id="catalogPage">
+            <div id="catalogPageContainer"></div>
         </div>
     </main>
 

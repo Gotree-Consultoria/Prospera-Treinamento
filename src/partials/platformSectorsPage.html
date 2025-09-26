@@ -2,9 +2,10 @@
   <div class="container">
     <h3>Gerenciar Setores</h3>
     <div id="platformSectorsMessages" class="form-messages"></div>
-    <div class="inline-actions">
-      <button class="btn-small" data-action="reloadSectors">Recarregar</button>
-      <button class="btn-small" data-action="createSector">Novo Setor</button>
+    <!-- Reutiliza exatamente a mesma estrutura e classes de Gestão de Conteúdo -->
+  <div class="admin-content-actions inline-actions">
+      <button class="crud-btn" data-action="createSector" title="Criar novo setor">Novo Setor</button>
+      <button class="crud-btn is-secondary" data-action="reloadSectors" title="Recarregar lista de setores">Recarregar</button>
     </div>
     <div class="table-responsive small-table" id="platformSectorsTableWrapper">
       <table class="table" id="platformSectorsTable">

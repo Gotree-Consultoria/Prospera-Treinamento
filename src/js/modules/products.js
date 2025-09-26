@@ -1,6 +1,6 @@
 import { products } from './render.js';
 import { renderProducts } from './render.js';
-import { showPage } from './navigation.js';
+import { showPage, currentPage } from './navigation.js';
 import { renderTrainingsForSector } from './trainings.js';
 import { getAdminTrainings } from './api.js';
 
@@ -144,52 +144,21 @@ function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s]));
 }
 
-export async function filterProductsByCategory(categoryName) {
-    await showPage("ebooks");
-    const loadingEl = document.getElementById('ebooksLoading');
-    if (loadingEl) {
-        // só mostra loading se ainda não houver nada preenchido
-        const trainingsList = document.getElementById('trainingsList');
-        if (trainingsList && trainingsList.children.length === 0 && trainingsList.innerHTML.trim() === '') {
-            loadingEl.style.display = 'block';
-        } else {
-            loadingEl.style.display = 'none';
-        }
-    }
-    if (categoryName === 'global') {
-        const trainingsList = document.getElementById('trainingsList');
-        if (trainingsList && trainingsList.children.length === 0 && trainingsList.innerHTML.trim() === '') {
-            trainingsList.innerHTML = '<p class="loading-msg">Carregando e-books globais...</p>';
-        }
-        try {
-            const ebooks = await fetchGlobalEbooksFromApi();
-            renderGlobalEbooks(ebooks);
-        } catch (e) {
-            if (trainingsList) trainingsList.innerHTML = '<p style="color:#b33;">Falha ao carregar e-books globais: ' + escapeHtml(e.message || '') + '</p>';
-        }
-        return;
-    }
-    if (categoryName === 'all') {
-        const trainingsList = document.getElementById('trainingsList');
-        if (trainingsList && trainingsList.children.length === 0 && trainingsList.innerHTML.trim() === '') {
-            trainingsList.innerHTML = '<p class="loading-msg">Carregando todos os e-books...</p>';
-        }
-        try {
-            const all = await fetchAllEbooksFromApi();
-            renderAllEbooks(all);
-        } catch (e) {
-            if (trainingsList) trainingsList.innerHTML = '<p style="color:#b33;">Falha ao carregar e-books: ' + escapeHtml(e.message || '') + '</p>';
-        }
-        return;
-    }
-    renderTrainingsForSector(categoryName);
+// Flag simples para evitar reentrância / loops ao filtrar
+let _ebooksFiltering = false;
+
+// LÓGICA DE SETOR MIGRADA PARA catalog.js
+// Mantemos stub para compatibilidade temporária com eventListeners legados.
+export function filterProductsByCategory(/* categoryName, opts */) {
+        console.warn('[products] filterProductsByCategory depreciado. A filtragem por setor agora ocorre em Catálogo Completo.');
 }
 
 document.addEventListener('page:loaded', (e) => {
     if (e?.detail?.page === 'ebooks') {
+        // Página legacy: manter funcional até remoção definitiva
         const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
         if (allBtn) allBtn.classList.add('active');
-        filterProductsByCategory('all');
+        filterProductsByCategory('all', { skipShow: true, forceLegacy: true });
     }
 });
 

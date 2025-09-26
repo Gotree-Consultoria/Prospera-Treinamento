@@ -1,7 +1,7 @@
 // Importa todas as funções de outros módulos que precisam ser chamadas por eventos
 import { showPage, showAccountSection, scrollToSection } from './navigation.js';
 import { handleLogin, handleRegister, logout, checkUserLoggedIn, handlePageLogin } from './auth.js';
-import { addToCart, removeFromCart, updateQuantity, checkout } from './carts.js';
+// Carrinho removido permanentemente; lógica migrada para modelo de planos.
 import { openAuthModal, closeAuthModal, showAuthTab } from './modals.js';
 import { toggleProfileEdit, toggleEmailEdit, togglePasswordEdit, handleEmailChange, handlePasswordChange, updateProfile, handleCompleteProfile, loadUserProfile, inviteSubuser, importCSV, exportReport, showCompanyAdminPanel } from './profile.js';
 import { handleCreatePfSubmit, handleOrgCreateSubmit, initOrgMembersPage, handleInviteMemberSubmit } from './profile.js';
@@ -49,7 +49,7 @@ export function setupEventListeners() {
     // Centraliza todos os eventos de clique da aplicação
     document.body.addEventListener("click", async (e) => {
         const target = e.target.closest(
-            "[data-page], [data-filter], .add-to-cart-btn, .remove-btn, .quantity-btn, [data-auth-action], [data-section], [data-auth-tab], [data-action], #scrollLeftBtn, #scrollRightBtn, #prevCardBtn, #nextCardBtn, #contaBtn"
+            "[data-page], [data-filter], .view-training-btn, [data-auth-action], [data-section], [data-auth-tab], [data-action], #scrollLeftBtn, #scrollRightBtn, #prevCardBtn, #nextCardBtn, #contaBtn"
         );
         if (!target) return;
 
@@ -64,33 +64,12 @@ export function setupEventListeners() {
             highlightFilterButton(target.dataset.filter);
         }
 
-        // Lógica do carrinho
-    if (target.classList.contains("add-to-cart-btn")) {
-        addToCart(target.dataset.id, target.dataset.type);
-    } else if (target.classList.contains("remove-btn")) {
-        removeFromCart(target.dataset.id, target.dataset.type);
-    } else if (target.classList.contains("quantity-btn")) {
-        const action = target.dataset.action;
-        const itemId = target.dataset.id;
-        const itemType = target.dataset.type;
-        
-        // Encontra o input de quantidade correspondente
-        const quantityInput = document.querySelector(`.quantity-input[data-id="${itemId}"][data-type="${itemType}"]`);
-        
-        if (quantityInput) {
-            let currentQuantity = parseInt(quantityInput.value);
-            let newQuantity;
-
-            if (action === 'increase') {
-                newQuantity = currentQuantity + 1;
-            } else if (action === 'decrease') {
-                newQuantity = currentQuantity - 1;
-            }
-            
-            // Chama a função com a nova quantidade calculada
-            updateQuantity(itemId, itemType, newQuantity);
+        // Lógica substituta: visualizar treinamento (detalhes)
+        if (target.classList.contains('view-training-btn')) {
+            const id = target.dataset.id;
+            // Navegação para detalhe (usa a página trainingDetail existente quando disponível)
+            import('./adminContent.js').then(m => { if (m.navigateToTrainingDetail) m.navigateToTrainingDetail(id); });
         }
-    }
 
     // Lógica de autenticação e perfil
         const authAction = target.dataset.authAction;
@@ -677,5 +656,281 @@ document.body.addEventListener('click', (e) => {
             }
         }
         return;
+    }
+});
+
+// ================== Cursos & Treinamentos (Minha Conta) ==================
+(function initLearningDelegates(){
+    console.debug('[learning] attach delegates');
+    document.body.addEventListener('click', (e)=>{
+        const menuLearning = e.target.closest('.account-menu .menu-item[data-section="learning"]');
+        if (menuLearning) {
+            e.preventDefault();
+            try { showAccountSection('learning'); } catch(_){ }
+            console.debug('[learning] menu click => init');
+            initLearningSection();
+        }
+        const tabBtn = e.target.closest('#learningTabs .ltab');
+        if (tabBtn) {
+            e.preventDefault();
+            const all = tabBtn.parentElement.querySelectorAll('.ltab');
+            all.forEach(b=> b.classList.remove('active'));
+            tabBtn.classList.add('active');
+            renderLearningCards();
+        }
+        const openBtn = e.target.closest('[data-action="openLearning"]');
+        if (openBtn) {
+            e.preventDefault();
+            const id = openBtn.getAttribute('data-id');
+            const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
+            if (/SYSTEM[_-]?ADMIN/.test(sysRole)) {
+                import('./adminContent.js').then(m => { if (m.navigateToTrainingDetail) m.navigateToTrainingDetail(id); });
+            } else {
+                // Placeholder – futura página pública de visualização
+                alert('Visualização em desenvolvimento. ID: '+id);
+            }
+        }
+    });
+    document.body.addEventListener('input', (e)=>{
+        if (e.target && e.target.id === 'learningSearch') { renderLearningCards(); }
+    });
+    document.body.addEventListener('change', (e)=>{
+        if (e.target && e.target.id === 'learningStatusFilter') { renderLearningCards(); }
+    });
+})();
+
+let _learningCache = null; let _learningLoading = false;
+async function loadLearningContent(){
+    if (_learningCache) return _learningCache;
+    if (_learningLoading) return new Promise(r=>{ const iv=setInterval(()=>{ if(_learningCache){clearInterval(iv); r(_learningCache);} },200); });
+    _learningLoading = true;
+    try {
+        const token = localStorage.getItem('jwtToken');
+        if (!token) throw new Error('Sessão expirada. Faça login.');
+        let data = [];
+        try {
+            const { getAdminTrainings } = await import('./api.js');
+            data = await getAdminTrainings(token);
+        } catch (err) {
+            console.warn('[learning] Falha ao carregar catálogo admin, tentando fallback público', err);
+            // Marcar estado de acesso restrito
+            sessionStorage.setItem('learningFilteredByOrgSectors', 'no-access');
+            // Fallback: criar placeholder vazio para permitir renderizar mensagem ao usuário
+            _learningCache = [];
+            return [];
+        }
+        const list = Array.isArray(data)?data:(Array.isArray(data.items)?data.items:(Array.isArray(data.data)?data.data:[]));
+        const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
+        // Primeiro filtro: somente publicados para usuários não system admin
+        let base = /SYSTEM[_-]?ADMIN/.test(sysRole) ? list : list.filter(t => (t.publicationStatus||t.status||'').toUpperCase()==='PUBLISHED');
+
+        // Filtro por setores adotados da organização selecionada (requisito: mostrar cursos dos setores adotados)
+        const orgId = sessionStorage.getItem('currentOrganizationId');
+        if (orgId) {
+            try {
+                // Buscar setores adotados dessa organização
+                const { getMyOrganizationSectors } = await import('./api.js');
+                const adopted = await getMyOrganizationSectors(token, orgId);
+                const adoptedIds = new Set((adopted||[]).map(s=> String(s.id||s.sectorId||s._id||'').trim()).filter(Boolean));
+                if (adoptedIds.size > 0) {
+                    base = base.filter(t => {
+                        const secs = extractTrainingSectorIds(t);
+                        return secs.some(id => adoptedIds.has(id));
+                    });
+                    // Marcar para UI que filtramos por setores adotados
+                    sessionStorage.setItem('learningFilteredByOrgSectors', 'true');
+                } else {
+                    sessionStorage.setItem('learningFilteredByOrgSectors', 'empty');
+                }
+            } catch (e) {
+                console.warn('[learning] Falha ao obter setores adotados da org', e);
+                sessionStorage.setItem('learningFilteredByOrgSectors', 'error');
+            }
+        } else {
+            // Sem organização selecionada: marcar estado
+            sessionStorage.setItem('learningFilteredByOrgSectors', 'no-org');
+        }
+
+        _learningCache = base;
+        return base;
+    } catch(err){ console.error('[learning] erro', err); throw err; } finally { _learningLoading = false; }
+}
+function initLearningSection(){
+    console.debug('[learning] initLearningSection invoked');
+    const listEl = document.getElementById('learningList');
+    if (!listEl) { console.warn('[learning] #learningList não encontrado'); return; }
+    listEl.classList.add('loading');
+    listEl.innerHTML = '<p class="loading-msg">Carregando conteúdos...</p>';
+    // Fallback de timeout para evitar ficar "travado" se algo falhar silenciosamente
+    const timeoutId = setTimeout(()=>{
+        if (listEl.classList.contains('loading')) {
+            listEl.classList.remove('loading');
+            listEl.innerHTML = '<p class="muted" style="font-size:.7rem;">Ainda carregando... verifique sua conexão ou recarregue a página.</p>';
+        }
+    }, 5000);
+    loadLearningContent()
+        .then(()=> ensureOrgSectorsBar())
+        .then(()=>{ renderLearningCards(); })
+        .catch(err=>{ listEl.innerHTML = `<p class="error-msg">${escapeHtml(err.message||'Erro ao carregar')}</p>`; listEl.classList.remove('loading'); })
+        .finally(()=>{ clearTimeout(timeoutId); });
+}
+function renderLearningCards(){
+    console.debug('[learning] renderLearningCards start, cache=', !!_learningCache);
+    const listEl = document.getElementById('learningList'); if(!listEl||!_learningCache){ if(!listEl) console.warn('[learning] listEl inexistente'); if(!_learningCache) console.warn('[learning] cache vazio'); return; }
+    const activeTab = document.querySelector('#learningTabs .ltab.active');
+    const tab = activeTab?activeTab.getAttribute('data-ltab'):'all';
+    const q = (document.getElementById('learningSearch')?.value||'').trim().toLowerCase();
+    const statusFilter = (document.getElementById('learningStatusFilter')?.value||'').toUpperCase();
+    const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
+    const sectorFilter = sessionStorage.getItem('learningSectorFilter') || '';
+    let list = _learningCache.slice();
+    if (tab==='ebooks') list=list.filter(t=>(t.entityType||'').toUpperCase()==='EBOOK');
+    else if (tab==='courses') list=list.filter(t=>(t.entityType||'').toUpperCase()==='RECORDED_COURSE');
+    else if (tab==='live') list=list.filter(t=>(t.entityType||'').toUpperCase()==='LIVE_TRAINING');
+    if (q) list=list.filter(t=>(t.title||'').toLowerCase().includes(q));
+    if (statusFilter) list=list.filter(t=>(t.publicationStatus||t.status||'').toUpperCase()===statusFilter);
+    if (sectorFilter) {
+        list = list.filter(t => {
+            const ids = extractTrainingSectorIds(t);
+            return ids.includes(sectorFilter);
+        });
+    }
+    listEl.classList.remove('loading');
+    if(!list.length){
+        console.debug('[learning] lista vazia; state=', sessionStorage.getItem('learningFilteredByOrgSectors'));
+        const state = sessionStorage.getItem('learningFilteredByOrgSectors');
+        let msg = 'Nenhum conteúdo encontrado.';
+        if (state === 'true') msg = 'Nenhum curso dos setores adotados foi encontrado.';
+        else if (state === 'empty') {
+            const orgIdCur = sessionStorage.getItem('currentOrganizationId');
+            const orgRole = orgIdCur ? (sessionStorage.getItem('myOrgRole_'+orgIdCur) || '') : '';
+            let base = 'Sua organização ainda não adotou setores.';
+            if (orgRole === 'ORG_MEMBER') base = 'Nenhum setor adotado pela organização.';
+            const notice = 'Caso você tenha adotado um setor para sua organização, os cursos aparecerão nesta tela.';
+            const obs = 'Obs.: Para um ORG_MEMBER o que irá aparecer é somente os treinamentos atribuídos pelo ORG_ADMIN. Fora isso ele só pode ver o catálogo público.';
+            msg = `${base}<br><br><strong>${escapeHtml(notice)}</strong><br><span class=\"muted\" style=\"font-size:.65rem;line-height:1.3\">${escapeHtml(obs)}</span>`;
+        }
+        else if (state === 'no-org') msg = 'Selecione uma organização para visualizar os cursos dos setores adotados.';
+        else if (state === 'error') msg = 'Não foi possível carregar os setores adotados para filtrar os cursos.';
+        else if (state === 'no-access') msg = 'Você não tem acesso ao catálogo interno. Aguarde atribuição de treinamentos pelo administrador ou utilize o catálogo público.';
+        if (sectorFilter) msg = 'Nenhum curso encontrado para este setor.';
+        listEl.innerHTML = `<p class="muted" style="font-size:.7rem;line-height:1.35">${msg}</p>`; return; }
+    listEl.innerHTML = list.map(t=>learningCardHtml(t, sysRole)).join('');
+}
+function extractTrainingSectorIds(t){
+    if(!t||typeof t!=='object') return [];
+    const arr = Array.isArray(t.sectors)?t.sectors:(Array.isArray(t.assignedSectors)?t.assignedSectors:[]);
+    return arr.map(s=> String((s&& (s.id||s.sectorId||s._id||s.code||s.identifier))||'').trim()).filter(Boolean);
+}
+async function ensureOrgSectorsBar(){
+    const bar = document.getElementById('learningOrgSectorsBar');
+    if (!bar) return;
+    let orgId = sessionStorage.getItem('currentOrganizationId');
+    bar.innerHTML='';
+    // Fallback: se nenhuma org selecionada, tentar auto-selecionar se o usuário só tem uma
+    if (!orgId){
+        try {
+            const tokenAuto = localStorage.getItem('jwtToken');
+            if (tokenAuto){
+                const { getMyOrganizations } = await import('./api.js');
+                const orgs = await getMyOrganizations(tokenAuto);
+                if (Array.isArray(orgs) && orgs.length === 1){
+                    const only = orgs[0];
+                    orgId = only.id || only._id || only.organizationId;
+                    if (orgId){
+                        sessionStorage.setItem('currentOrganizationId', orgId);
+                        sessionStorage.setItem('currentOrganizationName', only.name || only.razaoSocial || only.companyName || 'Organização');
+                        document.dispatchEvent(new CustomEvent('org:current:changed', {detail:{orgId}}));
+                    }
+                }
+            }
+        } catch (e){ console.warn('[learning] fallback seleção automática org falhou', e); }
+    }
+    if (!orgId){
+        bar.classList.add('empty');
+        bar.innerHTML='<span class="los-empty-hint">Selecione ou crie uma organização para ver seus setores adotados.</span>';
+        return;
+    }
+    const token = localStorage.getItem('jwtToken');
+    try {
+        const { getMyOrganizationSectors } = await import('./api.js');
+        const adopted = await getMyOrganizationSectors(token, orgId);
+        if (!adopted || !adopted.length){
+            bar.classList.add('empty');
+            const orgIdCur = sessionStorage.getItem('currentOrganizationId');
+            const orgRole = orgIdCur ? (sessionStorage.getItem('myOrgRole_'+orgIdCur) || '') : '';
+            const base = orgRole === 'ORG_MEMBER' ? 'Nenhum setor adotado pela organização.' : 'Esta organização não possui setores adotados.';
+            const notice = 'Caso você tenha adotado um setor para sua organização, os cursos aparecerão nesta tela.';
+            const obs = 'Obs.: Para um ORG_MEMBER o que irá aparecer é somente os treinamentos atribuídos pelo ORG_ADMIN. Fora isso ele só pode ver o catálogo público.';
+            bar.innerHTML=`<span class="los-empty-hint">${escapeHtml(base)}<br><br><strong>${escapeHtml(notice)}</strong><br><span style=\"font-size:.6rem;line-height:1.25\">${escapeHtml(obs)}</span></span>`;
+            return;
+        }
+        bar.classList.remove('empty');
+        const orgName = sessionStorage.getItem('currentOrganizationName')||'Organização';
+        const label = document.createElement('span'); label.className='los-label'; label.textContent='Setores';
+        const orgSpan = document.createElement('span'); orgSpan.className='los-org-name'; orgSpan.textContent=orgName+':';
+        bar.appendChild(label); bar.appendChild(orgSpan);
+        const currentFilter = sessionStorage.getItem('learningSectorFilter')||'';
+        adopted.forEach(s => {
+            const id = String(s.id||s.sectorId||s._id||''); if(!id) return;
+            const name = s.name||s.nome||('Setor '+id.substring(0,6));
+            const btn = document.createElement('button');
+            btn.type='button';
+            btn.className='los-badge'+(currentFilter===id?' active':'');
+            btn.dataset.sectorId=id;
+            btn.innerHTML=`<span class="text">${escapeHtml(name)}</span>`;
+            btn.addEventListener('click',()=>{
+                const cur = sessionStorage.getItem('learningSectorFilter');
+                if (cur===id){ sessionStorage.removeItem('learningSectorFilter'); } else { sessionStorage.setItem('learningSectorFilter', id); }
+                renderLearningCards();
+                ensureOrgSectorsBar();
+            });
+            bar.appendChild(btn);
+        });
+        if (currentFilter){
+            const reset = document.createElement('button');
+            reset.type='button';
+            reset.className='los-reset';
+            reset.textContent='Limpar filtro';
+            reset.addEventListener('click', ()=>{ sessionStorage.removeItem('learningSectorFilter'); renderLearningCards(); ensureOrgSectorsBar(); });
+            bar.appendChild(reset);
+        }
+    } catch (e){
+        console.warn('[learning] erro setores adotados', e);
+        bar.classList.add('empty');
+        bar.innerHTML='<span class="los-empty-hint">Não foi possível carregar setores adotados.</span>';
+    }
+}
+function learningCardHtml(t, sysRole){
+    const type=(t.entityType||'').toUpperCase();
+    const status=(t.publicationStatus||t.status||'').toUpperCase();
+    const published=status==='PUBLISHED';
+    const badges=[]; if(type==='EBOOK') badges.push('E-book'); else if(type==='RECORDED_COURSE') badges.push('Gravado'); else if(type==='LIVE_TRAINING') badges.push('Ao Vivo'); badges.push(published?'Publicado':'Rascunho');
+    const canOpen = published || /SYSTEM[_-]?ADMIN/.test(sysRole);
+    const actions = canOpen ? `<button class="btn btn-small" data-action="openLearning" data-id="${escapeHtml(t.id)}">Abrir</button>` : `<button class="btn btn-small" disabled>Indisponível</button>`;
+    return `<div class="learning-card" data-id="${escapeHtml(t.id)}"><h4>${escapeHtml(t.title||'')}</h4><p>${escapeHtml(t.description||'')}</p><div class="learning-badges">${badges.map(b=>`<span>${escapeHtml(b)}</span>`).join(' ')}</div><div class="learning-actions">${actions}</div></div>`;
+}
+function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s])); }
+
+// Atualizar barra de setores quando organização atual mudar
+document.addEventListener('org:current:changed', ()=>{
+    // Limpar cache para forçar recarregamento com setores da nova organização
+    _learningCache = null;
+    if (document.getElementById('learningSection')?.classList.contains('active')) {
+        initLearningSection();
+    }
+});
+
+// Auto-init quando a página account é carregada e a aba learning for exibida depois sem clique capturado
+document.addEventListener('page:loaded', (ev)=>{
+    if (ev?.detail?.page === 'account') {
+        // Delay curto para garantir que o DOM da seção foi inserido
+        setTimeout(()=>{
+            const ls = document.getElementById('learningSection');
+            if (ls && ls.classList.contains('active')) {
+                console.debug('[learning] page:loaded(account) -> learning já ativa -> init');
+                initLearningSection();
+            }
+        }, 50);
     }
 });

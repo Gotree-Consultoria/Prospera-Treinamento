@@ -16,7 +16,6 @@
 - 📁 Separação da seção de FAQ em um container independente, melhorando a organização do código e seguindo o padrão do projeto.
 - 🎨 Estilização completa da página de FAQ, com foco em experiência do usuário e identidade visual mais agradável e moderna.
 - 🛒 Ajustes e início da melhoria no contador de itens do carrinho, incluindo planejamento para tratar popups, alinhamento e responsividade.
-- 🛒 Correção na exibição do contador de itens do carrinho: movida a variável cartCount para dentro da função updateCartDisplay(), garantindo que o elemento exista no DOM antes de ser acessado.
 - 🌐 Adicionado botão "Site Oficial" na navegação com redirecionamento para o site institucional da Gootree, substituindo o antigo botão "Blog".
 - 🔄 Refatorada a navegação para usar data-page ao invés de onclick, promovendo uma separação mais clara entre HTML e JavaScript, e melhorando a escalabilidade do projeto.
 - 🧼 Melhorias no código e estruturação HTML, com correções em classes, organização de seções e comentários.

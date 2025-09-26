@@ -30,8 +30,8 @@ export async function loadPartial(page) {
     platformAudit: "src/partials/platformAuditPage.html",
     platformCache: "src/partials/platformCachePage.html",
     trainingDetail: "src/partials/trainingDetailPage.html",
-        cart: "src/partials/cartPage.html",
-        faq: "src/partials/faqPage.html"
+    faq: "src/partials/faqPage.html",
+    catalog: "src/partials/catalogPage.html"
     };
     const containerMap = {
         home: "homePageContainer",
@@ -61,8 +61,8 @@ export async function loadPartial(page) {
     platformAudit: "platformAuditPageContainer",
     platformCache: "platformCachePageContainer",
     trainingDetail: "trainingDetailPageContainer",
-        cart: "cartPageContainer",
-        faq: "faqPageContainer"
+    faq: "faqPageContainer",
+    catalog: "catalogPageContainer"
     };
     const partialPath = partialMap[page];
     const containerId = containerMap[page];
@@ -115,8 +115,8 @@ const pageMap = {
     platformAudit: "platformAuditPage",
     platformCache: "platformCachePage",
     trainingDetail: "trainingDetailPage",
-    cart: "cartPage",
     faq: "faqPage",
+    catalog: "catalogPage",
 };
 
 // Mapeamento reverso para resolver paths/hashes para chaves de página
@@ -136,7 +136,6 @@ const pathToPage = {
     '/organizations/members': 'orgMembers',
     '/admin/users': 'adminUsers',
     // detalhe ficará com rota dinâmica em SPA (mapeamento por hash)
-    '/cart': 'cart',
     '/faq': 'faq'
 };
 
@@ -182,6 +181,24 @@ export function resolveRouteFromLocation() {
  * @param {string} page - O nome da página a ser exibida.
  */
 export async function showPage(page, opts = {}) {
+    // Evitar recarregar a mesma página sem necessidade (mantém estado e evita flicker)
+    // Exceção: se opts.forceReload for passado ou se for trainingDetail com ID diferente.
+    if (currentPage === page && !opts.forceReload) {
+        if (page === 'trainingDetail') {
+            // permitir mudança de treinamento sem reload completo
+            const newId = opts.trainingId || window._openTrainingId;
+            if (newId && newId !== window._openTrainingId) {
+                try { window._openTrainingId = newId; } catch(_) {}
+            } else {
+                // mesma página e mesmo contexto -> apenas re-despacha evento e sai
+                try { document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page, refreshed: true } })); } catch(_) {}
+                return;
+            }
+        } else {
+            try { document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page, refreshed: true } })); } catch(_) {}
+            return;
+        }
+    }
     document.querySelectorAll(".page").forEach((pageEl) => {
         pageEl.classList.remove("active");
         pageEl.classList.add("hidden");
@@ -255,7 +272,7 @@ export function showAccountSection(section) {
         sectionEl.classList.remove("active");
         sectionEl.classList.add("hidden");
     });
-    const sectionMap = { profile: "profileSection", orders: "ordersSection", downloads: "downloadsSection" };
+    const sectionMap = { profile: "profileSection", plans: "plansSection", learning: "learningSection" };
     const targetSection = document.getElementById(sectionMap[section]);
     if (targetSection) {
         targetSection.classList.remove("hidden");

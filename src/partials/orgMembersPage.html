@@ -35,6 +35,37 @@
           <tbody></tbody>
         </table>
       </div>
+
+      <hr />
+      <section id="orgSectorsSection" aria-labelledby="orgSectorsTitle" class="org-sectors-section">
+        <h3 id="orgSectorsTitle" class="text-center">Setores Adotados pela Organização</h3>
+        <div class="org-sectors-add" id="orgSectorsAddRow">
+          <div class="osa-inline">
+            <label for="addOrgSectorSelect" class="sr-only">Selecionar setor para adicionar</label>
+            <div class="osa-select-wrap">
+              <select id="addOrgSectorSelect" class="input-select" aria-label="Selecionar setor">
+                <option value="" disabled selected>Selecione um setor do catálogo...</option>
+              </select>
+            </div>
+            <button id="addOrgSectorBtn" class="btn btn-account-secondary" type="button" disabled>Adicionar</button>
+          </div>
+          <div class="osa-meta">
+            <small id="orgSectorsCountBadge" class="osa-badge" aria-live="polite">0 adotados</small>
+            <div id="addOrgSectorFeedback" class="form-messages" aria-live="polite"></div>
+          </div>
+        </div>
+        <div id="orgSectorsMessages" class="form-messages" aria-live="polite"></div>
+        <div class="table-responsive" id="orgSectorsWrapper">
+          <table id="orgSectorsTable" class="table sectors-table">
+            <thead>
+              <tr><th class="col-id">ID</th><th class="col-name">Nome do Setor</th><th class="col-actions">Ações</th></tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="3">Carregando setores...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </div>
 

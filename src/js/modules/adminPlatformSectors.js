@@ -1,4 +1,4 @@
-import { getAdminSectors, createAdminSector } from './api.js';
+import { getAdminSectors, createAdminSector, deleteAdminSector } from './api.js';
 import { showToast } from './notifications.js';
 
 function isSystemAdmin() {
@@ -55,7 +55,13 @@ function attachHandlers() {
     const editBtn = ev.target.closest('[data-action="editSector"]');
     if (editBtn) { ev.preventDefault(); showToast('Editar setor '+ editBtn.dataset.sectorId +' (placeholder).'); }
     const delBtn = ev.target.closest('[data-action="deleteSector"]');
-    if (delBtn) { ev.preventDefault(); if (confirm('Excluir setor '+ delBtn.dataset.sectorId +'?')) { showToast('Setor excluído (placeholder).'); } }
+    if (delBtn) {
+      ev.preventDefault();
+      const sectorId = delBtn.dataset.sectorId;
+      if (!sectorId) return;
+      if (!confirm('Excluir setor '+ sectorId +'? Esta ação não pode ser desfeita.')) return;
+      handleDeleteSector(sectorId, delBtn);
+    }
   });
 }
 
@@ -144,4 +150,45 @@ function injectSectorModalStyles() {
     @media (max-width:520px) { .sector-modal { width:94vw; padding:16px 16px 18px; } }
   `;
   document.head.appendChild(style);
+}
+
+async function handleDeleteSector(sectorId, btn) {
+  const tbody = document.querySelector('#platformSectorsTable tbody');
+  const msgBox = document.getElementById('platformSectorsMessages');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Excluindo...';
+  try {
+    const token = localStorage.getItem('jwtToken');
+    await deleteAdminSector(token, sectorId);
+    showToast('Setor excluído.');
+    // Remover linha localmente para feedback imediato
+    const tr = btn.closest('tr');
+    if (tr) tr.remove();
+    // Se tabela esvaziou, recarregar para garantir estado consistente
+    if (tbody && !tbody.querySelector('tr')) loadSectors();
+  } catch (e) {
+    console.error('Erro ao excluir setor:', e);
+    let msg = e.message || 'Erro ao excluir setor.';
+    if (e.code === 'SECTOR_IN_USE') {
+      // Se o backend já trouxe a frase específica, mantemos; senão padronizamos
+      const lower = msg.toLowerCase();
+      if (!lower.includes('não é possível excluir') && !lower.includes('em uso')) {
+        msg = 'Não é possível excluir este setor, pois ele está associado a treinamentos.';
+      }
+    }
+    if (e.code === 'SECTOR_NOT_FOUND') msg = 'Setor não encontrado.';
+    showToast(msg, { type: 'error' });
+    // Mostrar também em área persistente para o admin ver/contexto
+    if (msgBox) {
+      const detail = document.createElement('div');
+      detail.className = 'inline-error-detail';
+      detail.textContent = msg;
+      // Guardar código e status para debug
+      if (e.code) detail.setAttribute('data-code', e.code);
+      if (e.status) detail.setAttribute('data-status', e.status);
+      msgBox.innerHTML = ''; // sobrescreve última
+      msgBox.appendChild(detail);
+    }
+    btn.disabled = false; btn.textContent = originalText;
+  }
 }

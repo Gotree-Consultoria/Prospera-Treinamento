@@ -1,7 +1,15 @@
-// As funções do api.js que lidam com a lógica de negócio real
-import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole } from './api.js';
+// Funções do api.js (import único consolidado evitando duplicação)
+import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole, getMyOrganizationSectors, removeOrganizationSector, addOrganizationSector, getPublicSectors } from './api.js'; // uso simplificado: catálogo público único
 
 let currentProfile = null;
+
+// SVG helpers para ícones do menu de ações
+function pencilIconSvg() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+}
+function trashIconSvg() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+}
 
 function maskEmail(email) {
     if (!email) return '';
@@ -765,6 +773,24 @@ export async function initOrgMembersPage() {
         console.error('Erro ao carregar membros:', err);
         if (messages) messages.textContent = err.message || 'Erro ao carregar membros.';
     }
+
+    // Carregar setores adotados
+    try {
+        await loadOrganizationSectors(orgId, token);
+    } catch (e) {
+        console.warn('[orgMembers] Falha ao carregar setores adotados', e);
+        const secMsg = document.getElementById('orgSectorsMessages');
+        if (secMsg) secMsg.textContent = e.message || 'Erro ao carregar setores.';
+    }
+
+    // Carregar catálogo público (lista de setores disponíveis) após ter adotados (para filtrar)
+    try {
+        await loadGlobalSectorsForOrg(orgId, token);
+    } catch (e) {
+        console.warn('[orgMembers] Falha ao carregar catálogo de setores', e);
+        const fb = document.getElementById('addOrgSectorFeedback');
+        if (fb && !fb.textContent) fb.textContent = e.message || 'Erro ao carregar catálogo público.';
+    }
 }
 
 // Função responsável apenas por renderizar a tabela de membros a partir de um array já obtido
@@ -818,64 +844,102 @@ async function renderOrgMembers(members, orgId) {
             const isOwnMembership = (possibleMembershipId && myMembershipStored && String(possibleMembershipId) === String(myMembershipStored)) || (currentUserId && possibleAuthUserId && String(possibleAuthUserId) === String(currentUserId));
             console.debug('[members] own-check', { possibleMembershipId, myMembershipStored, possibleAuthUserId, currentUserId, isOwnMembership });
             if (!isOwnMembership) {
-                // criar botões normalmente
-                const btn = document.createElement('button');
-                btn.className = 'btn-small btn-small-remove remove-org-member-btn';
-                btn.textContent = 'Remover';
-                btn.dataset.membershipId = membershipId || '';
-                btn.addEventListener('click', async (ev) => {
+                // Menu de ações com ícone 3 pontos
+                const menuWrap = document.createElement('div');
+                menuWrap.className = 'row-actions';
+                const menuBtn = document.createElement('button');
+                menuBtn.type = 'button';
+                menuBtn.className = 'row-actions-menu-btn';
+                menuBtn.setAttribute('aria-haspopup','true');
+                menuBtn.setAttribute('aria-expanded','false');
+                menuBtn.setAttribute('title','Ações');
+                menuBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
+
+                const dropdown = document.createElement('div');
+                dropdown.className = 'row-actions-dropdown';
+                dropdown.setAttribute('role','menu');
+                dropdown.innerHTML = `
+                    <button type="button" class="action-item change-role-btn" role="menuitem" data-membership-id="${membershipId||''}" data-member-name="${(displayName||'').replace(/"/g,'&quot;')}" data-current-role="${(m.role||m.userRole||'')}">
+                      <span class="icon">${pencilIconSvg()}</span><span>Alterar</span>
+                    </button>
+                    <button type="button" class="action-item remove-member-btn" role="menuitem" data-membership-id="${membershipId||''}">
+                      <span class="icon">${trashIconSvg()}</span><span>Remover</span>
+                    </button>`;
+
+                menuWrap.appendChild(menuBtn);
+                menuWrap.appendChild(dropdown);
+                actionTd.appendChild(menuWrap);
+
+                // Toggle do menu
+                menuBtn.addEventListener('click', (ev) => {
                     ev.preventDefault();
-                    if (!btn.dataset.membershipId) {
-                        console.debug('[members] remove clicked but no membershipId on button', btn);
-                        return;
-                    }
-                    console.debug('[members] attempting remove, membershipId=', btn.dataset.membershipId, 'orgId=', orgId);
-                    // Remoção otimista
-                    const originalBtnText = btn.textContent;
+                    // fechar outros menus
+                    document.querySelectorAll('.row-actions-dropdown.open').forEach(d => {
+                        if (d !== dropdown) {
+                            d.classList.remove('open');
+                            const btn = d.parentElement?.querySelector('.row-actions-menu-btn');
+                            btn && btn.setAttribute('aria-expanded','false');
+                        }
+                    });
+                    const opened = dropdown.classList.toggle('open');
+                    menuBtn.setAttribute('aria-expanded', opened ? 'true':'false');
+                });
+
+                // Ação Alterar
+                dropdown.querySelector('.change-role-btn').addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    dropdown.classList.remove('open');
+                    menuBtn.setAttribute('aria-expanded','false');
+                    openInlineRolePopup({ membershipId: membershipId, name: displayName, currentRole: m.role || m.userRole || '' }, menuBtn);
+                });
+                // Ação Remover
+                dropdown.querySelector('.remove-member-btn').addEventListener('click', async (ev) => {
+                    ev.preventDefault();
+                    const btn = ev.currentTarget;
+                    const membershipToRemove = btn.getAttribute('data-membership-id');
+                    if (!membershipToRemove) return;
+                    const token = localStorage.getItem('jwtToken');
+                    const originalHtml = btn.innerHTML;
                     btn.disabled = true;
-                    btn.textContent = 'Removendo...';
-                    const parent = tr.parentElement;
-                    let nextSibling = tr.nextSibling;
-                    parent && parent.removeChild(tr);
+                    btn.innerHTML = '<span class="icon spinner"></span><span>Removendo...</span>';
                     try {
-                        await removeOrgMember(token, orgId, btn.dataset.membershipId);
-                        console.debug('[members] removeOrgMember succeeded for', btn.dataset.membershipId);
-                            try {
-                                // apenas recarregar os membros (evita chamar loadUserProfile novamente)
-                                const refreshed = await getOrgMembers(token, orgId);
-                                await renderOrgMembers(refreshed, orgId);
-                            } catch (e) { console.warn('[members] refresh failed after delete', e); }
-                    } catch (err) {
-                        console.error('Erro ao remover membro (revertendo UI):', err);
+                        await removeOrgMember(token, orgId, membershipToRemove);
+                        // Recarregar membros
                         try {
-                            if (parent) {
-                                if (nextSibling) parent.insertBefore(tr, nextSibling); else parent.appendChild(tr);
-                            }
-                        } catch (re) { console.error('Falha ao reverter linha removida:', re); }
+                            const refreshed = await getOrgMembers(token, orgId);
+                            await renderOrgMembers(refreshed, orgId);
+                        } catch(e) { console.warn('[members] refresh after remove falhou', e); }
+                    } catch(err) {
+                        console.error('Erro ao remover membro:', err);
                         if (messages) messages.textContent = 'Erro ao remover membro: ' + (err.message || 'Tente novamente');
-                    } finally {
-                        try { btn.disabled = false; btn.textContent = originalBtnText; } catch(e) { /* ignore */ }
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
                     }
                 });
-                const wrap = document.createElement('div');
-                wrap.className = 'action-wrap';
-                wrap.style.display = 'inline-flex';
-                wrap.style.flexDirection = 'column';
-                wrap.style.alignItems = 'center';
-                wrap.style.gap = '6px';
-                wrap.appendChild(btn);
-                const changeBtn = document.createElement('button');
-                changeBtn.className = 'btn-small btn-small-change change-org-member-role-btn';
-                changeBtn.textContent = 'Alterar';
-                changeBtn.dataset.membershipId = membershipId || '';
-                changeBtn.dataset.memberName = displayName || '';
-                changeBtn.dataset.currentRole = m.role || m.userRole || '';
-                changeBtn.addEventListener('click', (ev) => {
-                    ev.preventDefault();
-                    openInlineRolePopup({ membershipId: membershipId, name: displayName, currentRole: m.role || m.userRole || '' }, changeBtn);
-                });
-                wrap.appendChild(changeBtn);
-                actionTd.appendChild(wrap);
+
+                // Listener global (uma vez) para fechar menu ao clicar fora
+                if (!window._rowActionsOutsideBound) {
+                    window._rowActionsOutsideBound = true;
+                    document.addEventListener('mousedown', (evt) => {
+                        document.querySelectorAll('.row-actions-dropdown.open').forEach(d => {
+                            if (!d.contains(evt.target) && !d.parentElement.contains(evt.target)) {
+                                d.classList.remove('open');
+                                const btn = d.parentElement?.querySelector('.row-actions-menu-btn');
+                                btn && btn.setAttribute('aria-expanded','false');
+                            }
+                        });
+                    });
+                    // fechar com ESC
+                    document.addEventListener('keydown', (evt) => {
+                        if (evt.key === 'Escape') {
+                            document.querySelectorAll('.row-actions-dropdown.open').forEach(d => {
+                                d.classList.remove('open');
+                                const btn = d.parentElement?.querySelector('.row-actions-menu-btn');
+                                btn && btn.setAttribute('aria-expanded','false');
+                            });
+                        }
+                    });
+                }
             } else {
                 // manter célula vazia para alinhamento
                 actionTd.innerHTML = '&nbsp;';
@@ -891,6 +955,154 @@ async function renderOrgMembers(members, orgId) {
             tbody.appendChild(tr);
         });
 }
+
+// ---------- Setores da Organização (ORG_ADMIN) ----------
+// Carrega catálogo público filtrado removendo setores já adotados
+async function loadGlobalSectorsForOrg(orgId, token) {
+    const select = document.getElementById('addOrgSectorSelect');
+    const badge = document.getElementById('orgSectorsCountBadge');
+    const addBtn = document.getElementById('addOrgSectorBtn');
+    if (!select) return;
+    select.disabled = true; if (addBtn) addBtn.disabled = true;
+    try {
+        const [catalog, adopted] = await Promise.all([
+            getPublicSectors(),
+            (async () => { try { return await getMyOrganizationSectors(token, orgId) || []; } catch { return []; } })()
+        ]);
+        const adoptedIds = new Set((adopted || []).map(s => s.id || s.sectorId || s._id));
+        if (badge) badge.textContent = adopted.length + (adopted.length === 1 ? ' adotado' : ' adotados');
+        // Limpar opções (exceto placeholder)
+        [...select.querySelectorAll('option')].forEach((o, i) => { if (i>0) o.remove(); });
+        catalog.filter(s => !adoptedIds.has(s.id)).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            select.appendChild(opt);
+        });
+        if ([...select.options].length <= 1) {
+            const fb = document.getElementById('addOrgSectorFeedback');
+            if (fb) fb.textContent = 'Nenhum novo setor disponível para adoção.';
+        }
+    } catch (e) {
+        const fb = document.getElementById('addOrgSectorFeedback');
+        if (fb) fb.textContent = e.message || 'Erro ao carregar setores.';
+    } finally {
+        select.disabled = false;
+        if (addBtn) addBtn.disabled = !select.value;
+    }
+}
+
+async function loadOrganizationSectors(orgId, token) {
+    if (!orgId) return;
+    const tableBody = document.querySelector('#orgSectorsTable tbody');
+    const msgBox = document.getElementById('orgSectorsMessages');
+            if (tableBody) tableBody.innerHTML = '<tr><td colspan="3">Carregando setores...</td></tr>';
+    try {
+        const sectors = await getMyOrganizationSectors(token, orgId);
+        if (!Array.isArray(sectors) || !sectors.length) {
+            if (tableBody) tableBody.innerHTML = '<tr><td colspan="3">Nenhum setor adotado no momento.</td></tr>';
+            const badge = document.getElementById('orgSectorsCountBadge');
+            if (badge) badge.textContent = '0 adotados';
+            return;
+        }
+        if (tableBody) {
+            tableBody.innerHTML = '';
+            sectors.forEach(s => {
+                const tr = document.createElement('tr');
+                const sectorIdVal = s.id || s.sectorId || s._id || '';
+                const tdId = document.createElement('td');
+                tdId.className = 'col-id sector-id';
+                tdId.textContent = sectorIdVal;
+                tdId.setAttribute('data-label','ID');
+                const tdName = document.createElement('td');
+                tdName.className = 'col-name sector-name';
+                tdName.textContent = s.name || s.nome || '';
+                tdName.setAttribute('data-label','Nome');
+                const tdActions = document.createElement('td');
+                tdActions.className = 'col-actions';
+                tdActions.setAttribute('data-label','Ações');
+                const btn = document.createElement('button');
+                btn.className = 'btn-small btn-small-remove remove-org-sector-btn';
+                btn.textContent = 'Remover';
+                btn.dataset.sectorId = sectorIdVal;
+                tdActions.appendChild(btn);
+                tr.appendChild(tdId); tr.appendChild(tdName); tr.appendChild(tdActions);
+                tableBody.appendChild(tr);
+            });
+        }
+        if (msgBox) msgBox.textContent = '';
+        const badge = document.getElementById('orgSectorsCountBadge');
+        if (badge) badge.textContent = sectors.length + (sectors.length === 1 ? ' adotado' : ' adotados');
+    } catch (err) {
+        console.error('[orgMembers] Erro ao obter setores:', err);
+        if (msgBox) msgBox.textContent = err.message || 'Erro ao carregar setores.';
+        if (tableBody) tableBody.innerHTML = '<tr><td colspan="2">Falha ao carregar.</td></tr>';
+        throw err;
+    }
+}
+
+// Delegação para remover setor adotado
+document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.remove-org-sector-btn');
+    if (!btn) return;
+    const orgId = sessionStorage.getItem('currentOrganizationId');
+    const sectorId = btn.dataset.sectorId;
+    if (!orgId || !sectorId) return;
+    ev.preventDefault();
+    const originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Removendo...';
+    const token = localStorage.getItem('jwtToken');
+    const msgBox = document.getElementById('orgSectorsMessages');
+    if (msgBox) msgBox.textContent = '';
+    try {
+        await removeOrganizationSector(token, orgId, sectorId);
+        await loadOrganizationSectors(orgId, token);
+        await loadGlobalSectorsForOrg(orgId, token);
+    } catch (e) {
+        console.error('Falha ao remover setor da organização:', e);
+        if (msgBox) msgBox.textContent = e.message || 'Erro ao remover setor.';
+    } finally {
+        try { btn.disabled = false; btn.textContent = originalText; } catch(_) {}
+    }
+});
+
+// Adicionar (adotar) setor à organização
+document.addEventListener('click', async (ev) => {
+    const addBtn = ev.target.closest('#addOrgSectorBtn');
+    if (!addBtn) return;
+    const orgId = sessionStorage.getItem('currentOrganizationId');
+    if (!orgId) return;
+    const select = document.getElementById('addOrgSectorSelect');
+    const feedback = document.getElementById('addOrgSectorFeedback');
+    if (feedback) feedback.textContent = '';
+    const sectorId = select && select.value;
+    if (!sectorId) {
+        if (feedback) feedback.textContent = 'Selecione um setor.';
+        return;
+    }
+    const token = localStorage.getItem('jwtToken');
+    addBtn.disabled = true; const originalTxt = addBtn.textContent; addBtn.textContent = 'Adicionando...';
+    try {
+        await addOrganizationSector(token, orgId, sectorId);
+        await loadOrganizationSectors(orgId, token);
+        if (select) select.value = '';
+        if (feedback) feedback.textContent = 'Setor adicionado com sucesso.';
+        await loadGlobalSectorsForOrg(orgId, token);
+    } catch (e) {
+        console.error('Erro ao adicionar setor:', e);
+        if (feedback) feedback.textContent = e.message || 'Erro ao adicionar setor.';
+    } finally {
+        addBtn.disabled = false; addBtn.textContent = originalTxt;
+    }
+});
+
+// Habilitar botão de adicionar setor dinamicamente
+document.addEventListener('change', (ev) => {
+    const select = ev.target.closest('#addOrgSectorSelect');
+    if (!select) return;
+    const btn = document.getElementById('addOrgSectorBtn');
+    if (btn) btn.disabled = !select.value;
+});
 
 // --- Fluxo de sair da organização ---
 // Botão e modal já estão no HTML; precisamos ligar os handlers

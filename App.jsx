@@ -6,13 +6,11 @@ import PackagesSection from './components/PackagesSection'
 import AboutSection from './components/AboutSection'
 import ContactSection from './components/ContactSection'
 import AccountPage from './components/AccountPage'
-import CartPage from './components/CartPage'
 import Footer from './components/Footer'
 import './App.css'
 
 function App() {
-  const [cartItems, setCartItems] = useState(0)
-  const [currentPage, setCurrentPage] = useState('home') // 'home', 'about', 'contact', 'account', 'cart'
+  const [currentPage, setCurrentPage] = useState('home') // 'home', 'about', 'contact', 'account'
 
   const renderPage = () => {
     switch (currentPage) {
@@ -30,8 +28,6 @@ function App() {
         return <ContactSection />
       case 'account':
         return <AccountPage />
-      case 'cart':
-        return <CartPage />
       default:
         return (
           <>

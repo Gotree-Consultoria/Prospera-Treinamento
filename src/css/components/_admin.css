@@ -172,6 +172,164 @@
 }
 .btn-small:hover { background: #f4f4f4; }
 
+/* Ações padronizadas (seguindo padrão de CRUD Conteúdo) */
+.btn-action-primary {
+  background: linear-gradient(135deg, var(--verde-claro, #3fc18d), var(--verde-escuro, #0d5a3b));
+  color:#fff;
+  border: 1px solid var(--verde-escuro, #0d5a3b);
+  font-weight:600;
+  letter-spacing:.25px;
+  border-radius: 22px;
+  padding:7px 18px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  transition: background .2s ease, box-shadow .2s ease, transform .18s ease;
+}
+.btn-action-primary:hover { box-shadow:0 4px 10px rgba(0,0,0,0.12); transform:translateY(-1px); }
+.btn-action-primary:active { transform:translateY(0); }
+
+.btn-action-secondary {
+  background: #fff;
+  color: var(--verde-escuro, #0d5a3b);
+
+/* ================= Botões CRUD Unificados ================= */
+.crud-btn {
+  pointer-events: inherit !important;
+  --verde-escuro: #005a32;
+  --verde-claro: #bed737;
+  --off-white: #f5f0eb;
+  --coral: #e65f3c;
+  --coral-dark: #d54a2a;
+  --white: #ffffff;
+  --gray-light: #d4d4d4;
+  --gray-lighter: #efefef;
+  --gray-medium: #6c757d;
+  --gray-dark: #343a40;
+  --verde-claro-dark: #9bb82b;
+  --btn-small-equal-width: 92px;
+  --btn-small-height: 34px;
+  --btn-small-height-mobile: 44px;
+  --font-family: 'Montserrat', sans-serif;
+  --font-size-base: 14px;
+  --line-height-base: 1.6;
+  --spacing-xxs: 0.25rem;
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+  --spacing-xxl: 4rem;
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  margin: 0;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .70rem;
+  letter-spacing: .25px;
+  font-weight: 600;
+  padding: 10px 18px 11px;
+  border-radius: 26px;
+  border: 1px solid #d5dcdf;
+  background: linear-gradient(135deg,#ffffff 0%, #f7faf9 100%);
+  color: #1b5632;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 14px -6px rgba(0,0,0,0.15);
+  transition: background .22s ease, box-shadow .22s ease, transform .18s ease, color .22s ease;
+  min-height: 36px;
+  text-decoration:none;
+}
+.crud-btn:hover { background: linear-gradient(135deg,#ffffff 0%, #eef6f3 100%); box-shadow:0 3px 10px -4px rgba(0,0,0,0.18); transform:translateY(-1px); }
+.crud-btn:active { transform:translateY(0); box-shadow:0 2px 6px -2px rgba(0,0,0,0.18); }
+.crud-btn:focus-visible { outline:2px solid var(--coral); outline-offset:2px; }
+.crud-btn:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Variante primária */
+.crud-btn.primary {
+  background: linear-gradient(135deg, var(--verde-claro) 0%, var(--verde-escuro) 100%);
+  color:#fff;
+  border-color: var(--verde-escuro);
+}
+.crud-btn.primary:hover { background: linear-gradient(135deg, var(--verde-claro-dark) 0%, var(--verde-escuro) 100%); }
+.crud-btn.primary:active { filter:brightness(.92); }
+
+/* Variante secundária */
+.crud-btn.secondary { /* mantém estilo base; apenas reforça semântica */ box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 14px -6px rgba(0,0,0,0.12); }
+
+/* Ícones inline opcionais */
+.crud-btn .icon { font-size: 0.85rem; line-height:1; display:inline-flex; }
+
+@media (max-width:640px) {
+  .crud-btn { width:100%; justify-content:center; }
+}
+  border:1px solid var(--verde-claro, #3fc18d);
+  font-weight:600;
+  letter-spacing:.25px;
+  border-radius:22px;
+  padding:7px 16px;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.btn-action-secondary:hover { background: rgba(63,193,141,0.10); }
+.btn-action-secondary:active { transform:translateY(1px); }
+.btn-action-secondary:focus-visible, .btn-action-primary:focus-visible { outline:2px solid var(--coral, #ff8055); outline-offset:2px; }
+
+/* Ajustar tamanho quando combinado com .btn-small */
+.btn-small.btn-action-primary, .btn-small.btn-action-secondary { font-size:0.78rem; }
+
+/* Variantes sem poluir estilos globais */
+.btn-small-change { border-color: var(--verde-escuro); color: var(--verde-escuro); background:#fff; }
+.btn-small-change:hover { background: var(--verde-escuro); color:#fff; }
+.btn-small-remove { border-color: #d04a4a; color:#b82121; background:#fff; }
+.btn-small-remove:hover { background:#d04a4a; color:#fff; }
+.btn-xsm { font-size:0.7rem; padding:4px 8px; line-height:1.15; }
+
+/* Harmonizar bordas mais arredondadas para ações destrutivas em tabelas de detalhe */
+table .btn-small-remove,
+.td-assignment-table .btn-small-remove {
+  border-radius: 18px;
+  padding: 5px 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: .25px;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+table .btn-small-remove:hover:not(:disabled) { box-shadow:0 2px 6px rgba(208,74,74,0.35); }
+table .btn-small-remove:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ================= Gerenciar Setores: Botão Editar com estilo suavizado ================= */
+#platformSectorsTable .btn-small-change {
+  border-radius: 18px;
+  padding: 5px 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: .25px;
+  /* Cor mais suave: usar verde-claro translúcido como fundo inicial */
+  background: linear-gradient(135deg, rgba(0,150,110,0.06), rgba(0,150,110,0.12));
+  border-color: var(--verde-claro, #44b98a);
+  color: var(--verde-escuro, #0e5b3e);
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+#platformSectorsTable .btn-small-change:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--verde-claro, #44b98a), var(--verde-escuro, #0e5b3e));
+  color:#fff;
+  box-shadow:0 2px 6px rgba(0,120,80,0.35);
+}
+#platformSectorsTable .btn-small-change:active:not(:disabled) {
+  transform:translateY(1px);
+}
+#platformSectorsTable .btn-small-change:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Botão "Remover" em vínculos de setor – mais compacto e consistente */
+/* Removidos estilos específicos de .remove-sector-link para unificar com .btn-small-remove */
+
 /* Responsive: transformar tabela em cards simples em telas pequenas */
 @media (max-width: 720px) {
   .table thead { display: none; }

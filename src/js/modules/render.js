@@ -32,7 +32,7 @@ export function renderCategories() {
     if (categories && categories.length > 0) {
         categoriesGrid.innerHTML = categories
             .map((category) => `
-            <div class="category-card" data-page="ebooks" data-filter="${category.name}">
+            <div class="category-card" data-page="catalog" data-filter="${category.name}">
                 <i class="${category.icon}"></i>
                 <h3>${category.name}</h3>
                 <p>${category.description}</p>
@@ -67,9 +67,9 @@ export function renderPackages() {
                 <ul class="package-features">
                     ${pkg.features ? pkg.features.map((feature) => `<li><i class="fas fa-check"></i> ${feature}</li>`).join("") : ""}
                 </ul>
-                <button class="btn btn-primary btn-full add-to-cart-btn" data-id="${pkg.id}" data-type="package">
-                    Adicionar ao Carrinho
-                </button>
+                <div class="package-access-note">
+                    <span class="badge badge-included">Incluído no Plano</span>
+                </div>
             </div>
         `)
         .join("");
@@ -115,10 +115,8 @@ export function renderProducts(filteredProducts = null) {
                     <div class="product-price">
                         <span class="product-price-value">${formatPrice(product.price)}</span>
                     </div>
-                    <div class="product-actions">
-                        <button class="btn btn-primary btn-full add-to-cart-btn" data-id="${product.id}" data-type="product">
-                            Adicionar ao Carrinho
-                        </button>
+                    <div class="product-access-note">
+                        <span class="badge badge-included">Incluído no Plano</span>
                     </div>
                 </div>
             </div>

@@ -153,7 +153,7 @@ export function renderTrainingsForSector(sector) {
                 <p class="training-desc">${t.description}</p>
                 <p class="training-meta">Duração: ${t.duration} • Modalidade: ${t.format} • ${t.obligatoriness}</p>
                 <div class="training-actions">
-                    <button class="btn btn-secondary add-to-cart-btn" data-id="${t.id}" data-type="training">Adicionar ao carrinho</button>
+                    <button class="btn btn-tertiary view-training-btn" data-id="${t.id}" data-type="training">Ver Detalhes</button>
                 </div>
             `;
             list.appendChild(card);

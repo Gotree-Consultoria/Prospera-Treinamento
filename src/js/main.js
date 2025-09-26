@@ -7,14 +7,12 @@ import './modules/adminOrgDetail.js';
 import './modules/adminPlatformSectors.js';
 import './modules/adminContent.js';
 import { showPage, scrollToSection, resolveRouteFromLocation } from './modules/navigation.js';
-import { renderProducts, renderPackages, renderCategories, updateData } from './modules/render.js';
 import { initCarousel } from './modules/carousel.js';
 import { checkUserLoggedIn } from './modules/auth.js';
-import { extractCategories } from './modules/utils.js';
+import './modules/catalog.js';
+import './modules/ebooksMini.js'; // mini catálogo de e-books na página de E-books
 
-let products = [];
-let packages = [];
-let categories = [];
+// Dados legacy de produtos/pacotes removidos (catálogo unificado agora cobre exibição)
 
 async function initializeApp() {
     const pageLoader = document.getElementById("page-loader");
@@ -40,23 +38,7 @@ async function initializeApp() {
             try { initTermsFlow(); } catch (e) { /* ignore */ }
         }
 
-        // Carrega produtos e pacotes de forma tolerante a falhas (API local pode não existir)
-        const results = await Promise.allSettled([
-            fetch('src/products.json').then(res => res.json()),
-            fetch('src/packages.json').then(res => res.json())
-        ]);
-
-        const productsData = results[0].status === 'fulfilled' ? results[0].value : [];
-        const packagesData = results[1].status === 'fulfilled' ? results[1].value : [];
-
-        products = productsData;
-        packages = packagesData;
-        categories = extractCategories(productsData);
-        updateData(productsData, packagesData, categories);
-
-        renderCategories();
-        renderProducts(products);
-        renderPackages();
+        // Removido: carregamento de products.json / packages.json (não usados mais)
 
         // Sempre configura os listeners, mesmo que os dados falhem
         setupEventListeners();
@@ -91,7 +73,7 @@ async function initializeApp() {
             pageLoader.style.display = "none";
         }
 
-        console.log("Aplicação inicializada com sucesso!");
+    console.log("Aplicação inicializada com sucesso (versão sem produtos legacy)!");
     } catch (error) {
         console.error("Erro ao inicializar a aplicação:", error);
     } finally {

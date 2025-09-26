@@ -23,15 +23,13 @@
                      <a class="submenu-item" href="#" data-section="profile" data-action="togglePasswordEdit">Trocar Senha</a>
                      <a class="submenu-item" href="#" data-page="orgManagement">Gestão de empresas</a>
                   </div>
-                  <a class="menu-item" href="#" data-section="orders">
-                     <i class="fas fa-shopping-bag">
-                     </i>
-                     Pedidos
+                  <a class="menu-item" href="#" data-section="plans">
+                     <i class="fas fa-layer-group"></i>
+                     Planos &amp; Assinatura
                   </a>
-                  <a class="menu-item" href="#" data-section="downloads">
-                     <i class="fas fa-download">
-                     </i>
-                     Downloads
+                  <a class="menu-item" href="#" data-section="learning">
+                     <i class="fas fa-graduation-cap"></i>
+                     Cursos &amp; Treinamentos
                   </a>
                   
                   <div class="logout-button-sidebar">
@@ -196,85 +194,60 @@
                   </div>
 
 
-               <div class="account-section hidden" id="ordersSection">
-                  <h2>
-                     Histórico de Pedidos
-                  </h2>
-                  <div class="orders-list">
-                     <div class="order-item">
-                        <div class="order-header">
-                           <span class="order-number">
-                              #001
-                           </span>
-                           <span class="order-date">
-                              15/01/2024
-                           </span>
-                           <span class="order-status completed">
-                              Concluído
-                           </span>
-                        </div>
-                        <div class="order-items">
-                           <p>
-                              Pacote Completo de Ergonomia - R$ 89,99
-                           </p>
-                        </div>
+               <div class="account-section hidden" id="plansSection">
+                  <h2>Planos &amp; Assinatura</h2>
+                  <div class="plans-wrapper">
+                     <div class="current-plan" id="currentPlanBox">
+                        <h3>Seu Plano Atual</h3>
+                        <p id="currentPlanName">Gratuito (Acesso Admin)</p>
+                        <p class="muted" id="currentPlanDesc">Todos os conteúdos liberados para gestão e testes internos.</p>
+                        <div class="plan-meta"><span id="planRenewalInfo">Renovação: —</span></div>
                      </div>
-                     <div class="order-item">
-                        <div class="order-header">
-                           <span class="order-number">#002</span>
-                           <span class="order-date">22/04/2024</span>
-                           <span class="order-status">Em processamento</span>
+                     <hr />
+                     <h3>Outros Planos</h3>
+                     <div class="plan-cards" id="availablePlans">
+                        <div class="plan-card" data-plan="starter">
+                           <h4>Starter</h4>
+                           <p>Acesso a E-books globais.</p>
+                           <div class="price">R$ 29,90/mês</div>
+                           <button class="btn btn-small" disabled>Em breve</button>
                         </div>
-                        <div class="order-items">
-                           <p>Curso Online: Técnicas de Liderança - R$ 149,00</p>
+                        <div class="plan-card" data-plan="pro">
+                           <h4>Pro</h4>
+                           <p>E-books + Cursos Gravados.</p>
+                           <div class="price">R$ 59,90/mês</div>
+                           <button class="btn btn-small" disabled>Em breve</button>
                         </div>
-                     </div>
-
-                     <div class="order-item">
-                        <div class="order-header">
-                           <span class="order-number">#003</span>
-                           <span class="order-date">05/07/2025</span>
-                           <span class="order-status">Concluído</span>
-                        </div>
-                        <div class="order-items">
-                           <p>Assinatura Mensal - R$ 29,90</p>
+                        <div class="plan-card" data-plan="enterprise">
+                           <h4>Enterprise</h4>
+                           <p>Catálogo completo + Gestão de Setores.</p>
+                           <div class="price">Custom</div>
+                           <button class="btn btn-small" disabled>Fale Conosco</button>
                         </div>
                      </div>
                   </div>
                </div>
-               <div class="account-section hidden" id="downloadsSection">
-                  <h2>
-                     Downloads Disponíveis
-                  </h2>
-                  <div class="downloads-list">
-
-                     <div class="download-item">
-                        <i class="fas fa-file-pdf"></i>
-                        <div class="download-info">
-                           <h4>E-book Ergonomia no Trabalho</h4>
-                           <p>Comprado em 15/01/2024</p>
-                        </div>
-                        <button class="btn btn-small">Download</button>
-                     </div>
-
-                     <div class="download-item">
-                        <i class="fas fa-file-pdf"></i>
-                        <div class="download-info">
-                           <h4>E-book RH Poderoso</h4>
-                           <p>Comprado em 30/08/2025</p>
-                        </div>
-                        <button class="btn btn-small">Download</button>
-                     </div>
-
-                     <div class="download-item">
-                        <i class="fas fa-file-pdf"></i>
-                        <div class="download-info">
-                           <h4>Guia Rápido de Gestão de Pessoas</h4>
-                           <p>Incluído com o pedido #002 - 22/04/2024</p>
-                        </div>
-                        <button class="btn btn-small">Download</button>
-                     </div>
-
+               <div class="account-section hidden" id="learningSection">
+                  <h2>Meus Cursos &amp; Treinamentos</h2>
+                  <div id="learningTabs" class="learning-tabs">
+                     <button class="ltab active" data-ltab="all">Todos</button>
+                     <button class="ltab" data-ltab="ebooks">E-books</button>
+                     <button class="ltab" data-ltab="courses">Gravados</button>
+                     <button class="ltab" data-ltab="live">Ao Vivo</button>
+                  </div>
+                  <div id="learningOrgSectorsBar" class="learning-org-sectors" aria-live="polite"></div>
+                  <div class="learning-filters">
+                     <label for="learningSearch" class="sr-only">Buscar conteúdo</label>
+                     <input type="text" id="learningSearch" placeholder="Buscar por título..." />
+                     <label for="learningStatusFilter" class="sr-only">Filtrar por status</label>
+                     <select id="learningStatusFilter">
+                        <option value="">Status (todos)</option>
+                        <option value="PUBLISHED">Publicado</option>
+                        <option value="DRAFT">Rascunho</option>
+                     </select>
+                  </div>
+                  <div id="learningList" class="learning-list loading">
+                     <p class="loading-msg">Carregando conteúdos...</p>
                   </div>
                </div>
                 

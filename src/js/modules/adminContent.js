@@ -1,11 +1,23 @@
-import { getAdminTrainings, createAdminTraining, publishAdminTraining, assignTrainingToSector, getAdminSectors, getAdminTrainingById, updateAdminTraining, deleteAdminTraining, uploadEbookFileWithProgress, buildEbookFileUrl } from './api.js';
+import { getAdminTrainings, createAdminTraining, publishAdminTraining, assignTrainingToSector, getAdminSectors, getAdminTrainingById, updateAdminTraining, deleteAdminTraining, uploadEbookFileWithProgress, buildEbookFileUrl, getAdminSectorById, API_BASE_URL, unlinkTrainingSector, orgUnfollowSector } from './api.js';
 import { uploadTrainingCoverImage } from './api.js';
 import { showToast } from './notifications.js';
-import { showPage } from './navigation.js';
+import { showPage, currentPage } from './navigation.js';
 
 function isSystemAdmin() {
   const raw = localStorage.getItem('systemRole') || localStorage.getItem('userRole') || '';
   return /SYSTEM[_-]?ADMIN|ADMIN/i.test(raw);
+}
+
+// === Nova detecção de papel principal para customizar UI de E-book ===
+function getPrimaryRole() {
+  const token = getAuthToken();
+  if (!token) return 'GUEST';
+  const raw = (localStorage.getItem('systemRole') || localStorage.getItem('userRole') || '').toUpperCase();
+  if (/SYSTEM[_-]?ADMIN/.test(raw)) return 'SYSTEM_ADMIN';
+  if (/ORG[_-]?ADMIN/.test(raw)) return 'ORG_ADMIN';
+  if (/ORG[_-]?MEMBER/.test(raw)) return 'ORG_MEMBER';
+  // fallback: se houver algum token mas sem role claro tratamos como membro
+  return 'ORG_MEMBER';
 }
 
 // === Helpers de autenticação / formatação ===
@@ -19,10 +31,123 @@ function formatDateTime(val) {
   return String(val);
 }
 
+  // =============================================================
+  // Tratamento de imagem de capa quebrada / fallback
+  // =============================================================
+  function rebuildCandidateCoverUrl(id, rawUrl, { forceBust=false } = {}) {
+    if (!rawUrl) return '';
+    let url = rawUrl.trim();
+    // Se já for absoluta http(s) usar direto
+    if (!/^https?:\/\//i.test(url)) {
+      // Pode ser apenas um filename (ex: 123.png) ou caminho armazenado.
+      // Backend expõe cover presumivelmente em /admin/trainings/{id}/cover-image (GET?) ou um caminho estático devolvido.
+      // Se nome do arquivo parece GUID + extensão, tentar /admin/trainings/{id}/cover-image?file=...
+      const hasExt = /\.(png|jpe?g|webp|gif)$/i.test(url);
+      if (!hasExt) {
+        // força png por tentativa? Melhor não. Apenas usa endpoint genérico se existir.
+        // Mantemos como veio e prefixamos base.
+      }
+      // Caso comum: apenas prefixar base
+      url = API_BASE_URL.replace(/\/$/, '') + '/' + url.replace(/^\//,'');
+    }
+    if (forceBust) {
+      const sep = url.includes('?') ? '&' : '?';
+      url += sep + 'v=' + Date.now();
+    }
+    return url;
+  }
+
+  function enhanceCoverImage(training) {
+    try {
+      const box = document.querySelector('.td-box-cover');
+      if (!box) return;
+      const img = box.querySelector('.td-cover-preview img');
+      if (!img) return;
+      const original = img.getAttribute('src');
+      img.addEventListener('error', () => {
+        // Evitar loop infinito
+        if (img.dataset._errored) return;
+        img.dataset._errored = '1';
+        console.warn('[cover] imagem quebrou, tentando fallback', original);
+        // Tentar recuperar programaticamente (fetch com Authorization) a partir de candidatos
+        attemptProgrammaticCoverFetch(training.id, original, box)
+          .then(ok => {
+            if (!ok) {
+              // Último fallback: reconstrução simples e/ou placeholder
+              const preview = box.querySelector('.td-cover-preview');
+              preview.innerHTML = `<div class="td-cover-broken" data-original-url="${escapeAttr(original)}" style="width:110px; height:140px; border:1px dashed #c89; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:.55rem; color:#a33; text-align:center; padding:6px;">Imagem indisponível<br/><button type="button" class="btn-small" data-action="retryCoverImg" data-original-url="${escapeAttr(original)}" style="margin-top:4px; font-size:.55rem; padding:4px 6px;">Tentar novamente</button></div>`;
+            }
+          });
+      }, { once:true });
+    } catch(err) { console.warn('enhanceCoverImage erro', err); }
+  }
+
+  async function attemptProgrammaticCoverFetch(trainingId, originalSrc, boxEl) {
+    try {
+      const token = getAuthToken();
+      const candidates = buildCoverCandidates(trainingId, originalSrc);
+      console.debug('[coverCandidate] lista', candidates);
+      const preview = boxEl.querySelector('.td-cover-preview');
+      if (preview) {
+        preview.innerHTML = `<div class="td-cover-skeleton" aria-label="Tentando carregar capa" role="img"></div>`;
+      }
+      for (const url of candidates) {
+        try {
+          const res = await fetch(url, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+          const ct = res.headers.get('content-type') || '';
+          if (res.ok && /image\//i.test(ct)) {
+            const blob = await res.blob();
+            const objUrl = URL.createObjectURL(blob);
+            if (preview) preview.innerHTML = `<img src="${escapeAttr(objUrl)}" alt="Capa" data-original-url="${escapeAttr(url)}" />`;
+            console.debug('[coverFetch] sucesso em', url);
+            return true;
+          } else {
+            console.debug('[coverFetch] falhou', url, res.status, ct);
+          }
+        } catch(fetchErr) {
+          console.debug('[coverFetch] erro candidato', url, fetchErr);
+        }
+      }
+    } catch(err) { console.warn('[coverFetch] erro geral', err); }
+    return false;
+  }
+
+  function buildCoverCandidates(trainingId, original) {
+    const list = new Set();
+    if (original) {
+      // adicionar original como veio
+      list.add(original);
+      // se relativo
+      if (!/^https?:\/\//i.test(original)) {
+        list.add(rebuildCandidateCoverUrl(trainingId, original, { forceBust:true }));
+      } else {
+        // forçar cache-buster
+        const sep = original.includes('?') ? '&' : '?';
+        list.add(original + sep + 'v=' + Date.now());
+      }
+    }
+    // Endpoints canônicos possíveis
+    if (trainingId) {
+      const base = API_BASE_URL.replace(/\/$/,'');
+      list.add(`${base}/admin/trainings/${encodeURIComponent(trainingId)}/cover-image`);
+      list.add(`${base}/admin/trainings/${encodeURIComponent(trainingId)}/cover-image?v=${Date.now()}`);
+    }
+    // Possível pasta estática /covers/
+    if (original && /[A-Za-z0-9_-]+\.(png|jpe?g|webp)$/i.test(original)) {
+      const fname = original.split('/').pop();
+      const base = API_BASE_URL.replace(/\/$/,'');
+      list.add(`${base}/covers/${fname}`);
+      list.add(`${base}/uploads/${fname}`);
+    }
+    return [...list];
+  }
+
 let cachedSectors = [];
 window.uploadedEbooks = window.uploadedEbooks || {}; // legado (usado apenas para armazenar nome após upload, não define status)
 window._allTrainings = window._allTrainings || [];
 const FILTER_STATE = { text:'', type:'', status:'' };
+// Pré-visualizações locais de capa (antes do backend confirmar). Cada entrada: { file, url }
+window._pendingCoverPreviews = window._pendingCoverPreviews || {};
 
 // === Detecção robusta de presença de PDF para E-book ===
 function trainingHasPdf(t) {
@@ -143,28 +268,15 @@ function injectConfirmModalStyles() {
 // === Upload de E-book (PDF) ===
 function openEbookUploadModal(trainingId, meta={}) {
   closeAdminContentModal();
+  const title = meta.title || '';
   const overlay = document.createElement('div');
   overlay.className='content-modal-overlay';
   overlay.innerHTML = `
     <div class="content-modal" role="dialog" aria-modal="true" aria-labelledby="ebookUploadTitle">
-      <h3 id="ebookUploadTitle">Enviar PDF do E-book</h3>
+      <h3 id="ebookUploadTitle">Upload de PDF</h3>
       <form id="ebookUploadForm" class="content-form" enctype="multipart/form-data">
-        <label>Título<span>*</span></label>
-        <input type="text" name="title" required maxlength="160" placeholder="Ex: NR-18 Básico" />
-        <label>Descrição</label>
-        <textarea name="description" rows="3" maxlength="800" placeholder="Descrição do conteúdo"></textarea>
-        <label>Autor</label>
-        <input type="text" name="author" maxlength="120" placeholder="Nome do autor" />
-        <label>Tipo (entityType)<span>*</span></label>
-        <select name="entityType" required>
-          <option value="">Selecione...</option>
-          <option value="RECORDED_COURSE">Curso Gravado</option>
-          <option value="LIVE_TRAINING">Treinamento Ao Vivo</option>
-          <option value="EBOOK">E-book</option>
-        </select>
-        <label>Organização (opcional)</label>
-        <input type="text" name="organizationId" placeholder="UUID da organização (se aplicável)" />
-        <div class="form-messages" id="trainingCreateMessages" aria-live="polite"></div>
+        <p style="margin:0 0 8px; font-size:.8rem; line-height:1.1rem;">Treinamento: <strong>${escapeHtml(title)}</strong></p>
+        <p style="margin:0 0 14px; font-size:.7rem; color:#555;">Os dados básicos já foram salvos. Envie o PDF agora ou feche para enviar depois.</p>
         <label>Arquivo PDF<span>*</span></label>
         <input type="file" name="file" accept="application/pdf" required />
         <div class="progress-row" style="display:none; flex-direction:column; gap:4px;">
@@ -175,14 +287,13 @@ function openEbookUploadModal(trainingId, meta={}) {
         </div>
         <div class="form-messages" id="ebookUploadMessages" aria-live="polite"></div>
         <div class="content-modal-actions">
-          <button type="button" class="btn-small btn-small-remove" data-action="cancelUpload">Cancelar</button>
-          <button type="submit" class="btn-small btn-small-change" id="ebookUploadSubmit">Enviar</button>
+          <button type="button" class="btn-small btn-small-remove" data-action="cancelUpload">Fechar</button>
+          <button type="submit" class="btn-small btn-small-change" id="ebookUploadSubmit">Enviar PDF</button>
         </div>
       </form>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', (e)=> { if (e.target === overlay) closeAdminContentModal(); });
-  // estilos de modal já carregados via CSS estático (_adminModals.css)
   const form = overlay.querySelector('#ebookUploadForm');
   const bar = form.querySelector('.bar');
   const pct = form.querySelector('.pct');
@@ -198,11 +309,8 @@ function openEbookUploadModal(trainingId, meta={}) {
     form.querySelector('#ebookUploadSubmit').disabled = true;
     try {
       const token = localStorage.getItem('jwtToken');
-      await uploadEbookFileWithProgress(token, trainingId, f, (perc)=> {
-        bar.style.width = perc + '%'; pct.textContent = perc + '%';
-      });
-  // Armazena somente nome (legado); status real virá do endpoint ao recarregar
-  window.uploadedEbooks[trainingId] = { fileName: f.name };
+      await uploadEbookFileWithProgress(token, trainingId, f, (perc)=> { bar.style.width = perc + '%'; pct.textContent = perc + '%'; });
+      window.uploadedEbooks[trainingId] = { fileName: f.name };
       showToast('PDF enviado.');
       closeAdminContentModal();
       loadTrainings();
@@ -267,7 +375,9 @@ function renderTrainings(list) {
     window._currentRowMenu = null; window._currentRowMenuToggle = null;
   } catch(_) {}
   const rows = list.map(t => {
-    const status = t.publicationStatus || t.status || 'DRAFT';
+  let status = t.publicationStatus || t.status || 'DRAFT';
+  const rawStatusUpper = (status||'').toUpperCase();
+  const statusLabel = rawStatusUpper === 'DRAFT' ? 'Rascunho' : (rawStatusUpper === 'PUBLISHED' ? 'Publicado' : (rawStatusUpper === 'ARCHIVED' ? 'Arquivado' : status));
     const published = (status || '').toUpperCase() === 'PUBLISHED';
     const isEbook = t.entityType === 'EBOOK';
   const hasPdf = trainingHasPdf(t);
@@ -285,13 +395,13 @@ function renderTrainings(list) {
       `<button class=\"dropdown-item\" role=\"menuitem\" tabindex=\"-1\" data-action=\"assignSector\" data-id=\"${t.id}\"><span class=\"ic\">${iconAssign}</span>Vincular Setor</button>`
     ];
     if (isEbook) {
-      menuItems.push(`<button class=\"dropdown-item\" role=\"menuitem\" tabindex=\"-1\" data-action=\"uploadEbook\" data-id=\"${t.id}\"><span class=\"ic\">${iconUpload}</span>${hasPdf ? 'Substituir PDF' : 'Enviar PDF'}</button>`);
+      menuItems.push(`<button class=\"dropdown-item\" role=\"menuitem\" tabindex=\"-1\" data-action=\"uploadEbook\" data-id=\"${t.id}\" data-title=\"${escapeAttr(t.title || '')}\"><span class=\"ic\">${iconUpload}</span>${hasPdf ? 'Substituir PDF' : 'Enviar PDF'}</button>`);
     }
     return `<tr data-training-id="${t.id}">
       <td>${t.id || ''}</td>
       <td>${escapeHtml(t.title || '')} ${ebookIcon}</td>
       <td>${escapeHtml(t.entityType || '')}</td>
-      <td>${escapeHtml(status)}</td>
+  <td>${escapeHtml(statusLabel)}</td>
       <td>${escapeHtml(t.author || '')}</td>
       <td>
         <div class=\"row-actions\">
@@ -304,34 +414,39 @@ function renderTrainings(list) {
       </td>
     </tr>`;}).join('');
   container.innerHTML = `
-    <div class="inline-actions" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <button class="btn-small btn-small-change" data-action="newTraining">Novo Treinamento</button>
-        <button class="btn-small" data-action="reloadTrainings">Recarregar</button>
+    <div class="inline-actions" style="justify-content:space-between; flex-wrap:wrap; gap:8px; align-items:flex-start;">
+      <div class="admin-content-actions">
+        <button class="crud-btn" data-action="newTraining" title="Criar novo treinamento">Novo Treinamento</button>
+        <button class="crud-btn is-secondary" data-action="reloadTrainings" title="Recarregar lista">Recarregar</button>
       </div>
-      <div class="filters" style="display:flex; gap:6px; flex-wrap:wrap; align-items:flex-end;">
-        <div style="display:flex; flex-direction:column; gap:2px;">
-          <label style="font-size:.6rem; font-weight:600;">Busca</label>
-          <input type="text" data-filter="text" placeholder="Título..." style="padding:4px 6px; min-width:140px;" value="${escapeAttr(FILTER_STATE.text)}" />
+      <div class="admin-content-filters">
+        <div class="acf-group">
+          <label for="acf-search">Busca</label>
+          <div class="acf-control"><input id="acf-search" type="text" data-filter="text" placeholder="Título..." value="${escapeAttr(FILTER_STATE.text)}" /></div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:2px;">
-          <label style="font-size:.6rem; font-weight:600;">Tipo</label>
-          <select data-filter="type" style="padding:4px 6px;">
-            <option value="">Todos</option>
-            <option value="RECORDED_COURSE" ${FILTER_STATE.type==='RECORDED_COURSE'?'selected':''}>Gravado</option>
-            <option value="LIVE_TRAINING" ${FILTER_STATE.type==='LIVE_TRAINING'?'selected':''}>Ao Vivo</option>
-            <option value="EBOOK" ${FILTER_STATE.type==='EBOOK'?'selected':''}>E-book</option>
-          </select>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:2px;">
-          <label style="font-size:.6rem; font-weight:600;">Status</label>
-            <select data-filter="status" style="padding:4px 6px;">
+        <div class="acf-group">
+          <label for="acf-type">Tipo</label>
+          <div class="acf-control">
+            <select id="acf-type" data-filter="type">
               <option value="">Todos</option>
-              <option value="DRAFT" ${FILTER_STATE.status==='DRAFT'?'selected':''}>Draft</option>
-              <option value="PUBLISHED" ${FILTER_STATE.status==='PUBLISHED'?'selected':''}>Publicado</option>
+              <option value="RECORDED_COURSE" ${FILTER_STATE.type==='RECORDED_COURSE'?'selected':''}>Gravado</option>
+              <option value="LIVE_TRAINING" ${FILTER_STATE.type==='LIVE_TRAINING'?'selected':''}>Ao Vivo</option>
+              <option value="EBOOK" ${FILTER_STATE.type==='EBOOK'?'selected':''}>E-book</option>
             </select>
+          </div>
         </div>
-        <div style="font-size:.65rem; opacity:.8; white-space:nowrap;">${list.length} itens</div>
+        <div class="acf-group">
+          <label for="acf-status">Status</label>
+          <div class="acf-control">
+            <select id="acf-status" data-filter="status">
+              <option value="">Todos</option>
+              <option value="DRAFT" ${FILTER_STATE.status==='DRAFT'?'selected':''}>Rascunho</option>
+              <option value="PUBLISHED" ${FILTER_STATE.status==='PUBLISHED'?'selected':''}>Publicado</option>
+              <option value="ARCHIVED" ${FILTER_STATE.status==='ARCHIVED'?'selected':''}>Arquivado</option>
+            </select>
+          </div>
+        </div>
+        <div class="acf-meta"><span class="acf-count" aria-label="Quantidade de itens listados">${list.length} itens</span></div>
       </div>
     </div>
     <div class="table-responsive small-table">
@@ -372,16 +487,19 @@ function renderTrainings(list) {
     const typeSelect = container.querySelector('select[data-filter="type"]');
     const statusSelect = container.querySelector('select[data-filter="status"]');
     if (textInput && !textInput._bound) {
-      textInput.addEventListener('input', debounce((e)=> { FILTER_STATE.text = e.target.value; renderTrainings(applyFilters(window._allTrainings)); }, 300));
+      textInput.addEventListener('click', (e)=> e.stopPropagation());
+      textInput.addEventListener('input', debounce((e)=> { e.stopPropagation(); FILTER_STATE.text = e.target.value; renderTrainings(applyFilters(window._allTrainings)); }, 300));
       textInput._bound = true;
     }
     const onSel = () => { renderTrainings(applyFilters(window._allTrainings)); };
     if (typeSelect && !typeSelect._bound) {
-      typeSelect.addEventListener('change', (e)=> { FILTER_STATE.type = e.target.value; onSel(); });
+      typeSelect.addEventListener('click', (e)=> e.stopPropagation());
+      typeSelect.addEventListener('change', (e)=> { e.stopPropagation(); FILTER_STATE.type = e.target.value; onSel(); });
       typeSelect._bound = true;
     }
     if (statusSelect && !statusSelect._bound) {
-      statusSelect.addEventListener('change', (e)=> { FILTER_STATE.status = e.target.value; onSel(); });
+      statusSelect.addEventListener('click', (e)=> e.stopPropagation());
+      statusSelect.addEventListener('change', (e)=> { e.stopPropagation(); FILTER_STATE.status = e.target.value; onSel(); });
       statusSelect._bound = true;
     }
   } catch (err) { console.warn('[adminContent] Falha ao bindar filtros', err); }
@@ -437,6 +555,7 @@ if (!window._rowMenuGlobalBound) {
     currentRowMenu = null;
     currentRowMenuToggle = null;
     document.querySelectorAll('.row-menu-backdrop').forEach(b => b.remove());
+    try { window.closeAllMenus = closeAllMenus; } catch(_) {}
   }
   function positionPortalMenu(menu, toggleBtn) {
     // Não mover mais para o body; usar position:fixed sem alterar hierarquia
@@ -576,8 +695,10 @@ function attachHandlers() {
     if (uploadBtn) {
       e.preventDefault();
       const id = uploadBtn.dataset.id;
-      let title = '';
-      try { const obj = (Array.isArray(window._allTrainings) ? window._allTrainings.find(t=>t.id==id) : null); title = obj && obj.title || ''; } catch(_){}
+      let title = uploadBtn.dataset.title || '';
+      if (!title) {
+        try { const obj = (Array.isArray(window._allTrainings) ? window._allTrainings.find(t=>t.id==id) : null); title = obj && obj.title || ''; } catch(_){}
+      }
       openEbookUploadModal(id, { title });
       closeAllMenus();
       return;
@@ -586,6 +707,13 @@ function attachHandlers() {
     if (viewEbookBtn) { e.preventDefault(); openEbookViewer(viewEbookBtn.dataset.id); closeAllMenus(); return; }
   const viewBtn = e.target.closest('[data-action="viewTraining"]');
   if (viewBtn) { e.preventDefault(); navigateToTrainingDetail(viewBtn.dataset.id); closeAllMenus(); return; }
+
+  // Remover vínculo de setor
+  const unlinkBtn = e.target.closest('[data-action="unlinkSector"]');
+  if (unlinkBtn) {
+    e.preventDefault();
+    performUnlinkSector(unlinkBtn);
+  }
   };
   scopeIds.forEach(id => {
     const el = document.getElementById(id);
@@ -594,6 +722,73 @@ function attachHandlers() {
       el.addEventListener('click', handler);
     }
   });
+}
+
+// --- Função reutilizável para desvincular setor ---
+async function performUnlinkSector(unlinkBtn) {
+  const trainingId = unlinkBtn.dataset.trainingId;
+  let sectorId = unlinkBtn.dataset.sectorId;
+  if (!trainingId) { console.warn('[adminContent] Falta trainingId no botão de unlink'); return; }
+  if (!sectorId) {
+    const tr = unlinkBtn.closest('tr');
+    sectorId = tr ? (tr.getAttribute('data-sector-id') || '') : '';
+    if (!sectorId) {
+      try {
+        const firstCell = tr ? tr.querySelector('td') : null;
+        const label = firstCell ? firstCell.textContent.trim() : '';
+        console.debug('[adminContent] tentativa inferir sectorId via label', label);
+      } catch(_) {}
+    }
+    if (!sectorId) { console.error('[adminContent] Setor sem ID para desvincular'); showToast('Erro: setor sem ID.', { type:'error' }); return; }
+  }
+  if (unlinkBtn.disabled) return;
+  if (!confirm('Remover este setor do treinamento?')) return;
+  unlinkBtn.disabled = true; const prev = unlinkBtn.textContent; unlinkBtn.textContent = 'Removendo...';
+  try {
+    const token = localStorage.getItem('jwtToken');
+    const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
+    console.debug('[adminContent] unlink setor click', { trainingId, sectorId, sysRole });
+    if (/SYSTEM[_-]?ADMIN/.test(sysRole)) {
+      await unlinkTrainingSector(token, trainingId, sectorId);
+      console.debug('[adminContent] unlinkTrainingSector OK');
+      showToast('Setor desvinculado.');
+    } else if (/ORG[_-]?ADMIN/.test(sysRole)) {
+      const orgId = localStorage.getItem('currentOrgId');
+      if (!orgId) throw new Error('Org ID não encontrado para ORG_ADMIN');
+      await orgUnfollowSector(token, orgId, sectorId);
+      console.debug('[adminContent] orgUnfollowSector OK');
+      showToast('Organização deixou de seguir o setor.');
+    } else {
+      throw new Error('Sem permissão para remover setor.');
+    }
+    const tr = unlinkBtn.closest('tr'); if (tr) tr.remove();
+  unlinkBtn.textContent = 'Removido';
+  unlinkBtn.classList.add('removed');
+  } catch(err) {
+    console.error('Erro ao remover setor', err);
+    const msgBox = document.getElementById('trainingDetailMessages');
+    const msg = err.message || 'Falha ao remover setor';
+    showToast(msg, { type:'error' });
+    if (msgBox) { msgBox.textContent = msg; }
+    unlinkBtn.disabled = false; unlinkBtn.textContent = prev;
+  }
+}
+
+// Listener global de fallback caso a hierarquia não esteja dentro dos containers iniciais
+if (typeof document !== 'undefined' && !window._globalUnlinkSectorBound) {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="unlinkSector"]');
+    if (!btn) return;
+    // Evita duplicar se já foi tratado dentro de outro handler no mesmo tick
+    if (btn._unlinkHandled) return;
+    btn._unlinkHandled = true;
+    setTimeout(()=>{ btn._unlinkHandled = false; },0);
+    // Se já está em estado final, não refazer
+    if (btn.textContent === 'Removido') return;
+    console.debug('[adminContent][global-listener] intercept unlink click');
+    performUnlinkSector(btn);
+  });
+  window._globalUnlinkSectorBound = true;
 }
 
 // Merge seguro: só sobrescreve campos definidos
@@ -743,7 +938,7 @@ function openCreateTrainingModal() {
           <button type="button" class="btn-small btn-small-remove" data-action="cancelModal">Cancelar</button>
           <button type="submit" class="btn-small btn-small-change" id="createTrainingSubmit">Criar</button>
         </div>
-      </form>
+      </form>-
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAdminContentModal(); });
@@ -756,13 +951,8 @@ function openCreateTrainingModal() {
 
 // openTrainingDetail (modal) removido na migração para página. Qualquer chamada antiga deve usar navigateToTrainingDetail.
 
-function renderTrainingDetailHtml(t) {
-  const sectors = Array.isArray(t.sectors) ? t.sectors : (Array.isArray(t.assignedSectors) ? t.assignedSectors : []);
-  // Categoria virtual "Global" para EBOOKs avulsos (sem setores). Não cria setor real, apenas exibição.
-  const showGlobal = (t.entityType === 'EBOOK') && (!sectors || !sectors.length);
-  const sectorsHtml = showGlobal
-    ? '<ul class="td-sectors-list"><li>Global</li></ul>'
-    : (sectors.length ? '<ul class="td-sectors-list">'+ sectors.map(s => `<li>${escapeHtml(s.name || s.title || s.sectorName || '')}</li>`).join('') +'</ul>' : '<p class="td-empty">Nenhum setor vinculado.</p>');
+function renderTrainingDetailHtml(t, role='SYSTEM_ADMIN') {
+  // Exibição anterior de "Setores" removida. Agora usamos somente o bloco "Vínculos de Setor".
   // Campos Status e Autor restaurados para referência antes de clicar em Editar.
   const published = (t.publicationStatus || t.status || '').toUpperCase() === 'PUBLISHED';
   const ebookBlock = (t.entityType === 'EBOOK') ? (() => {
@@ -772,45 +962,64 @@ function renderTrainingDetailHtml(t) {
     const statusHtml = has
       ? `<span class="td-ok">Arquivo enviado${fileName ? ': ' + escapeHtml(fileName) : ''}${upd ? ' (Atualizado em: '+ escapeHtml(upd.toLocaleString()) +')' : ''}</span>`
       : '<span class="td-warn">Arquivo não enviado</span>';
+    let hint = '';
+    if (role === 'SYSTEM_ADMIN') {
+      hint = has ? 'Use a barra de ações acima para abrir ou substituir o PDF.' : 'Use a barra de ações acima para enviar o PDF.';
+    } else if (role === 'ORG_ADMIN') {
+      hint = has ? 'Você pode abrir ou substituir o PDF (ações acima).' : 'Envie o PDF usando a ação acima.';
+    } else if (role === 'ORG_MEMBER') {
+      hint = has ? 'Clique em "Abrir PDF" (quando disponível) para visualizar.' : 'O PDF ainda não foi disponibilizado.';
+    } else { // GUEST
+      hint = has ? 'Faça login para acessar este E-book.' : 'Conteúdo indisponível para visitantes.';
+    }
     return `
       <div class="td-box td-box-ebook">
         <strong class="td-box-title">E-book:</strong>
         ${statusHtml}
-        <div class="td-actions-row">
-          <button class="btn-small" data-action="uploadEbook" data-id="${t.id}">${has ? 'Substituir PDF' : 'Enviar PDF'}</button>
-          ${has ? `<button class="btn-small" data-action="viewEbook" data-id="${t.id}">Abrir PDF</button>` : ''}
-        </div>
+        <div class="td-hint td-ebook-hint">${hint}</div>
       </div>`;
   })() : '';
   const coverBlock = (()=> {
-    const hasCover = !!(t.coverImageUrl || t.coverImagePath || t.coverUrl);
-    const url = t.coverImageUrl || t.coverImagePath || t.coverUrl || '';
-    const preview = hasCover ? `<div class="td-cover-preview"><img src="${escapeAttr(url)}" alt="Capa" /></div>` : '';
+    // Se backend ainda não retornou coverImageUrl mas o usuário já escolheu um arquivo nesta sessão,
+    // usar a pré-visualização local (object URL) para experiência imediata.
+    let backendUrl = t._coverBustedUrl || t.coverImageUrl || '';
+    const pending = window._pendingCoverPreviews && window._pendingCoverPreviews[t.id];
+    const localPreviewUrl = (!backendUrl && pending && pending.url) ? pending.url : null;
+    const effectiveUrl = backendUrl || localPreviewUrl || '';
+    const hasCover = !!effectiveUrl;
+    const isLocal = !!localPreviewUrl;
+    const preview = hasCover
+      ? `<div class="td-cover-preview"><img src="${escapeAttr(effectiveUrl)}" alt="Capa${isLocal ? ' (pré-visualização local não enviada ainda)' : ''}" loading="lazy" decoding="async" /></div>`
+      : `<div class="td-cover-preview"><div class="td-cover-skeleton" aria-label="Capa pendente" role="img"></div></div>`;
     const inputId = 'coverInput-' + encodeURIComponent(String(t.id));
     return `<div class="td-box td-box-cover">
       <strong class="td-box-title">Capa:</strong>
-      ${hasCover ? '<span class="td-ok">Imagem enviada</span>' : '<span class="td-warn">Nenhuma imagem</span>'}
+      ${hasCover ? (isLocal ? '<span class="td-warn">Pré-visualização (ainda não enviada)</span>' : '<span class="td-ok">Imagem enviada</span>') : '<span class="td-warn">Nenhuma imagem</span>'}
       ${preview}
       <div class="td-cover-row">
-        <input id="${inputId}" type="file" accept="image/*" data-action="uploadCoverInput" data-id="${t.id}" class="td-cover-input" />
-        <label for="${inputId}" class="btn-small" data-action="chooseCover" data-id="${t.id}">${hasCover ? 'Escolher nova imagem' : 'Escolher imagem'}</label>
+        <div class="td-cover-upload">
+          <input id="${inputId}" type="file" accept="image/*" data-action="uploadCoverInput" data-id="${t.id}" class="td-cover-input-overlay" aria-label="Selecionar imagem da capa" />
+          <button type="button" class="btn-small td-cover-trigger${hasCover ? ' is-has-cover' : ''}" data-action="chooseCover" data-target-input="${inputId}" data-id="${t.id}">${hasCover ? (isLocal ? 'Escolher outra' : 'Trocar imagem') : 'Escolher imagem'}</button>
+        </div>
         <span data-cover-filename class="td-file-name"></span>
         <button type="button" class="btn-small btn-small-change" data-action="sendCoverUpload" data-id="${t.id}" style="display:none;">Enviar Capa</button>
         <button type="button" class="btn-small btn-small-remove" data-action="cancelCoverSelection" data-id="${t.id}" style="display:none;">Cancelar</button>
         <div class="cover-progress" data-cover-progress>0%</div>
       </div>
-      <div class="td-hint">Formatos aceitos: JPG, PNG, WEBP. O upload só inicia após clicar em "Enviar Capa".</div>
+      <div class="td-hint">Formatos aceitos: JPG, PNG, WEBP. ${hasCover && isLocal ? 'Clique em "Enviar Capa" para concluir o upload.' : 'O upload só inicia após clicar em "Enviar Capa".'}</div>
     </div>`;
   })();
   // Bloco polimórfico conforme entityType
   let polymorphicBlock = '';
   if (t.entityType === 'EBOOK' && t.ebookDetails) {
     const d = t.ebookDetails;
+    const fileName = d.filePath ? (()=>{ try { return decodeURIComponent(d.filePath.split('/').pop()); } catch(_) { return d.filePath.split('/').pop(); } })() : '—';
+    const uploadedAt = d.fileUploadedAt || d.updatedAt || d.createdAt;
     polymorphicBlock = `<div class="td-box td-box-poly"><strong class="td-box-title">Detalhes do E-book</strong>
       <div class="td-poly-grid">
         <div><span class="td-label">Páginas</span><span class="td-value">${escapeHtml(String(d.pages || d.totalPages || '—'))}</span></div>
-        <div><span class="td-label">Idioma</span><span class="td-value">${escapeHtml(d.language || '—')}</span></div>
-        <div><span class="td-label">Versão</span><span class="td-value">${escapeHtml(d.version || '—')}</span></div>
+        <div><span class="td-label">Arquivo</span><span class="td-value">${escapeHtml(fileName)}</span></div>
+        <div><span class="td-label">Upload PDF</span><span class="td-value">${escapeHtml(formatDateTime(uploadedAt))}</span></div>
       </div>
       ${d.summary ? `<div class="td-poly-desc"><span class="td-label">Resumo</span><span class="td-value">${escapeHtml(d.summary)}</span></div>`:''}
     </div>`;
@@ -840,8 +1049,32 @@ function renderTrainingDetailHtml(t) {
       ${l.accessLink ? `<div class="td-poly-desc"><span class="td-label">Link de Acesso</span><span class="td-value"><a href="${escapeAttr(l.accessLink)}" target="_blank" rel="noopener">Abrir</a></span></div>`:''}
     </div>`;
   }
+  // Vínculos de setor (sectorAssignments) - se vazio, exibir linha "Global" para ebooks avulsos ou qualquer treinamento sem vínculo.
+  let assignments = Array.isArray(t._resolvedSectorAssignments) ? t._resolvedSectorAssignments : (Array.isArray(t.sectorAssignments) ? t.sectorAssignments : []);
+  const hasAssignments = assignments && assignments.length > 0;
+  if (!hasAssignments) {
+    // não altera o DTO, só cria uma linha fictícia para exibição e funcionamento de filtros de "Ebooks Avulsos" (Global)
+    assignments = [{ _virtual: true, _sector: { name: 'Global' }, trainingType: null, legalBasis: null }];
+  }
+  const assignmentsBlock = `<div class="td-box td-box-assignments"><strong class="td-box-title">Vínculos de Setor</strong>
+    <div class="td-assignment-wrapper">
+      <table class="td-assignment-table"><thead><tr><th>Setor</th><th>Tipo</th><th>Base Legal</th><th>Ações</th></tr></thead><tbody>
+        ${assignments.map(a => {
+          const tType = (a.trainingType||'').toUpperCase();
+          const tLabel = tType === 'COMPULSORY' ? 'Obrigatório' : (tType === 'OPTIONAL' ? 'Opcional' : (tType||'—'));
+          const name = a._sector ? (a._sector.name || a._sector.title || a._sector.id) : (a.sectorId || '—');
+          const sectorId = a._sector ? (a._sector.id || a._sector.sectorId || a.sectorId) : a.sectorId;
+          const virtual = a._virtual ? 'true' : 'false';
+          const disableBtn = virtual === 'true' ? 'disabled' : '';
+          return `<tr data-sector-id="${escapeAttr(sectorId||'')}" data-virtual="${virtual}"><td>${escapeHtml(name)}</td><td>${escapeHtml(tLabel)}</td><td>${escapeHtml(a.legalBasis||'—')}</td><td><button type="button" class="btn-small btn-small-remove" data-action="unlinkSector" data-training-id="${escapeAttr(t.id)}" data-sector-id="${escapeAttr(sectorId||'')}" ${disableBtn} title="Remover vínculo deste setor">Remover</button></td></tr>`; }).join('')}
+      </tbody></table>
+      ${hasAssignments ? '' : '<p class="td-hint" style="margin-top:6px; font-size:.65rem;">Sem vínculos reais: tratado como Global.</p>'}
+    </div>
+    <div class="td-hint" style="margin-top:4px; font-size:.55rem;">Remoção: System Admin desvincula global / Org Admin deixa de seguir (se aplicável).</div>
+  </div>`;
+
   return `
-    <div class="td-block">
+    <div class="td-block" data-role="${escapeAttr(role)}">
       <div class="td-grid">
         <div class="td-field"><span class="td-label">ID</span><span class="td-value">${escapeHtml(t.id || '')}</span></div>
         <div class="td-field"><span class="td-label">Título</span><span class="td-value">${escapeHtml(t.title || '')}</span></div>
@@ -851,10 +1084,11 @@ function renderTrainingDetailHtml(t) {
         <div class="td-field"><span class="td-label">Criado em</span><span class="td-value">${escapeHtml(formatDateTime(t.createdAt))}</span></div>
         <div class="td-field"><span class="td-label">Atualizado em</span><span class="td-value">${escapeHtml(formatDateTime(t.updatedAt))}</span></div>
         <div class="td-field td-desc"><span class="td-label">Descrição</span><span class="td-value">${escapeHtml(t.description || '') || '<em>—</em>'}</span></div>
-        <div class="td-field td-sectors"><span class="td-label">Setores</span><span class="td-value">${sectorsHtml}</span></div>
+  <!-- Campo "Setores" removido: representação consolidada em "Vínculos de Setor" -->
       </div>
       ${ebookBlock}
       ${coverBlock}
+      ${assignmentsBlock}
       ${polymorphicBlock}
       <div class="td-raw is-hidden"><strong>JSON Bruto:</strong><pre>${escapeHtml(JSON.stringify(t, null, 2))}</pre></div>
     </div>`;
@@ -945,11 +1179,9 @@ async function submitCreateTrainingForm(e) {
     showToast('Treinamento criado.');
     const createdId = created && (created.id || created.trainingId || created.uuid);
     closeAdminContentModal();
-    if (dto.entityType === 'EBOOK' && createdId) {
-      openEbookUploadModal(createdId, { title: dto.title });
-    } else {
-      loadTrainings();
-    }
+    // Fluxo ajustado: após criar sempre fechamos modal e apenas recarregamos a lista.
+    // Para EBOOK o upload passa a ser uma ação manual posterior (menu "Enviar PDF").
+    loadTrainings();
   } catch (err) {
     console.error('Erro criação treinamento', err);
     messages.textContent = err.message || 'Erro ao criar.';
@@ -1090,6 +1322,12 @@ if (!window._adminContentGlobalNewTrainingBound) {
 function navigateToTrainingDetail(id) {
   if (!id) return;
   try { window._openTrainingId = id; } catch(_) {}
+  try {
+    const adminPages = new Set(['adminContent','adminUsers','adminOrgs','adminOrgDetail','adminAnalytics','platformSectors','platformTags','platformLevels','platformEmails','platformPolicies','platformIntegrations','platformAudit','platformCache']);
+    if (adminPages.has(currentPage)) {
+      window._prevAdminPage = currentPage;
+    }
+  } catch(_){ }
   if (typeof showPage === 'function') {
     showPage('trainingDetail', { trainingId: id });
   } else { console.warn('showPage não disponível'); }
@@ -1113,60 +1351,103 @@ async function initTrainingDetailPage() {
       return;
     }
     const t = await getAdminTrainingById(token, id);
+    // Confiar diretamente na URL vinda do backend; aplicar cache-buster apenas após upload recente
+    if (t && t.coverImageUrl && window._recentCoverUploadId === id) {
+      try {
+        if (/^https?:\/\//i.test(t.coverImageUrl)) {
+          const sep = t.coverImageUrl.includes('?') ? '&' : '?';
+          t._coverBustedUrl = t.coverImageUrl + sep + 'v=' + Date.now();
+          console.debug('[trainingDetail] cache-buster aplicado para coverImageUrl');
+        }
+      } catch(errCache) { console.warn('Falha ao aplicar cache-buster', errCache); }
+    }
     if (!t) {
       container.innerHTML = '<p class="td-empty">Treinamento não encontrado.</p>';
       return;
     }
-    container.innerHTML = renderTrainingDetailHtml(t);
+    // Resolver nomes de setores a partir de sectorAssignments se existirem
+    try {
+      if (Array.isArray(t.sectorAssignments) && t.sectorAssignments.length) {
+        const cache = (window._sectorsById = window._sectorsById || {});
+        const toFetch = t.sectorAssignments.map(a => a.sectorId).filter(sid => sid && !cache[sid]);
+        const unique = [...new Set(toFetch)];
+        const fetchPromises = unique.map(async sid => {
+          try {
+            const detail = await getAdminSectorById(token, sid);
+            if (detail && detail.id) cache[detail.id] = detail;
+          } catch(err) { console.warn('Falha ao resolver setor', sid, err); }
+        });
+        if (fetchPromises.length) await Promise.all(fetchPromises);
+        // Anexa resolvedNames na estrutura para uso na renderização (sem mutar original crítico)
+        t._resolvedSectorAssignments = t.sectorAssignments.map(a => ({ ...a, _sector: (a.sectorId && cache[a.sectorId]) || null }));
+      }
+    } catch(err) { console.warn('Erro ao resolver nomes de setores', err); }
+    const role = getPrimaryRole();
+    container.innerHTML = renderTrainingDetailHtml(t, role);
     if (actionsBar) {
-      actionsBar.innerHTML = buildDetailPageActionsHtml(t);
+      actionsBar.innerHTML = buildDetailPageActionsHtml(t, role);
+      if (!actionsBar.innerHTML.trim()) {
+        actionsBar.classList.add('is-empty');
+      } else {
+        actionsBar.classList.remove('is-empty');
+      }
     }
-    updateTrainingDetailStatusPill(t);
-    attachDetailPageHandlers(t);
+    try { enhanceCoverImage(t); } catch(errEnh) { console.warn('Falha enhanceCoverImage', errEnh); }
+  // updateTrainingDetailStatusPill removido: status já é mostrado em seção inferior detalhada
+  attachDetailPageHandlers(t);
   } catch (err) {
     console.error(err);
     container.innerHTML = `<p class="td-error">Erro ao carregar: ${escapeHtml(err.message || 'Erro')}</p>`;
   }
 }
 
-function buildDetailPageActionsHtml(t) {
+function buildDetailPageActionsHtml(t, role='SYSTEM_ADMIN') {
   const pubStatus = (t.publicationStatus || t.status || '').toUpperCase();
   // Status válidos: DRAFT, PUBLISHED, ARCHIVED
   const published = pubStatus === 'PUBLISHED';
   const isEbook = (t.entityType || '').toUpperCase() === 'EBOOK';
   const hasPdf = isEbook && trainingHasPdf(t);
-  const buttons = [
-    `<button class="btn-small" data-action="backToTrainings">Voltar</button>`,
-    `<button class="btn-small" data-action="reloadTrainingDetail" data-id="${escapeAttr(t.id)}" title="Recarregar">Recarregar</button>`,
-    `<button class="btn-small" data-action="toggleRawJson" title="Mostrar/ocultar JSON bruto">JSON</button>`,
-    `<button class="btn-small" data-action="editTraining" data-id="${escapeAttr(t.id)}">Editar</button>`,
-    `<button class="btn-small" data-action="assignSectors" data-id="${escapeAttr(t.id)}">Setores</button>`,
-    `<button class="btn-small" data-action="publishTraining" data-id="${escapeAttr(t.id)}" ${published ? 'disabled' : ''}>${published ? 'Publicado' : 'Publicar'}</button>`,
-    `<button class="btn-small btn-small-remove" data-action="deleteTraining" data-id="${escapeAttr(t.id)}">Excluir</button>`
-  ];
-  if (isEbook) {
-    buttons.push(`<button class="btn-small" data-action="uploadEbook" data-id="${escapeAttr(t.id)}">${hasPdf ? 'Substituir PDF' : 'Enviar PDF'}</button>`);
-    if (hasPdf) buttons.push(`<button class="btn-small" data-action="viewEbook" data-id="${escapeAttr(t.id)}">Abrir PDF</button>`);
+  const buttons = [];
+  // Regras por papel
+  if (role === 'SYSTEM_ADMIN') {
+    buttons.push(
+      `<button class="btn-small" data-action="reloadTrainingDetail" data-id="${escapeAttr(t.id)}" title="Recarregar">Recarregar</button>`,
+      `<button class="btn-small" data-action="toggleRawJson" title="Mostrar/ocultar JSON bruto">JSON</button>`,
+      `<button class="btn-small" data-action="editTraining" data-id="${escapeAttr(t.id)}">Editar</button>`,
+      `<button class="btn-small" data-action="assignSectors" data-id="${escapeAttr(t.id)}">Setores</button>`,
+      `<button class="btn-small" data-action="publishTraining" data-id="${escapeAttr(t.id)}" ${published ? 'disabled' : ''}>${published ? 'Publicado' : 'Publicar'}</button>`
+    );
+    if (isEbook) {
+      buttons.push(`<button class="btn-small" data-action="uploadEbook" data-id="${escapeAttr(t.id)}">${hasPdf ? 'Substituir PDF' : 'Enviar PDF'}</button>`);
+      if (hasPdf) buttons.push(`<button class="btn-small" data-action="viewEbook" data-id="${escapeAttr(t.id)}">Abrir PDF</button>`);
+    }
+    buttons.push(`<button class="btn-small" data-action="chooseCover" data-id="${escapeAttr(t.id)}">Capa</button>`);
+    buttons.push(`<button class="btn-small btn-small-remove" data-action="deleteTraining" data-id="${escapeAttr(t.id)}">Excluir</button>`);
+    return buttons.join('\n');
   }
-  // Botão para abrir seletor de capa rapidamente
-  buttons.push(`<button class="btn-small" data-action="chooseCover" data-id="${escapeAttr(t.id)}">Capa</button>`);
+  if (role === 'ORG_ADMIN') {
+    buttons.push(`<button class="btn-small" data-action="reloadTrainingDetail" data-id="${escapeAttr(t.id)}">Recarregar</button>`);
+    buttons.push(`<button class="btn-small" data-action="editTraining" data-id="${escapeAttr(t.id)}">Editar</button>`);
+    if (isEbook) {
+      buttons.push(`<button class="btn-small" data-action="uploadEbook" data-id="${escapeAttr(t.id)}">${hasPdf ? 'Substituir PDF' : 'Enviar PDF'}</button>`);
+      if (hasPdf && published) buttons.push(`<button class="btn-small" data-action="viewEbook" data-id="${escapeAttr(t.id)}">Abrir PDF</button>`);
+    }
+    buttons.push(`<button class="btn-small" data-action="chooseCover" data-id="${escapeAttr(t.id)}">Capa</button>`);
+    return buttons.join('\n');
+  }
+  if (role === 'ORG_MEMBER') {
+    if (isEbook && hasPdf && published) {
+      buttons.push(`<button class="btn-small" data-action="viewEbook" data-id="${escapeAttr(t.id)}">Abrir PDF</button>`);
+    }
+    return buttons.join('\n');
+  }
+  // GUEST
+  if (isEbook && hasPdf && published) {
+    buttons.push(`<button class="btn-small" data-action="promptLogin" data-id="${escapeAttr(t.id)}">Login para Acessar</button>`);
+  }
   return buttons.join('\n');
 }
 
-function updateTrainingDetailStatusPill(t) {
-  const pill = document.getElementById('trainingDetailStatus');
-  if (!pill) return;
-  const pubStatus = (t.publicationStatus || t.status || '—');
-  pill.textContent = pubStatus;
-  pill.classList.remove('is-published','is-draft','is-archived');
-  if (pubStatus.toUpperCase() === 'PUBLISHED') {
-    pill.classList.add('is-published');
-  } else if (/ARCHIVED/i.test(pubStatus)) {
-    pill.classList.add('is-archived');
-  } else if (/DRAFT/i.test(pubStatus)) {
-    pill.classList.add('is-draft');
-  }
-}
 
 function attachDetailPageHandlers(currentTraining) {
   const root = document.getElementById('trainingDetailPageRoot') || document;
@@ -1174,6 +1455,34 @@ function attachDetailPageHandlers(currentTraining) {
   root._tdHandlersAttached = true;
   root.addEventListener('click', detailClickDelegate);
   root.addEventListener('change', detailChangeDelegate);
+  root.addEventListener('keydown', (e) => {
+    // Nenhuma lógica adicional necessária agora que é um button
+  });
+  // Fallback direto em pointerdown para alguns navegadores que bloqueiam re-dispatch
+  root.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.td-cover-trigger');
+    if (!el) return;
+    // Não impedir comportamento padrão do label; apenas log para debug
+    console.debug('[cover] pointerdown label');
+  });
+  // Fallback dedicado: se após click o input não disparar (nenhuma seleção / sem dialog), oferecer tentativa alternativa
+  root.addEventListener('click', (e) => {
+    const el = e.target.closest('.td-cover-trigger');
+    if (!el) return;
+    // Se navegador ignorar programatic click dentro do delegado principal, tentamos novamente aqui
+    const id = el.getAttribute('data-id') || (currentTraining && currentTraining.id);
+    const input = getCoverInput(id, { includeByFor: true });
+    if (input && !input._lastUserArm) {
+      // Marca tentativa manual
+      input._lastUserArm = Date.now();
+      setTimeout(() => {
+        // Se ainda não houve seleção (value vazio) e nenhum dialog abriu (difícil detectar), forçamos outro click
+        if (!input.value) {
+          try { input.click(); console.debug('[cover] tentativa secundária de abertura do seletor'); } catch(err) { console.warn('[cover] falha fallback click', err); }
+        }
+      }, 120);
+    }
+  }, true);
 
   function detailClickDelegate(e) {
     const btn = e.target.closest('[data-action]');
@@ -1182,9 +1491,19 @@ function attachDetailPageHandlers(currentTraining) {
     const id = btn.getAttribute('data-id') || (currentTraining && currentTraining.id);
     switch(action) {
       case 'backToTrainings':
-        // Limpa hash e volta
-        try { history.replaceState(null,'','#adminContent'); } catch(_) { window.location.hash = '#adminContent'; }
-        showPage('adminContent');
+        // Redireciona explicitamente para o painel de gestão de conteúdo
+        try {
+          // Remove qualquer referência ao id aberto para evitar reload automático do detalhe
+          delete window._openTrainingId;
+        } catch(_) {}
+        const fallback = 'adminContent';
+        const target = (window._prevAdminPage) ? window._prevAdminPage : fallback;
+        try { history.replaceState(null,'','#'+target); } catch(_) { window.location.hash = '#'+target; }
+        if (typeof showPage === 'function') {
+          showPage(target, { from: 'trainingDetail' });
+        } else {
+          window.location.hash = '#'+target;
+        }
         break;
       case 'reloadTrainingDetail':
         initTrainingDetailPage();
@@ -1212,14 +1531,38 @@ function attachDetailPageHandlers(currentTraining) {
         openPdfInNewTab(currentTraining);
         break;
       case 'chooseCover': {
-        const input = document.querySelector(`input[data-action="uploadCoverInput"][data-id="${CSS.escape(String(id))}"]`);
-        if (input) input.click();
+        // Remoção preventiva de overlays que possam ter ficado presos e estarem bloqueando clique
+        try { clearStrayOverlays(); } catch(_) {}
+        // Novo fallback definitivo: usar input temporário anexado ao body para garantir abertura nativa.
+        promptCoverFileSelection(id)
+          .then(file => { if (file) applySelectedCoverFile(id, file); })
+          .catch(err => { if (err && err !== 'CANCELLED') console.warn('Seleção de capa cancelada/erro', err); });
         break; }
       case 'sendCoverUpload':
         sendCoverUpload(id);
         break;
       case 'cancelCoverSelection':
         resetCoverSelection(id);
+        break;
+      case 'retryCoverImg': {
+        const wrap = document.querySelector('.td-box-cover');
+        if (wrap) {
+          const broken = wrap.querySelector('.td-cover-broken');
+          let rawUrl = broken && broken.getAttribute('data-original-url');
+          if (!rawUrl) {
+            // tentar recuperar do dataset do botão
+            rawUrl = btn.getAttribute('data-original-url');
+          }
+          if (rawUrl) {
+            // aplicar cache-buster
+            const rebuilt = rebuildCandidateCoverUrl(id, rawUrl, { forceBust:true });
+            wrap.querySelector('.td-cover-preview').innerHTML = `<img src="${escapeAttr(rebuilt)}" alt="Capa" loading="lazy" decoding="async" />`;
+            enhanceCoverImage({ id, coverImageUrl: rawUrl, _coverBustedUrl: rebuilt });
+          }
+        }
+        break; }
+      case 'promptLogin':
+        try { showPage('loginPage'); } catch(_) { window.location.hash = '#loginPage'; }
         break;
     }
   }
@@ -1234,10 +1577,90 @@ function attachDetailPageHandlers(currentTraining) {
 
 // COVER IMAGE STATE
 const coverSelectionState = new Map();
+function clearStrayOverlays() {
+  // Remove overlays de modais antigos que possam ter ficado (falha em callbacks / navegação rápida)
+  document.querySelectorAll('.content-modal-overlay, .confirm-modal-overlay').forEach(el => {
+    // Se a página atual é detalhe, não precisamos de nenhum overlay aberto
+    el.remove();
+  });
+  // Também remover menus suspensos órfãos
+  document.querySelectorAll('.action-menu.portal, .row-menu-backdrop').forEach(el => el.remove());
+}
+function getCoverInput(id, opts={}) {
+  if (!id) return null;
+  const sel = `input[data-action="uploadCoverInput"][data-id="${id}"]`;
+  let found = null;
+  try { found = document.querySelector(sel); } catch(_) {}
+  if (!found && window.CSS && typeof CSS.escape === 'function') {
+    try { found = document.querySelector(`input[data-action="uploadCoverInput"][data-id="${CSS.escape(String(id))}"]`); } catch(_) {}
+  }
+  if (!found && opts.includeByFor) {
+    // Agora usamos botão; fallback: procurar botão com data-target-input
+    const btn = document.querySelector(`.td-cover-trigger[data-id="${id}"]`);
+    if (btn && btn.dataset.targetInput) {
+      const byId = document.getElementById(btn.dataset.targetInput);
+      if (byId) found = byId;
+    }
+  }
+  return found;
+}
+
+function promptCoverFileSelection(trainingId) {
+  return new Promise((resolve, reject) => {
+    try {
+      const temp = document.createElement('input');
+      temp.type = 'file';
+      temp.accept = 'image/*';
+      temp.style.position = 'fixed';
+      temp.style.left='-9999px';
+      document.body.appendChild(temp);
+      temp.addEventListener('change', () => {
+        const file = temp.files && temp.files[0];
+        temp.remove();
+        if (!file) { reject('CANCELLED'); return; }
+        resolve(file);
+      }, { once:true });
+      // Em alguns navegadores o click síncrono pode ser bloqueado se não for evento direto do usuário
+      setTimeout(()=> { try { temp.click(); } catch(err) { temp.remove(); reject(err); } }, 0);
+    } catch(err) { reject(err); }
+  });
+}
+
+function applySelectedCoverFile(trainingId, file) {
+  if (!trainingId || !file) return;
+  coverSelectionState.set(trainingId, file);
+  try {
+    // Revogar URL anterior se existir
+    if (window._pendingCoverPreviews[trainingId] && window._pendingCoverPreviews[trainingId].url) {
+      URL.revokeObjectURL(window._pendingCoverPreviews[trainingId].url);
+    }
+    window._pendingCoverPreviews[trainingId] = { file, url: URL.createObjectURL(file) };
+  } catch(err) { console.warn('[cover] falha ao gerar object URL', err); }
+  // Atualiza UI principal se input original existir
+  const input = getCoverInput(trainingId);
+  if (input) {
+    // Não é possível setar File programaticamente em input existente por segurança; apenas movimentamos estado e UI
+    const row = input.closest('.td-cover-row');
+    if (row) {
+      const nameSpan = row.querySelector('[data-cover-filename]'); if (nameSpan) nameSpan.textContent = file.name;
+      const sendBtn = row.querySelector('[data-action="sendCoverUpload"]'); if (sendBtn) sendBtn.style.display='';
+      const cancelBtn = row.querySelector('[data-action="cancelCoverSelection"]'); if (cancelBtn) cancelBtn.style.display='';
+    }
+  } else {
+    // Se não existe bloco ainda (edge case), apenas mostra toast; usuário pode reenviar após reload
+    showToast('Arquivo pronto para envio (estado temporário)');
+  }
+}
 function onCoverFileSelected(id, inputEl) {
   if (!id || !inputEl || !inputEl.files || !inputEl.files[0]) return;
   const file = inputEl.files[0];
   coverSelectionState.set(id, file);
+  try {
+    if (window._pendingCoverPreviews[id] && window._pendingCoverPreviews[id].url) {
+      URL.revokeObjectURL(window._pendingCoverPreviews[id].url);
+    }
+    window._pendingCoverPreviews[id] = { file, url: URL.createObjectURL(file) };
+  } catch(err) { console.warn('[cover] falha object URL (change)', err); }
   const row = inputEl.closest('.td-cover-row');
   if (row) {
     const nameSpan = row.querySelector('[data-cover-filename]');
@@ -1253,7 +1676,11 @@ function onCoverFileSelected(id, inputEl) {
 
 function resetCoverSelection(id) {
   coverSelectionState.delete(id);
-  const input = document.querySelector(`input[data-action="uploadCoverInput"][data-id="${CSS.escape(String(id))}"]`);
+  if (window._pendingCoverPreviews[id]) {
+    try { if (window._pendingCoverPreviews[id].url) URL.revokeObjectURL(window._pendingCoverPreviews[id].url); } catch(_) {}
+    delete window._pendingCoverPreviews[id];
+  }
+  const input = getCoverInput(id);
   if (input) input.value = '';
   const row = input && input.closest('.td-cover-row');
   if (row) {
@@ -1271,19 +1698,63 @@ function resetCoverSelection(id) {
 async function sendCoverUpload(id) {
   const file = coverSelectionState.get(id);
   if (!file) return;
-  const row = document.querySelector(`input[data-action="uploadCoverInput"][data-id="${CSS.escape(String(id))}"]`)?.closest('.td-cover-row');
+  const row = getCoverInput(id)?.closest('.td-cover-row');
   const prog = row?.querySelector('[data-cover-progress]');
   if (prog) { prog.style.display = ''; prog.textContent = '0%'; }
+  const token = getAuthToken();
+  if (!token) { showToast('Sessão expirada.'); return; }
   try {
-    const token = getAuthToken();
     await uploadTrainingCoverImage(token, id, file, (p)=> { if (prog) prog.textContent = p + '%'; });
-    showToast('Capa enviada com sucesso');
+    // Mostrar skeleton provisório no bloco de capa enquanto confirma
+    try {
+      const container = document.getElementById('trainingDetailContent');
+      const coverBox = container && container.querySelector('.td-box-cover');
+      if (coverBox) {
+        let preview = coverBox.querySelector('.td-cover-preview');
+        if (!preview) {
+          preview = document.createElement('div');
+          preview.className = 'td-cover-preview';
+          coverBox.appendChild(preview);
+        }
+        preview.innerHTML = '<div class="td-cover-skeleton" aria-hidden="true"></div>';
+        const statusEl = coverBox.querySelector('.td-warn, .td-ok');
+        if (statusEl) statusEl.outerHTML = '<span class="td-ok">Processando capa...</span>';
+      }
+    } catch(_) {}
+    // Após upload, refetch com retries para garantir propagação e confirmar coverImageUrl
+    const fetched = await verifyCoverAfterUpload(token, id);
+    if (fetched && fetched.coverImageUrl) {
+      window._recentCoverUploadId = id; // sinaliza para aplicar cache-buster na próxima render
+      showToast('Capa enviada e confirmada.');
+      // Limpa preview local porque agora backend já deve servir
+      if (window._pendingCoverPreviews[id]) {
+        try { if (window._pendingCoverPreviews[id].url) URL.revokeObjectURL(window._pendingCoverPreviews[id].url); } catch(_) {}
+        delete window._pendingCoverPreviews[id];
+      }
+    } else {
+      console.debug('[coverUpload] coverImageUrl ainda ausente após retries', fetched);
+      showToast('Upload feito, aguardando propagação da capa...', { type: 'warn' });
+    }
     coverSelectionState.delete(id);
     await initTrainingDetailPage();
   } catch(err) {
-    console.error(err);
+    console.error('[coverUpload] Falha', err);
     showToast('Erro ao enviar capa');
   }
+}
+
+async function verifyCoverAfterUpload(token, id, { attempts = 5, delayMs = 600 } = {}) {
+  const sleep = (ms) => new Promise(r=>setTimeout(r, ms));
+  let last = null;
+  for (let i=0;i<attempts;i++) {
+    try {
+      last = await getAdminTrainingById(token, id);
+      console.debug(`[coverUpload] tentativa ${i+1}/${attempts} - coverImageUrl=`, last && last.coverImageUrl);
+      if (last && last.coverImageUrl) return last;
+    } catch(e) { /* ignora e tenta novamente */ }
+    await sleep(delayMs);
+  }
+  return last;
 }
 
 function triggerPdfUpload(id) {

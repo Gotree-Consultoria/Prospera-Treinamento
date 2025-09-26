@@ -2,6 +2,302 @@
 // Estilos da Página de E-books
 // ======================================================= */
 
+/* Header mais compacto específico da página de E-books */
+#ebooksPage .page-header {
+    padding: 1.75rem 0 1.1rem; /* antes herdava var(--spacing-xl); reduzido */
+}
+#ebooksPage .page-header h1 {
+    font-size: 1.75rem; /* reduzido conforme solicitação */
+    margin-bottom: .45rem;
+    line-height: 1.18;
+    letter-spacing: .5px;
+}
+#ebooksPage .page-header p {
+    font-size: 1rem;
+    max-width: 560px;
+}
+
+/* Remover bloco legacy trainingsList na página de e-books */
+#ebooksPage .trainings-list.trainings-list--hidden {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ajustar aproximação entre header e mini grid */
+#ebooksPage .products { padding-top: 0.25rem; }
+#ebooksPage .ebooks-mini-catalog { margin-top: 1.2rem; }
+
+/* Header compacto também para página de Treinamentos */
+#packagesPage .page-header {
+    padding: 1.75rem 0 1.1rem;
+}
+#packagesPage .page-header h1 {
+    font-size: 1.75rem;
+    margin-bottom: .45rem;
+    line-height: 1.18;
+    letter-spacing: .5px;
+}
+#packagesPage .page-header p {
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Header compacto para Catálogo Completo */
+#catalogPage .page-header {
+    padding: 1.75rem 0 1.1rem;
+}
+#catalogPage .page-header h1 {
+    font-size: 1.75rem;
+    margin-bottom: .45rem;
+    line-height: 1.18;
+    letter-spacing: .5px;
+}
+#catalogPage .page-header p {
+    font-size: 1rem;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+/* =======================================================
+   Catálogo Completo - Filtros aprimorados
+   ======================================================= */
+#catalogPage .catalog-filters { background:linear-gradient(135deg,#f6f9f4,#eef4e8); padding:1.2rem 0 1rem; border-bottom:1px solid #e1e9dc; }
+#catalogPage .catalog-filters .container { display:flex; flex-direction:column; gap:1rem; }
+
+/* Barra de quick filters (chips) */
+#catalogPage .catalog-quick-filters { display:flex; gap:.55rem; flex-wrap:wrap; margin:0; justify-content:center; align-items:center; }
+#catalogPage .catalog-quick-filters .filter-btn { 
+    background:#ffffff; 
+    border:1px solid #d6e1d1; 
+    color:#1c352b; 
+    font-size:.72rem; 
+    letter-spacing:.5px; 
+    font-weight:600; 
+    padding:.55rem .85rem; 
+    border-radius:30px; 
+    box-shadow:0 2px 4px -2px rgba(0,0,0,.08); 
+    position:relative; 
+    transition:background .25s, color .25s, box-shadow .25s, transform .25s; 
+}
+#catalogPage .catalog-quick-filters .filter-btn:hover { background:#f0f7ed; box-shadow:0 4px 10px -4px rgba(0,0,0,.12); transform:translateY(-2px); }
+#catalogPage .catalog-quick-filters .filter-btn.active { background:linear-gradient(135deg,#005a32,#0b7a47); color:#fff; border-color:#0b7a47; box-shadow:0 5px 14px -5px rgba(0,90,50,.45); }
+
+/* Wrapper e título de setores */
+#catalogPage .catalog-sectors-wrapper { display:flex; flex-direction:column; gap:.55rem; }
+#catalogPage .catalog-sectors-wrapper .sector-header { display:flex; align-items:center; justify-content:space-between; padding:0 .25rem; }
+#catalogPage .catalog-sectors-wrapper .sector-title { font-size:.65rem; text-transform:uppercase; letter-spacing:.8px; font-weight:700; color:#06452c; opacity:.85; }
+#catalogPage .catalog-sectors-wrapper .sector-clear-btn { background:transparent; border:0; font-size:.55rem; letter-spacing:.5px; text-transform:uppercase; font-weight:600; color:#0b7a47; cursor:pointer; padding:4px 6px; border-radius:6px; transition:.2s ease background,color; }
+#catalogPage .catalog-sectors-wrapper .sector-clear-btn:hover { background:#e3efe5; }
+
+/* Botões comportando-se como radios */
+#catalogPage .catalog-quick-filters[role="radiogroup"] .filter-btn { position:relative; padding-left:1.6rem; }
+#catalogPage .catalog-quick-filters[role="radiogroup"] .filter-btn::before { content:""; position:absolute; left:.65rem; top:50%; width:.65rem; height:.65rem; border:2px solid #0b7a47; border-radius:50%; transform:translateY(-50%); background:#fff; box-sizing:border-box; transition:.25s all; }
+#catalogPage .catalog-quick-filters[role="radiogroup"] .filter-btn.active::before { background:#0b7a47; box-shadow:0 0 0 3px rgba(11,122,71,.25); }
+
+/* Badge de contagem (opcional futura injeção) */
+#catalogPage .catalog-quick-filters .filter-btn .count-badge { background:#0b7a47; color:#fff; font-size:.5rem; font-weight:600; padding:2px 5px; border-radius:10px; margin-left:6px; line-height:1; }
+
+/* Barra combinada de busca e selects */
+#catalogPage .catalog-filter-bar { display:flex; flex-wrap:wrap; gap:1rem; align-items:stretch; }
+#catalogPage .catalog-search { position:relative; flex:1 1 260px; }
+#catalogPage .catalog-search input { 
+    width:100%; 
+    background:#fff; 
+    border:1.5px solid #d6e1d1; 
+    padding:.65rem .9rem .65rem 2.4rem; 
+    border-radius:14px; 
+    font-size:.82rem; 
+    line-height:1.2; 
+    transition:border-color .25s, box-shadow .25s, background .25s; 
+}
+#catalogPage .catalog-search input:focus { outline:none; border-color:#0b7a47; box-shadow:0 0 0 3px rgba(11,122,71,.18); background:#ffffff; }
+#catalogPage .catalog-search i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#0b7a47; font-size:.9rem; }
+
+/* Select custom look */
+#catalogPage .catalog-selects { display:flex; gap:.7rem; align-items:stretch; flex-wrap:wrap; }
+#catalogPage .catalog-selects select { 
+    background:#fff; 
+    border:1.5px solid #d6e1d1; 
+    border-radius:14px; 
+    padding:.6rem .95rem; 
+    font-size:.75rem; 
+    font-weight:600; 
+    text-transform:uppercase; 
+    letter-spacing:.6px; 
+    color:#1c352b; 
+    cursor:pointer; 
+    -webkit-appearance:none; 
+    appearance:none; 
+    position:relative; 
+    min-width:160px;
+    transition:border-color .25s, box-shadow .25s, background .25s; 
+}
+#catalogPage .catalog-selects select:focus { outline:none; border-color:#0b7a47; box-shadow:0 0 0 3px rgba(11,122,71,.18); }
+
+/* Pequeno caret usando pseudo elemento container wrapper (opcional) */
+#catalogPage .catalog-selects select { background-image:linear-gradient(135deg,#005a32,#0b7a47); -webkit-background-clip:text; background-clip:text; color:transparent; }
+#catalogPage .catalog-selects select option { color:#1c352b; background:#fff; }
+
+/* Toggle de Formatos (segmented buttons) */
+#catalogPage .catalog-format-toggle { display:inline-flex; background:#ffffff; border:1.5px solid #d6e1d1; border-radius:14px; overflow:hidden; position:relative; margin-right:.4rem; }
+#catalogPage .catalog-format-toggle .format-btn { 
+    background:transparent; 
+    border:0; 
+    padding:.55rem .9rem; 
+    font-size:.65rem; 
+    letter-spacing:.5px; 
+    font-weight:600; 
+    text-transform:uppercase; 
+    color:#1c352b; 
+    cursor:pointer; 
+    position:relative; 
+    transition:.25s ease all; 
+    display:flex; 
+    align-items:center; 
+    gap:6px; 
+}
+#catalogPage .catalog-format-toggle .format-btn:not(:last-child){ border-right:1px solid #d6e1d1; }
+#catalogPage .catalog-format-toggle .format-btn:hover { background:#f2f8f1; }
+#catalogPage .catalog-format-toggle .format-btn.active { background:linear-gradient(135deg,#005a32,#0b7a47); color:#fff; box-shadow:0 6px 15px -4px rgba(0,90,50,.45); }
+#catalogPage .catalog-format-toggle .format-btn.active::after { content:''; position:absolute; inset:0; border:1px solid rgba(255,255,255,.35); border-radius:12px; pointer-events:none; }
+
+/* Esconder select sem retirar acessibilidade para leitores (tabindex -1) */
+#catalogPage select.visually-hidden-select { 
+    position:absolute; 
+    width:1px; height:1px; 
+    padding:0; margin:-1px; 
+    overflow:hidden; clip:rect(0 0 0 0); 
+    white-space:nowrap; border:0; 
+}
+
+/* Estados responsivos */
+@media (max-width:760px){
+  #catalogPage .catalog-quick-filters { gap:.45rem; }
+  #catalogPage .catalog-quick-filters .filter-btn { font-size:.68rem; padding:.5rem .7rem; }
+  #catalogPage .catalog-filter-bar { flex-direction:column; }
+  #catalogPage .catalog-selects { width:100%; }
+  #catalogPage .catalog-selects select { flex:1 1 auto; min-width:unset; width:100%; }
+}
+
+/* Capa nos cards do catálogo quando disponível */
+#catalogPage .catalog-card { position:relative; display:flex; flex-direction:column; }
+#catalogPage .catalog-card-cover { width:100%; aspect-ratio: 4/2.2; background:linear-gradient(135deg,#e5efe4,#d2e4d1); border-radius:10px; overflow:hidden; margin-bottom:.65rem; display:flex; align-items:center; justify-content:center; }
+#catalogPage .catalog-card-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+#catalogPage .catalog-card-cover.no-cover::after { content:'Sem capa'; font-size:.6rem; letter-spacing:.5px; font-weight:600; color:#1c352b; opacity:.55; }
+
+/* Scroll suave horizontal (fallback caso chips excedam largura) */
+#catalogPage .catalog-quick-filters { overflow-x:auto; }
+#catalogPage .catalog-quick-filters::-webkit-scrollbar { height:8px; }
+#catalogPage .catalog-quick-filters::-webkit-scrollbar-track { background:#e2ecde; border-radius:12px; }
+#catalogPage .catalog-quick-filters::-webkit-scrollbar-thumb { background:#0b7a47; border-radius:12px; }
+
+/* =============================================
+     Layout Miniaturas Catálogo Completo
+     ============================================= */
+#catalogPage .catalog-grid { 
+    display:grid; 
+    gap:16px; 
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); 
+    align-items:start; 
+}
+#catalogPage .catalog-card { 
+    background:#fff; 
+    border:1px solid #dfe6dd; 
+    border-radius:14px; 
+    padding:10px 10px 12px; 
+    box-shadow:0 2px 6px -2px rgba(0,0,0,.08); 
+    transition:.25s ease all; 
+    cursor:pointer; 
+    min-height:0; 
+}
+#catalogPage .catalog-card:hover { 
+    transform:translateY(-4px); 
+    box-shadow:0 8px 20px -6px rgba(0,0,0,.18); 
+    border-color:#bcd5c1; 
+}
+#catalogPage .catalog-card-badge { 
+    position:absolute; 
+    top:6px; left:6px; 
+    background:rgba(0,90,50,.9); 
+    color:#fff; 
+    padding:2px 6px; 
+    font-size:.55rem; 
+    border-radius:6px; 
+    letter-spacing:.5px; 
+    font-weight:600; 
+    z-index:2; 
+}
+#catalogPage .catalog-card-cover { 
+    aspect-ratio: 3/4; 
+    border-radius:10px; 
+    margin:0 0 8px; 
+    background:linear-gradient(135deg,#e4efe7,#d3e7d9); 
+    position:relative; 
+}
+#catalogPage .catalog-card-cover img { transition:.35s ease transform; }
+#catalogPage .catalog-card:hover .catalog-card-cover img { transform:scale(1.04); }
+#catalogPage .catalog-card-title { 
+    font-size:.72rem; 
+    line-height:1.15; 
+    margin:0 0 6px; 
+    font-weight:600; 
+    min-height:1.6em; 
+    color:#063d29; 
+}
+#catalogPage .catalog-card-desc { display:none; }
+#catalogPage .catalog-card-actions { 
+    margin-top:auto; 
+    display:flex; 
+}
+#catalogPage .catalog-card-actions .btn { 
+    font-size:.6rem; 
+    padding:6px 8px; 
+    border-radius:6px; 
+    background:linear-gradient(135deg,#005a32,#0b7a47); 
+    color:#fff; 
+    box-shadow:0 4px 10px -3px rgba(0,90,50,.35); 
+    width:100%; 
+}
+#catalogPage .catalog-card-actions .btn:hover { filter:brightness(1.08); }
+
+/* Ajustes responsivos para telas muito pequenas */
+@media (max-width:520px){
+    #catalogPage .catalog-grid { gap:12px; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+    #catalogPage .catalog-card { padding:8px 8px 10px; }
+    #catalogPage .catalog-card-title { font-size:.66rem; }
+    #catalogPage .catalog-card-actions .btn { font-size:.55rem; }
+}
+
+/* Header compacto para páginas institucionais e admin */
+#aboutPage .page-header,
+#contactPage .page-header,
+.adminUsersPage .page-header,
+.adminUserDetailPage .page-header,
+#adminContentPage .page-header {
+    padding: 1.6rem 0 1rem;
+}
+#aboutPage .page-header h1,
+#contactPage .page-header h1,
+.adminUsersPage .page-header h1,
+.adminUserDetailPage .page-header h1,
+#adminContentPage .page-header h1 {
+    font-size: 1.65rem;
+    margin-bottom: .4rem;
+    line-height: 1.18;
+    letter-spacing: .5px;
+}
+#aboutPage .page-header p,
+#contactPage .page-header p,
+.adminUsersPage .page-header p,
+.adminUserDetailPage .page-header p,
+#adminContentPage .page-header p {
+    font-size: .95rem;
+    max-width: 620px;
+    margin: 0 auto;
+}
+
 /* Estilo do contêiner de filtros e pesquisa */
 .filters-and-search {
     margin: var(--spacing-lg) 0;
@@ -78,4 +374,83 @@
     top: 50%;
     transform: translateY(-50%);
     color: var(--gray-light);
+}
+
+/* =======================================================
+     CTA final para Catálogo Completo
+     ======================================================= */
+.ebooks-mini-catalog { margin-top: 2.2rem; }
+.ebooks-mini-catalog .mini-title { font-size:1.6rem; margin:0 0 1rem; text-align:center; }
+.ebooks-mini-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:18px; }
+.ebook-mini-card { background:#fff; border:1px solid #e2eadb; border-radius:12px; padding:10px 10px 12px; display:flex; flex-direction:column; gap:8px; position:relative; box-shadow:0 2px 6px -2px rgba(0,0,0,.08); transition:.25s; cursor:pointer; }
+.ebook-mini-card:hover { box-shadow:0 6px 18px -6px rgba(0,0,0,.15); transform:translateY(-3px); }
+.ebook-mini-cover { width:100%; aspect-ratio:3/4; background:#f3f6ef center/cover no-repeat; border-radius:8px; box-shadow:0 0 0 1px #d7e2ce inset; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.ebook-mini-cover.no-img { background:linear-gradient(135deg,#005a32,#0b7d4a); box-shadow:0 0 0 1px #0b7d4a inset; }
+.ebook-mini-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+.ebook-mini-meta { font-size:.65rem; letter-spacing:.5px; font-weight:600; text-transform:uppercase; color:#4a5b4d; }
+.ebook-mini-title { font-size:.85rem; font-weight:600; line-height:1.25; color:#1c2d26; flex:1; }
+.ebook-mini-actions { display:flex; justify-content:space-between; align-items:center; }
+.ebook-mini-btn { background:linear-gradient(135deg,#005a32,#0b7a47); color:#fff; border:none; font-size:.70rem; padding:6px 10px; border-radius:16px; font-weight:600; cursor:pointer; box-shadow:0 3px 10px -4px rgba(0,90,50,.45); transition:.25s; }
+.ebook-mini-btn:hover { transform:translateY(-2px); }
+.mini-empty { text-align:center; font-size:.9rem; color:#5c6d60; margin-top:1rem; }
+
+/* Modal Detalhe */
+.ebook-detail-modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:flex-start; justify-content:center; padding:60px 20px 40px; z-index:1000; overflow-y:auto; }
+.ebook-detail-content { background:#fff; max-width:760px; width:100%; border-radius:18px; padding:34px 34px 40px; position:relative; box-shadow:0 12px 40px -10px rgba(0,0,0,.4); animation:fadeInScale .35s ease; }
+.ebook-detail-close { position:absolute; top:12px; right:14px; background:none; border:none; font-size:1.8rem; line-height:1; cursor:pointer; color:#1f3a31; }
+.ebook-detail-header { display:flex; gap:24px; flex-wrap:wrap; }
+.ebook-detail-cover { width:220px; aspect-ratio:3/4; background:#f0f5ed center/cover no-repeat; border-radius:12px; box-shadow:0 0 0 1px #dfe8d8 inset; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.ebook-detail-cover.no-img { background:linear-gradient(135deg,#005a32,#0b7d4a); box-shadow:0 0 0 1px #0b7d4a inset; }
+.ebook-detail-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+.ebook-detail-info { flex:1; min-width:260px; display:flex; flex-direction:column; gap:12px; }
+.ebook-detail-info h3 { margin:0; font-size:1.6rem; color:#063d36; }
+.ebook-detail-desc { font-size:.95rem; line-height:1.5; color:#2d4239; }
+.ebook-detail-footer { margin-top:24px; display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.ebook-detail-footer .btn-primary { background:linear-gradient(135deg,#005a32,#0b7a47); color:#fff; border:none; padding:.85rem 1.4rem; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px -4px rgba(0,90,50,.4); }
+@keyframes fadeInScale { from { opacity:0; transform:translateY(20px) scale(.97);} to { opacity:1; transform:translateY(0) scale(1);} }
+@media (max-width:640px){
+    .ebook-detail-content { padding:26px 22px 32px; }
+    .ebook-detail-cover { width:160px; }
+    .ebook-detail-info h3 { font-size:1.3rem; }
+}
+.more-catalog-cta {
+    padding: 1.5rem 0 1.75rem; /* altura reduzida */
+    background: linear-gradient(135deg, rgba(0,90,50,.035), rgba(190,215,55,.05)); /* mais leve */
+    margin-top: 1.5rem;
+}
+.more-catalog-cta .container {
+    display: flex;
+    justify-content: center;
+}
+.catalog-cta-box {
+    max-width: 560px; /* mais compacto */
+    margin: 0 auto;
+    text-align: center;
+    background: #fff;
+    border: 1px solid #dfe9d6;
+    border-radius: 12px;
+    padding: 1.25rem 1rem; /* menos padding interno */
+    box-shadow: 0 3px 12px -4px rgba(0,0,0,.08);
+}
+.catalog-cta-box p {
+    font-size: 1.05rem;
+    margin: 0 0 1rem;
+    font-weight: 500;
+    color: #064b2b;
+}
+.catalog-cta-box .btn {
+    background: linear-gradient(90deg, var(--verde-escuro,#005a32), #0b7a47);
+    color: #fff;
+    border: none;
+    padding: .7rem 1.3rem;
+    font-size: .95rem;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0,0,0,.14);
+    transition: transform .15s, box-shadow .15s;
+}
+.catalog-cta-box .btn:hover, .catalog-cta-box .btn:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px -4px rgba(0,0,0,.25);
 }

@@ -10,7 +10,6 @@ export async function loadAllComponents() {
         { id: "aboutPageContainer", file: "src/partials/aboutPage.html" },
         { id: "contactPageContainer", file: "src/partials/contactPage.html" },
         { id: "accountPageContainer", file: "src/partials/accountPage.html" },
-        { id: "cartPageContainer", file: "src/partials/cartPage.html" },
         { id: "faqPageContainer", file: "src/partials/faqPage.html" },
         { id: "footerPageContainer", file: "src/partials/footerPage.html" },
         { id: "productCategoriesContainer", file: "src/partials/productCategoriesPage.html" },
