@@ -221,6 +221,9 @@
 .learning-org-sectors .los-reset:hover { background:#f1f5f9; }
 .learning-org-sectors .los-org-name { font-weight:600; font-size:.7rem; color:#334155; margin-right:6px; }
 .learning-org-sectors .los-empty-hint { font-size:.6rem; color:#64748b; }
+.learning-role-notice { margin: 8px 0 14px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: .78rem; color: #1f2937; line-height: 1.45; }
+.learning-role-notice strong { color: #0f172a; }
+.learning-role-notice .counts { display: block; margin-top: 6px; font-size: .72rem; color: #475569; }
 @media (max-width: 640px) {
   .osa-inline { flex-direction: column; align-items: stretch; }
   .osa-meta { flex-direction: column; align-items: flex-start; }

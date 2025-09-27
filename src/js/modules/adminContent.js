@@ -1,7 +1,9 @@
-import { getAdminTrainings, createAdminTraining, publishAdminTraining, assignTrainingToSector, getAdminSectors, getAdminTrainingById, updateAdminTraining, deleteAdminTraining, uploadEbookFileWithProgress, buildEbookFileUrl, getAdminSectorById, API_BASE_URL, unlinkTrainingSector, orgUnfollowSector } from './api.js';
+import { getAdminTrainings, createAdminTraining, publishAdminTraining, assignTrainingToSector, getAdminSectors, getAdminTrainingById, updateAdminTraining, deleteAdminTraining, uploadEbookFileWithProgress, buildEbookFileUrl, getAdminSectorById, API_BASE_URL, unlinkTrainingSector, orgUnfollowSector, updateEbookProgress, fetchEbookProgress } from './api.js';
 import { uploadTrainingCoverImage } from './api.js';
 import { showToast } from './notifications.js';
 import { showPage, currentPage } from './navigation.js';
+
+const READER_PROGRESS_KEY_PREFIX = 'prospera:readerProgress:';
 
 function isSystemAdmin() {
   const raw = localStorage.getItem('systemRole') || localStorage.getItem('userRole') || '';
@@ -1301,6 +1303,9 @@ document.addEventListener('page:loaded', (e) => {
   if (e.detail.page === 'trainingDetail') {
     try { initTrainingDetailPage && initTrainingDetailPage(); } catch(err) { console.warn('Falha init detalhe', err); }
   }
+  if (e.detail.page === 'trainingReader') {
+    try { initTrainingReaderPage && initTrainingReaderPage(); } catch(err) { console.warn('Falha init reader', err); }
+  }
 });
 
 // Listener global de segurança (captura clicks mesmo fora do card original, ex: se id mudou)
@@ -1319,9 +1324,13 @@ if (!window._adminContentGlobalNewTrainingBound) {
 }
 
 // ================= NOVA NAVEGAÇÃO PARA PÁGINA DE DETALHE =================
-function navigateToTrainingDetail(id) {
+function navigateToTrainingDetail(id, options = {}) {
   if (!id) return;
-  try { window._openTrainingId = id; } catch(_) {}
+  try {
+    window._openTrainingId = id;
+    if (options && options.training) window._trainingDetailPreloaded = options.training;
+    if (options && options.source) window._trainingDetailSource = options.source;
+  } catch(_) {}
   try {
     const adminPages = new Set(['adminContent','adminUsers','adminOrgs','adminOrgDetail','adminAnalytics','platformSectors','platformTags','platformLevels','platformEmails','platformPolicies','platformIntegrations','platformAudit','platformCache']);
     if (adminPages.has(currentPage)) {
@@ -1329,7 +1338,9 @@ function navigateToTrainingDetail(id) {
     }
   } catch(_){ }
   if (typeof showPage === 'function') {
-    showPage('trainingDetail', { trainingId: id });
+    const role = getPrimaryRole();
+    const targetPage = (role === 'SYSTEM_ADMIN' || role === 'ORG_ADMIN') ? 'trainingDetail' : 'trainingReader';
+    showPage(targetPage, { trainingId: id });
   } else { console.warn('showPage não disponível'); }
 }
 
@@ -1340,17 +1351,40 @@ async function initTrainingDetailPage() {
   const id = window._openTrainingId;
   if (!id) {
     container.innerHTML = '<p class="td-empty">ID do treinamento não definido.</p>';
+    if (actionsBar) {
+      actionsBar.innerHTML = '';
+      actionsBar.classList.add('is-empty');
+    }
     return;
   }
   container.innerHTML = '<div class="td-loading">Carregando...</div>';
-  try {
-    const token = getAuthToken();
-    if (!token) {
-      container.innerHTML = '<p class="td-error">Sessão não encontrada. Redirecionando para login...</p>';
-      setTimeout(()=> { try { showPage('loginPage'); } catch(_) {} }, 900);
+  if (actionsBar) {
+    actionsBar.innerHTML = '';
+    actionsBar.classList.add('is-empty');
+  }
+  const token = getAuthToken();
+  if (!token) {
+    container.innerHTML = '<p class="td-error">Sessão não encontrada. Redirecionando para login...</p>';
+    setTimeout(()=> { try { showPage('loginPage'); } catch(_) {} }, 900);
+    return;
+  }
+  const role = getPrimaryRole();
+  if (role !== 'SYSTEM_ADMIN' && role !== 'ORG_ADMIN') {
+    if (typeof showPage === 'function') {
+      showPage('trainingReader', { trainingId: id, forceReload: true });
       return;
     }
+    try {
+      await renderLearnerTrainingDetail({ id, token, container, actionsBar, role });
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = `<p class="td-error">Erro ao carregar: ${escapeHtml(err.message || 'Erro')}</p>`;
+    }
+    return;
+  }
+  try {
     const t = await getAdminTrainingById(token, id);
+    try { window._currentTrainingDetail = t; } catch(_) {}
     // Confiar diretamente na URL vinda do backend; aplicar cache-buster apenas após upload recente
     if (t && t.coverImageUrl && window._recentCoverUploadId === id) {
       try {
@@ -1382,7 +1416,6 @@ async function initTrainingDetailPage() {
         t._resolvedSectorAssignments = t.sectorAssignments.map(a => ({ ...a, _sector: (a.sectorId && cache[a.sectorId]) || null }));
       }
     } catch(err) { console.warn('Erro ao resolver nomes de setores', err); }
-    const role = getPrimaryRole();
     container.innerHTML = renderTrainingDetailHtml(t, role);
     if (actionsBar) {
       actionsBar.innerHTML = buildDetailPageActionsHtml(t, role);
@@ -1393,12 +1426,779 @@ async function initTrainingDetailPage() {
       }
     }
     try { enhanceCoverImage(t); } catch(errEnh) { console.warn('Falha enhanceCoverImage', errEnh); }
-  // updateTrainingDetailStatusPill removido: status já é mostrado em seção inferior detalhada
-  attachDetailPageHandlers(t);
+    // updateTrainingDetailStatusPill removido: status já é mostrado em seção inferior detalhada
+    attachDetailPageHandlers(t);
   } catch (err) {
     console.error(err);
     container.innerHTML = `<p class="td-error">Erro ao carregar: ${escapeHtml(err.message || 'Erro')}</p>`;
   }
+}
+
+async function initTrainingReaderPage() {
+  const root = document.getElementById('trainingReaderPageRoot');
+  const content = document.getElementById('trainingReaderContent');
+  const messages = document.getElementById('trainingReaderMessages');
+  if (!root || !content) return;
+  if (typeof root._readerCleanup === 'function') {
+    try { root._readerCleanup(); } catch (_) { /* noop */ }
+    root._readerCleanup = null;
+  }
+  const id = window._openTrainingId;
+  if (!id) {
+    content.innerHTML = '<p class="td-empty">Treinamento não informado.</p>';
+    if (messages) messages.textContent = '';
+    return;
+  }
+  const token = getAuthToken();
+  if (!token) {
+    content.innerHTML = '<p class="td-error">Sessão expirada. Faça login novamente para acessar o material.</p>';
+    if (messages) messages.textContent = '';
+    setTimeout(() => { try { showPage('login'); } catch (_) { window.location.hash = '#login'; } }, 600);
+    return;
+  }
+  content.innerHTML = '<p class="td-loading">Carregando conteúdo...</p>';
+  if (messages) messages.textContent = '';
+  try {
+    const role = getPrimaryRole();
+    const training = await fetchLearnerTrainingData(id, token);
+    if (!training) {
+      content.innerHTML = '<p class="td-empty">Treinamento não encontrado ou não atribuído.</p>';
+      return;
+    }
+    try { window._currentTrainingDetail = training; } catch (_) {}
+    const pdfUrl = resolveTrainingPdfUrl(training, { preferStream: true });
+    let progressData = null;
+    try {
+      progressData = await fetchEbookProgress(token, training.id);
+      if (progressData && typeof progressData === 'object') {
+        training._progressInfo = progressData;
+      }
+    } catch (progressErr) {
+      console.warn('[trainingReader] falha ao obter progresso do e-book', progressErr);
+    }
+    const initialPage = inferLearnerStartingPage(training, progressData);
+    content.innerHTML = renderLearnerTrainingDetailHtml(training, role, { pdfUrl, readerMode: true, progressData, initialPage });
+    const titleEl = root.querySelector('.training-title');
+    if (titleEl) titleEl.textContent = training.title || 'Leitura de E-book';
+    const viewer = content.querySelector('#trainingPdfContainer');
+    if (!viewer) return;
+    if (!pdfUrl) {
+      viewer.innerHTML = '<p class="td-empty">Nenhum material PDF foi disponibilizado para este treinamento.</p>';
+      return;
+    }
+    viewer.innerHTML = '<div class="pdf-loading">Carregando PDF...</div>';
+    const { renderPdfInto } = await import('./pdfViewer.js');
+    const controller = await renderPdfInto(pdfUrl, viewer, { token, renderMode: 'single', initialPage });
+    if (controller) {
+      setupLearnerReaderControls({ root, controller, token, training, messages, progressInfo: progressData });
+      const totalFromProgress = progressData && progressData.totalPages ? Number(progressData.totalPages) : 0;
+      updateReaderProgressUI(root, {
+        page: controller.currentPage || initialPage,
+        totalPages: (totalFromProgress && Number.isFinite(totalFromProgress) ? totalFromProgress : 0) || controller.pageCount || Number(viewer.dataset.pdfPages || viewer.dataset.totalPages || 0)
+      });
+    }
+  } catch (err) {
+    console.error('[trainingReader] erro ao preparar leitor', err);
+    content.innerHTML = '<p class="td-error">Não foi possível carregar o conteúdo no momento.</p>';
+    if (messages) messages.textContent = escapeHtml(err.message || 'Erro inesperado.');
+  }
+
+  if (!root._readerHandlersBound) {
+    root._readerHandlersBound = true;
+    root.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-action="readerBack"]');
+      if (!btn) return;
+      event.preventDefault();
+      try {
+        try {
+          if (typeof root._readerCleanup === 'function') {
+            root._readerCleanup();
+            root._readerCleanup = null;
+          }
+        } catch (_) { /* noop */ }
+        try { delete window._openTrainingId; } catch (_) {}
+        showPage('learning', { forceReload: true });
+      } catch (_) {
+        window.location.hash = '#learning';
+      }
+    });
+  }
+}
+
+async function renderLearnerTrainingDetail({ id, token, container, actionsBar, role }) {
+  if (!container) return;
+  container.classList.add('learner-detail');
+  let training;
+  try {
+    training = await fetchLearnerTrainingData(id, token);
+  } catch (err) {
+    console.error('[learnerDetail] erro carregando treinamento', err);
+    container.innerHTML = `<p class="td-error">${escapeHtml(err.message || 'Erro ao carregar treinamento.')}</p>`;
+    if (actionsBar) {
+      actionsBar.innerHTML = '';
+      actionsBar.classList.add('is-empty');
+    }
+    return;
+  }
+  if (!training) {
+    container.innerHTML = '<p class="td-empty">Treinamento não encontrado ou não atribuído.</p>';
+    if (actionsBar) {
+      actionsBar.innerHTML = '';
+      actionsBar.classList.add('is-empty');
+    }
+    return;
+  }
+  try { window._currentTrainingDetail = training; } catch(_) {}
+  const pdfUrl = resolveTrainingPdfUrl(training, { preferStream: true });
+  container.innerHTML = renderLearnerTrainingDetailHtml(training, role, { pdfUrl });
+  if (actionsBar) {
+    const actionsHtml = buildLearnerActionsHtml(training);
+    actionsBar.innerHTML = actionsHtml;
+    if (!actionsHtml.trim()) actionsBar.classList.add('is-empty'); else actionsBar.classList.remove('is-empty');
+  }
+  const viewer = container.querySelector('#trainingPdfContainer');
+  if (!viewer) return;
+  if (!pdfUrl) {
+    viewer.innerHTML = '<p class="td-empty">Nenhum material PDF foi disponibilizado para este treinamento.</p>';
+    return;
+  }
+  viewer.innerHTML = '<div class="pdf-loading">Carregando PDF...</div>';
+  try {
+    const { renderPdfInto } = await import('./pdfViewer.js');
+    await renderPdfInto(pdfUrl, viewer, { token });
+  } catch (err) {
+    console.error('[trainingDetail] erro ao renderizar PDF', err);
+    viewer.innerHTML = '<p class="td-error">Não foi possível carregar o PDF no momento. Tente recarregar a página ou contate o administrador da plataforma.</p>';
+  }
+}
+
+async function fetchLearnerTrainingData(id, token) {
+  if (!id) throw new Error('Treinamento não informado.');
+  if (!token) throw new Error('Sessão expirada.');
+  let training = null;
+  try {
+    if (window._trainingDetailPreloaded && String(window._trainingDetailPreloaded.id) === String(id)) {
+      training = window._trainingDetailPreloaded;
+    }
+  } catch (_) { /* ignore */ }
+  if (!training) {
+    const { getMyTrainingEnrollments } = await import('./api.js');
+    const raw = await getMyTrainingEnrollments(token);
+    training = extractLearnerTrainingFromCollection(raw, id);
+  }
+  try { delete window._trainingDetailPreloaded; } catch (_) { /* ignore */ }
+  return training;
+}
+
+function buildLearnerActionsHtml() {
+  return '';
+}
+
+function renderLearnerTrainingDetailHtml(training, role = 'ORG_MEMBER', { pdfUrl, readerMode = false, progressData = null, initialPage = 1 } = {}) {
+  const enrollment = training && training._enrollment ? training._enrollment : {};
+  const statusInfo = mapLearnerStatus(enrollment.enrollmentStatus || enrollment.status || training.enrollmentStatus);
+  const entityBadge = mapEntityTypeBadge(training.entityType);
+  const assignedAt = enrollment.enrolledAt || enrollment.assignedAt || enrollment.createdAt || training.enrolledAt || training.assignedAt;
+  const assignedLabel = assignedAt ? formatLearnerAssignedDate(assignedAt) : '—';
+  const lastAccess = enrollment.lastAccessedAt || enrollment.updatedAt || training.updatedAt || null;
+  const progressInfo = progressData || training._progressInfo || null;
+  const progressPercentRaw = (progressInfo && typeof progressInfo.progressPercentage === 'number') ? progressInfo.progressPercentage : null;
+  const computedProgress = computeLearnerProgressValue(training);
+  const normalizedPercent = progressPercentRaw != null ? Math.min(100, Math.max(0, Number(progressPercentRaw))) : computedProgress;
+  const coverUrl = resolveTrainingCoverUrl(training);
+  const placeholderLetter = (String(training.title || 'T').trim().charAt(0) || 'T').toUpperCase();
+  const description = (training.description && training.description.trim()) ? escapeHtml(training.description.trim()) : '<em>Sem descrição informada.</em>';
+  const badges = buildLearnerBadges(training, enrollment, entityBadge);
+  const progressLabel = progressPercentRaw != null
+    ? `${normalizedPercent % 1 === 0 ? normalizedPercent.toFixed(0) : normalizedPercent.toFixed(2)}%`
+    : `${normalizedPercent}%`;
+  const lastPageFromProgress = progressInfo && progressInfo.lastPageRead != null ? Math.max(1, Math.round(Number(progressInfo.lastPageRead))) : null;
+  const totalPagesFromProgress = progressInfo && progressInfo.totalPages != null && Number(progressInfo.totalPages) > 0
+    ? Math.max(1, Math.round(Number(progressInfo.totalPages)))
+    : null;
+  const initialReaderPage = Math.max(1, Math.round(Number(initialPage || lastPageFromProgress || 1)));
+
+  const readerControlsMarkup = readerMode ? `
+      <div class="reader-controls" data-reader-controls hidden>
+        <button type="button" class="reader-nav-btn" data-reader-prev aria-label="Página anterior">Anterior</button>
+        <div class="reader-page-indicator">Página <span data-reader-current>${escapeHtml(String(lastPageFromProgress || initialReaderPage))}</span> de <span data-reader-total>${totalPagesFromProgress ? escapeHtml(String(totalPagesFromProgress)) : '—'}</span></div>
+        <div class="reader-progress-display">
+          <div class="reader-progress-track" data-reader-progress-track role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${normalizedPercent}">
+            <div class="reader-progress-fill" data-reader-progress-fill style="width:${normalizedPercent}%"></div>
+          </div>
+          <span class="reader-progress-text" data-reader-progress-text aria-live="polite">${escapeHtml(progressLabel)} concluído</span>
+        </div>
+        <button type="button" class="reader-nav-btn" data-reader-next aria-label="Próxima página">Próxima</button>
+      </div>` : '';
+
+  const coverMarkup = coverUrl
+    ? `<div class="learner-cover"><img src="${escapeAttr(coverUrl)}" alt="Capa do treinamento" loading="lazy" decoding="async" /></div>`
+    : `<div class="learner-cover"><div class="learning-cover-placeholder" aria-hidden="true">${escapeHtml(placeholderLetter)}</div></div>`;
+
+  const readerHeading = readerMode ? 'Material atribuído' : 'Material do treinamento';
+  const viewerContent = pdfUrl
+    ? '<div class="pdf-loading">Carregando PDF...</div>'
+    : '<p class="td-empty">Nenhum material PDF foi disponibilizado para este treinamento.</p>';
+
+  const lastAccessLabel = lastAccess ? formatLearnerAssignedDate(lastAccess) : '—';
+  const baseNote = 'Seu progresso é atualizado automaticamente ao avançar na leitura.';
+  const noteText = (readerMode && (lastPageFromProgress || initialReaderPage) && totalPagesFromProgress)
+    ? `Página ${escapeHtml(String(lastPageFromProgress || initialReaderPage))} de ${escapeHtml(String(totalPagesFromProgress))}. ${baseNote}`
+    : baseNote;
+
+  return `
+    <div class="learner-overview" data-role="${escapeAttr(role || '')}">
+      <div class="learner-meta">
+        ${statusInfo.label ? `<span class="learner-status status-${escapeAttr(statusInfo.className)}">${escapeHtml(statusInfo.label)}</span>` : ''}
+        ${badges.map(b => `<span class="learner-badge">${escapeHtml(b)}</span>`).join(' ')}
+      </div>
+      <h2 class="learner-title">${escapeHtml(training.title || 'Treinamento')}</h2>
+      ${training.author ? `<p class="learner-author">Autor: <strong>${escapeHtml(training.author)}</strong></p>` : ''}
+      <p class="learner-description">${description}</p>
+      ${coverMarkup}
+    </div>
+    <div class="learner-assignment">
+      <h3>Informações da sua matrícula</h3>
+      <div class="learner-assignment-list">
+        <div><dt>Status atual</dt><dd>${statusInfo.label ? escapeHtml(statusInfo.label) : '—'}</dd></div>
+        <div><dt>Atribuído desde</dt><dd>${escapeHtml(assignedLabel)}</dd></div>
+        <div><dt>Último acesso</dt><dd>${escapeHtml(lastAccessLabel)}</dd></div>
+        <div><dt>Progresso</dt><dd><span data-learner-progress-value>${escapeHtml(progressLabel)}</span></dd></div>
+      </div>
+      <div class="learner-notes" data-learner-progress-note data-note-default="${escapeAttr(baseNote)}">${escapeHtml(noteText)}</div>
+    </div>
+    <div class="learner-reader" data-reader-root>
+      <h3>${escapeHtml(readerHeading)}</h3>
+      ${readerControlsMarkup}
+      <div class="training-pdf-shell">
+        <div class="training-pdf-container" id="trainingPdfContainer" data-training-id="${escapeAttr(training.id || '')}" ${totalPagesFromProgress ? `data-total-pages="${escapeAttr(String(totalPagesFromProgress))}"` : ''}>
+          ${viewerContent}
+        </div>
+      </div>
+    </div>`;
+}
+
+function mapLearnerStatus(status) {
+  const normalized = (status || '').toString().toUpperCase();
+  switch (normalized) {
+    case 'ACTIVE':
+      return { label: 'Em andamento', className: 'active' };
+    case 'COMPLETED':
+      return { label: 'Concluído', className: 'completed' };
+    case 'CANCELLED':
+      return { label: 'Cancelado', className: 'cancelled' };
+    case 'NOT_ENROLLED':
+    case 'PENDING':
+      return { label: 'Não iniciado', className: 'pending' };
+    default:
+      return { label: '', className: '' };
+  }
+}
+
+function mapEntityTypeBadge(entityType) {
+  const normalized = (entityType || '').toString().toUpperCase();
+  if (normalized === 'EBOOK') return 'E-book';
+  if (normalized === 'RECORDED_COURSE') return 'Curso Gravado';
+  if (normalized === 'LIVE_TRAINING') return 'Treinamento ao Vivo';
+  return '';
+}
+
+function formatLearnerAssignedDate(value) {
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch (err) {
+    return String(value || '—');
+  }
+}
+
+function firstDefined(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function computeLearnerProgressValue(training) {
+  const enrollment = training && training._enrollment ? training._enrollment : {};
+  let raw = firstDefined(
+    training.progressPercentage,
+    training.progress,
+    enrollment.progressPercentage,
+    enrollment.progress,
+    enrollment.completionRate
+  );
+  if (raw === undefined || raw === null || raw === '') raw = 0;
+  raw = Number(raw);
+  if (!Number.isFinite(raw)) raw = 0;
+  if (raw > 0 && raw <= 1) raw = raw * 100;
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+function getStoredReaderPage(trainingId) {
+  if (!trainingId) return null;
+  try {
+    const raw = localStorage.getItem(READER_PROGRESS_KEY_PREFIX + trainingId);
+    if (!raw) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function setStoredReaderPage(trainingId, page) {
+  if (!trainingId) return;
+  const value = Number(page);
+  if (!Number.isFinite(value) || value <= 0) return;
+  try {
+    localStorage.setItem(READER_PROGRESS_KEY_PREFIX + trainingId, String(Math.round(value)));
+  } catch (_) { /* ignore quota issues */ }
+}
+
+function extractLastPageFromTraining(training, progressInfo = null) {
+  if (!training) return null;
+  const enrollment = training._enrollment || {};
+  const progress = progressInfo || training._progressInfo || null;
+  const candidates = [
+    progress && progress.lastPageRead,
+    enrollment.lastPageRead,
+    training.lastPageRead,
+    enrollment.pageNumber,
+    enrollment.page,
+    enrollment.currentPage
+  ];
+  for (const candidate of candidates) {
+    const num = Number(candidate);
+    if (Number.isFinite(num) && num > 0) return Math.round(num);
+  }
+  return null;
+}
+
+function inferLearnerStartingPage(training, progressInfo = null) {
+  const extracted = extractLastPageFromTraining(training, progressInfo);
+  if (extracted) return extracted;
+  const stored = getStoredReaderPage(training && training.id);
+  if (stored) return stored;
+  return 1;
+}
+
+function updateReaderProgressUI(root, { page, totalPages }) {
+  if (!root) return;
+  const numericPage = Math.max(1, Math.round(Number(page) || 1));
+  const numericTotal = Math.max(0, Math.round(Number(totalPages) || 0));
+  const currentEl = root.querySelector('[data-reader-current]');
+  const totalEl = root.querySelector('[data-reader-total]');
+  const progressValueEl = root.querySelector('[data-learner-progress-value]');
+  const progressTextEl = root.querySelector('[data-reader-progress-text]');
+  const progressTrack = root.querySelector('[data-reader-progress-track]');
+  const progressFill = root.querySelector('[data-reader-progress-fill]');
+  const noteEl = root.querySelector('[data-learner-progress-note]');
+
+  if (currentEl) currentEl.textContent = String(numericPage);
+  if (totalEl) totalEl.textContent = numericTotal > 0 ? String(numericTotal) : '—';
+
+  let percent = null;
+  if (numericTotal > 0) {
+    percent = Math.min(100, Math.max(0, Math.round((numericPage / numericTotal) * 100)));
+  }
+  if (percent != null) {
+    const label = `${percent}%`;
+    if (progressValueEl) progressValueEl.textContent = label;
+    if (progressTextEl) progressTextEl.textContent = `${label} concluído`;
+    if (progressTrack) {
+      progressTrack.setAttribute('aria-valuenow', String(percent));
+      progressTrack.setAttribute('aria-valuetext', `Leitura ${percent}% concluída`);
+    }
+    if (progressFill) progressFill.style.width = `${percent}%`;
+  } else {
+    if (progressFill) progressFill.style.width = '0%';
+  }
+
+  if (noteEl) {
+    const base = noteEl.dataset.noteDefault || noteEl.textContent || '';
+    if (numericTotal > 0) {
+      noteEl.textContent = `Página ${numericPage} de ${numericTotal}. ${base}`.trim();
+    } else {
+      noteEl.textContent = base;
+    }
+  }
+}
+
+function setupLearnerReaderControls({ root, controller, token, training, messages, progressInfo = null }) {
+  if (!root || !controller) return;
+  const controls = root.querySelector('[data-reader-controls]');
+  if (!controls) return;
+
+  if (typeof root._readerCleanup === 'function') {
+    try { root._readerCleanup(); } catch (_) { /* noop */ }
+    root._readerCleanup = null;
+  }
+
+  controls.hidden = false;
+  controls.removeAttribute('hidden');
+  controls.classList.add('is-ready');
+
+  const prevBtn = controls.querySelector('[data-reader-prev]');
+  const nextBtn = controls.querySelector('[data-reader-next]');
+  const noteEl = root.querySelector('[data-learner-progress-note]');
+  const container = root.querySelector('#trainingPdfContainer');
+  const datasetTotal = container ? Number(container.dataset.totalPages || container.dataset.pdfPages || 0) : 0;
+  const progressTotal = progressInfo && progressInfo.totalPages ? Number(progressInfo.totalPages) : 0;
+  let totalPages = 0;
+  if (Number.isFinite(progressTotal) && progressTotal > 0) totalPages = Math.round(progressTotal);
+  if (!totalPages && Number.isFinite(datasetTotal) && datasetTotal > 0) totalPages = Math.round(datasetTotal);
+  if (!totalPages && Number.isFinite(controller.pageCount) && controller.pageCount > 0) totalPages = Math.round(controller.pageCount);
+  if (totalPages > 0 && container) {
+    container.dataset.totalPages = String(totalPages);
+  }
+  if (noteEl) {
+    noteEl.textContent = 'Use os botões de navegação ou as setas do teclado para registrar seu progresso automaticamente.';
+  }
+
+  if (totalPages <= 1) {
+    controls.classList.add('is-single-page');
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+  }
+
+  updateReaderProgressUI(root, { page: controller.currentPage || 1, totalPages });
+
+  let isNavigating = false;
+  let persistTimeout = null;
+  const cleanupFns = [];
+  const trainingId = training && training.id ? training.id : null;
+  let lastPersistedPage = extractLastPageFromTraining(training, progressInfo) || getStoredReaderPage(trainingId);
+
+  const finalizeNavigationState = () => {
+    const current = controller.currentPage || 1;
+    const disablePrev = current <= 1 || totalPages <= 1;
+    const disableNext = totalPages <= 1 || (totalPages > 0 && current >= totalPages);
+    if (prevBtn) prevBtn.disabled = disablePrev;
+    if (nextBtn) nextBtn.disabled = disableNext;
+  };
+
+  finalizeNavigationState();
+
+  const notifyProgressPersistError = () => {
+    if (!messages) return;
+    if (messages.dataset.progressError) return;
+    messages.dataset.progressError = 'true';
+    messages.textContent = 'Não foi possível salvar sua última página agora. Continuaremos tentando.';
+    setTimeout(() => {
+      if (messages.dataset.progressError) {
+        messages.textContent = '';
+        delete messages.dataset.progressError;
+      }
+    }, 4000);
+  };
+
+  const persistProgress = (page) => {
+    const numericPage = Math.max(1, Math.round(Number(page) || 1));
+    if (!trainingId) return;
+    setStoredReaderPage(trainingId, numericPage);
+    try {
+      const enrollment = training ? (training._enrollment = training._enrollment || {}) : null;
+      if (enrollment) enrollment.lastPageRead = numericPage;
+      const info = training ? (training._progressInfo = training._progressInfo || {}) : null;
+      if (info) {
+        info.lastPageRead = numericPage;
+        if (totalPages > 0) info.totalPages = totalPages;
+        progressInfo = info;
+      }
+    } catch (_) { /* ignore */ }
+    if (!token) return;
+    if (lastPersistedPage === numericPage) return;
+    if (persistTimeout) clearTimeout(persistTimeout);
+    persistTimeout = setTimeout(async () => {
+      try {
+        await updateEbookProgress(token, trainingId, numericPage);
+        lastPersistedPage = numericPage;
+        if (messages) {
+          delete messages.dataset.progressError;
+          messages.textContent = '';
+        }
+      } catch (err) {
+        console.warn('[trainingReader] falha ao atualizar progresso remoto', err);
+        notifyProgressPersistError();
+      }
+    }, 800);
+  };
+
+  const navigateTo = async (delta) => {
+    if (isNavigating || typeof controller.goTo !== 'function') return;
+    const current = controller.currentPage || 1;
+    let target = Number.isFinite(delta) ? current + delta : current;
+    if (totalPages > 0) {
+      target = Math.max(1, Math.min(totalPages, Math.round(target)));
+    } else {
+      target = Math.max(1, Math.round(target));
+    }
+    if (target === current) return;
+
+    isNavigating = true;
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    try {
+      await controller.goTo(target);
+      const currentPage = controller.currentPage || target;
+      if (!totalPages && container) {
+        const refreshed = Number(container.dataset.totalPages || container.dataset.pdfPages || 0);
+        if (Number.isFinite(refreshed) && refreshed > 0) {
+          totalPages = Math.round(refreshed);
+        }
+      }
+      if (!totalPages && Number.isFinite(controller.pageCount) && controller.pageCount > 0) {
+        totalPages = Math.round(controller.pageCount);
+      }
+      if (totalPages > 0 && container) {
+        container.dataset.totalPages = String(totalPages);
+      }
+      updateReaderProgressUI(root, { page: currentPage, totalPages });
+      persistProgress(currentPage);
+      if (trainingId && totalPages) {
+        const percent = Math.min(100, Math.max(0, Math.round((currentPage / totalPages) * 100)));
+        try {
+          document.dispatchEvent(new CustomEvent('training:progress-updated', {
+            detail: { trainingId, currentPage, totalPages, percent }
+          }));
+        } catch (_) { /* ignore */ }
+      }
+    } catch (err) {
+      console.error('[trainingReader] erro ao renderizar página', err);
+      if (messages && !messages.dataset.progressError) {
+        messages.textContent = 'Não foi possível carregar a página. Tente novamente.';
+        messages.dataset.progressError = 'temp';
+        setTimeout(() => {
+          if (messages.dataset.progressError === 'temp') {
+            messages.textContent = '';
+            delete messages.dataset.progressError;
+          }
+        }, 4000);
+      }
+    } finally {
+      isNavigating = false;
+      finalizeNavigationState();
+    }
+  };
+
+  if (prevBtn) {
+    const handler = () => navigateTo(-1);
+    prevBtn.addEventListener('click', handler);
+    cleanupFns.push(() => prevBtn.removeEventListener('click', handler));
+  }
+  if (nextBtn) {
+    const handler = () => navigateTo(1);
+    nextBtn.addEventListener('click', handler);
+    cleanupFns.push(() => nextBtn.removeEventListener('click', handler));
+  }
+
+  const keyboardHandler = (event) => {
+    const active = document.activeElement;
+    const isInside = active ? root.contains(active) : false;
+    if (!(isInside || active === document.body || active === null)) return;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      navigateTo(-1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      navigateTo(1);
+    }
+  };
+  document.addEventListener('keydown', keyboardHandler);
+  cleanupFns.push(() => document.removeEventListener('keydown', keyboardHandler));
+
+  const cleanup = () => {
+    if (persistTimeout) clearTimeout(persistTimeout);
+    cleanupFns.forEach(fn => { try { fn(); } catch (_) { /* noop */ } });
+    if (controller && typeof controller.destroy === 'function') {
+      try { controller.destroy(); } catch (_) { /* noop */ }
+    }
+  };
+
+  finalizeNavigationState();
+  root._readerCleanup = cleanup;
+  if (trainingId && totalPages) {
+    const initialCurrent = controller.currentPage || 1;
+    const percent = Math.min(100, Math.max(0, Math.round((initialCurrent / totalPages) * 100)));
+    try {
+      document.dispatchEvent(new CustomEvent('training:progress-updated', {
+        detail: { trainingId, currentPage: initialCurrent, totalPages, percent }
+      }));
+    } catch (_) { /* ignore */ }
+  }
+  persistProgress(controller.currentPage || 1);
+}
+
+function buildLearnerBadges(training, enrollment, entityBadge) {
+  const badges = [];
+  if (entityBadge) badges.push(entityBadge);
+  if (enrollment && Object.keys(enrollment).length) badges.push('Atribuído a mim');
+  return badges;
+}
+
+function extractLearnerTrainingFromCollection(raw, id) {
+  const list = Array.isArray(raw)
+    ? raw
+    : (raw && Array.isArray(raw.items)) ? raw.items
+    : (raw && Array.isArray(raw.data)) ? raw.data
+    : (raw && Array.isArray(raw.content)) ? raw.content
+    : (raw && Array.isArray(raw.results)) ? raw.results
+    : [];
+  const targetId = String(id);
+  for (const entry of list) {
+    const normalized = normalizeLearnerTrainingItem(entry);
+    if (normalized && String(normalized.id) === targetId) {
+      return normalized;
+    }
+  }
+  return null;
+}
+
+function normalizeLearnerTrainingItem(item) {
+  if (!item) return null;
+  const base = item.training || item.content || item;
+  const normalized = { ...base };
+  const enrollmentSource = item._enrollment || item.enrollment || base?._enrollment || base?.enrollment;
+  if (enrollmentSource) normalized._enrollment = enrollmentSource;
+  normalized.id = normalized.id || item.trainingId || item.id || base?.id || base?.uuid || base?.code;
+  normalized.title = normalized.title || base?.title || item.trainingTitle || base?.name || item.name || 'Treinamento';
+  if (!normalized.description) {
+    if (typeof base?.description === 'string') normalized.description = base.description;
+    else if (typeof item.description === 'string') normalized.description = item.description;
+    else normalized.description = '';
+  }
+  normalized.entityType = normalized.entityType || base?.entityType || item.entityType || '';
+  const status = normalized.publicationStatus || normalized.status || (normalized._enrollment && (normalized._enrollment.status || normalized._enrollment.enrollmentStatus)) || item.status;
+  if (status) normalized.publicationStatus = status;
+  if (!normalized.coverImageUrl) normalized.coverImageUrl = base?.coverImageUrl || item.coverImageUrl || (base?.cover && base.cover.url) || (item.cover && item.cover.url);
+  if (!normalized.ebookDetails && (base?.ebookDetails || item.ebookDetails)) normalized.ebookDetails = base?.ebookDetails || item.ebookDetails;
+  if (!normalized.pdfUrl && item.pdfUrl) normalized.pdfUrl = item.pdfUrl;
+  return normalized.id ? normalized : null;
+}
+
+const PDF_URL_KEYS = ['pdfUrl','pdfPath','fileUrl','file','ebookUrl','ebookFileUrl','ebookFile','ebookPath','ebookPdfPath','filePath'];
+
+function resolveTrainingPdfUrl(training, options = {}) {
+  const { preferStream = false } = options || {};
+  if (!training) return '';
+
+  const id = training.id
+    || training.trainingId
+    || (training._enrollment && (training._enrollment.trainingId || training._enrollment.id));
+
+  const rawType = training.entityType
+    || training.trainingType
+    || training.type
+    || training.contentType
+    || (training._enrollment && (training._enrollment.entityType || training._enrollment.trainingType));
+  const entityType = rawType ? rawType.toString().toUpperCase() : '';
+
+  const hasEbookHints = Boolean(
+    (entityType && entityType.includes('EBOOK'))
+    || training.ebookDetails
+    || training.isEbook
+    || training.hasPdf
+    || training.pdfUrl
+    || training.ebookUrl
+  );
+
+  if (preferStream && id && hasEbookHints) {
+    return ensureAbsoluteUrl(`/stream/ebooks/${encodeURIComponent(String(id))}`);
+  }
+
+  const visited = new Set();
+  const sources = [
+    training,
+    training.ebookDetails,
+    training.details,
+    training._enrollment,
+    training._enrollment && training._enrollment.training
+  ];
+  for (const source of sources) {
+    const value = scanPdfInSource(source, visited);
+    if (value) return ensureAbsoluteUrl(value);
+  }
+
+  const ebookDetails = training.ebookDetails || training.details || null;
+  if (ebookDetails) {
+    const fileName = ebookDetails.fileName || ebookDetails.filename || ebookDetails.ebookFileName;
+    if (fileName && typeof fileName === 'string') {
+      const built = buildEbookFileUrl(fileName);
+      if (built) return ensureAbsoluteUrl(built);
+    }
+    const rawUrl = ebookDetails.url || ebookDetails.link || ebookDetails.fileUrl;
+    if (rawUrl && typeof rawUrl === 'string') {
+      return ensureAbsoluteUrl(rawUrl);
+    }
+  }
+
+  return '';
+}
+
+function scanPdfInSource(source, visited) {
+  if (!source || typeof source !== 'object' || visited.has(source)) return '';
+  visited.add(source);
+  for (const key of PDF_URL_KEYS) {
+    const v = source[key];
+    if (typeof v === 'string') {
+      if (/\.pdf($|\?)/i.test(v)) return v;
+      if (/\/stream\/ebooks\//i.test(v)) return v;
+    }
+  }
+  for (const val of Object.values(source)) {
+    if (typeof val === 'string') {
+      if (/\.pdf($|\?)/i.test(val)) return val;
+      if (/\/stream\/ebooks\//i.test(val)) return val;
+    }
+    if (val && typeof val === 'object') {
+      const nested = scanPdfInSource(val, visited);
+      if (nested) return nested;
+    }
+  }
+  return '';
+}
+
+function ensureAbsoluteUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  try {
+    const base = API_BASE_URL.replace(/\/$/, '');
+    if (url.startsWith('/')) return base + url;
+    return `${base}/${url}`;
+  } catch (_) {
+    return url;
+  }
+}
+
+function resolveTrainingCoverUrl(training) {
+  if (!training) return '';
+  const coverCandidates = [
+    training.coverImageUrl,
+    training.coverUrl,
+    training.thumbnailUrl,
+    training.cover,
+    training.coverImage,
+    training.thumbnail
+  ];
+  for (const candidate of coverCandidates) {
+    if (!candidate) continue;
+    if (typeof candidate === 'string') {
+      if (candidate.trim()) return ensureAbsoluteUrl(candidate.trim());
+    } else if (candidate && typeof candidate === 'object') {
+      const val = candidate.url || candidate.path || candidate.src;
+      if (val) return ensureAbsoluteUrl(val);
+    }
+  }
+  if (training.ebookDetails) {
+    const ebookCover = resolveTrainingCoverUrl(training.ebookDetails);
+    if (ebookCover) return ebookCover;
+  }
+  return '';
 }
 
 function buildDetailPageActionsHtml(t, role='SYSTEM_ADMIN') {
@@ -1470,7 +2270,8 @@ function attachDetailPageHandlers(currentTraining) {
     const el = e.target.closest('.td-cover-trigger');
     if (!el) return;
     // Se navegador ignorar programatic click dentro do delegado principal, tentamos novamente aqui
-    const id = el.getAttribute('data-id') || (currentTraining && currentTraining.id);
+    const ctxTraining = window._currentTrainingDetail || currentTraining;
+    const id = el.getAttribute('data-id') || (ctxTraining && ctxTraining.id);
     const input = getCoverInput(id, { includeByFor: true });
     if (input && !input._lastUserArm) {
       // Marca tentativa manual
@@ -1487,8 +2288,9 @@ function attachDetailPageHandlers(currentTraining) {
   function detailClickDelegate(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
+    const ctxTraining = window._currentTrainingDetail || currentTraining;
     const action = btn.getAttribute('data-action');
-    const id = btn.getAttribute('data-id') || (currentTraining && currentTraining.id);
+    const id = btn.getAttribute('data-id') || (ctxTraining && ctxTraining.id);
     switch(action) {
       case 'backToTrainings':
         // Redireciona explicitamente para o painel de gestão de conteúdo
@@ -1528,7 +2330,7 @@ function attachDetailPageHandlers(currentTraining) {
         triggerPdfUpload(id);
         break;
       case 'viewEbook':
-        openPdfInNewTab(currentTraining);
+        openPdfInNewTab(ctxTraining);
         break;
       case 'chooseCover': {
         // Remoção preventiva de overlays que possam ter ficado presos e estarem bloqueando clique

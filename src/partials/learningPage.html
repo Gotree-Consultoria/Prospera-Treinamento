@@ -1,0 +1,37 @@
+<div class="page" id="learningPage">
+   <section class="page-header">
+      <div class="container">
+         <h1>Meus Cursos &amp; Treinamentos</h1>
+         <p class="muted">Acompanhe os conteúdos disponíveis para a sua organização e as matrículas que lhe foram atribuídas.</p>
+      </div>
+   </section>
+   <section class="account-content learning-page-content">
+      <div class="container">
+         <div class="learning-wrapper">
+            <div class="account-section active" id="learningSection">
+               <div id="learningTabs" class="learning-tabs">
+                  <button class="ltab active" data-ltab="all">Todos</button>
+                  <button class="ltab" data-ltab="ebooks">E-books</button>
+                  <button class="ltab" data-ltab="courses">Gravados</button>
+                  <button class="ltab" data-ltab="live">Ao Vivo</button>
+               </div>
+               <div id="learningOrgSectorsBar" class="learning-org-sectors" aria-live="polite"></div>
+               <div id="learningRoleNotice" class="learning-role-notice" aria-live="polite"></div>
+               <div class="learning-filters">
+                  <label for="learningSearch" class="sr-only">Buscar conteúdo</label>
+                  <input type="text" id="learningSearch" placeholder="Buscar por título..." />
+                  <label for="learningStatusFilter" class="sr-only">Filtrar por status</label>
+                  <select id="learningStatusFilter">
+                     <option value="">Status (todos)</option>
+                     <option value="PUBLISHED">Publicado</option>
+                     <option value="DRAFT">Rascunho</option>
+                  </select>
+               </div>
+               <div id="learningList" class="learning-list loading">
+                  <p class="loading-msg">Carregando conteúdos...</p>
+               </div>
+            </div>
+         </div>
+      </div>
+   </section>
+</div>

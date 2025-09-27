@@ -57,6 +57,7 @@ export function setupEventListeners() {
 
         // Lógica de navegação e filtros
         if (target.dataset.page) {
+            console.debug('[events] click data-page=', target.dataset.page);
             await showPage(target.dataset.page);
         }
         if (target.dataset.filter) {
@@ -663,13 +664,6 @@ document.body.addEventListener('click', (e) => {
 (function initLearningDelegates(){
     console.debug('[learning] attach delegates');
     document.body.addEventListener('click', (e)=>{
-        const menuLearning = e.target.closest('.account-menu .menu-item[data-section="learning"]');
-        if (menuLearning) {
-            e.preventDefault();
-            try { showAccountSection('learning'); } catch(_){ }
-            console.debug('[learning] menu click => init');
-            initLearningSection();
-        }
         const tabBtn = e.target.closest('#learningTabs .ltab');
         if (tabBtn) {
             e.preventDefault();
@@ -682,13 +676,22 @@ document.body.addEventListener('click', (e) => {
         if (openBtn) {
             e.preventDefault();
             const id = openBtn.getAttribute('data-id');
-            const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
-            if (/SYSTEM[_-]?ADMIN/.test(sysRole)) {
-                import('./adminContent.js').then(m => { if (m.navigateToTrainingDetail) m.navigateToTrainingDetail(id); });
-            } else {
-                // Placeholder – futura página pública de visualização
-                alert('Visualização em desenvolvimento. ID: '+id);
+            let preloaded = null;
+            try {
+                if (Array.isArray(_learningCache)) {
+                    preloaded = _learningCache.find(item => String(item.id) === String(id));
+                }
+            } catch (err) {
+                console.warn('[learning] falha ao buscar treinamento selecionado', err);
             }
+            if (preloaded) {
+                try { window._trainingDetailPreloaded = preloaded; } catch (err) { console.warn('[learning] não foi possível armazenar pré-carga do treinamento', err); }
+            }
+            import('./adminContent.js').then(m => {
+                if (m.navigateToTrainingDetail) {
+                    m.navigateToTrainingDetail(id, { source: 'learning', training: preloaded });
+                }
+            });
         }
     });
     document.body.addEventListener('input', (e)=>{
@@ -704,56 +707,152 @@ async function loadLearningContent(){
     if (_learningCache) return _learningCache;
     if (_learningLoading) return new Promise(r=>{ const iv=setInterval(()=>{ if(_learningCache){clearInterval(iv); r(_learningCache);} },200); });
     _learningLoading = true;
+    sessionStorage.removeItem('learningFilteredByOrgSectors');
     try {
         const token = localStorage.getItem('jwtToken');
         if (!token) throw new Error('Sessão expirada. Faça login.');
-        let data = [];
-        try {
+
+    const rawRole = (localStorage.getItem('systemRole') || '').toUpperCase();
+    const isSystemAdmin = /SYSTEM[_-]?ADMIN/.test(rawRole);
+    const isOrgAdmin = /ORG[_-]?ADMIN/.test(rawRole);
+    sessionStorage.setItem('learningShowStatus', isSystemAdmin ? 'true' : 'false');
+    const roleContext = isSystemAdmin ? 'SYSTEM_ADMIN' : (isOrgAdmin ? 'ORG_ADMIN' : (rawRole || 'ORG_MEMBER'));
+    sessionStorage.setItem('learningRoleContext', roleContext);
+        let list = [];
+
+        if (isSystemAdmin) {
+            sessionStorage.setItem('learningShowOrgBar', 'false');
+            sessionStorage.removeItem('learningSectorFilter');
             const { getAdminTrainings } = await import('./api.js');
-            data = await getAdminTrainings(token);
-        } catch (err) {
-            console.warn('[learning] Falha ao carregar catálogo admin, tentando fallback público', err);
-            // Marcar estado de acesso restrito
-            sessionStorage.setItem('learningFilteredByOrgSectors', 'no-access');
-            // Fallback: criar placeholder vazio para permitir renderizar mensagem ao usuário
-            _learningCache = [];
-            return [];
-        }
-        const list = Array.isArray(data)?data:(Array.isArray(data.items)?data.items:(Array.isArray(data.data)?data.data:[]));
-        const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
-        // Primeiro filtro: somente publicados para usuários não system admin
-        let base = /SYSTEM[_-]?ADMIN/.test(sysRole) ? list : list.filter(t => (t.publicationStatus||t.status||'').toUpperCase()==='PUBLISHED');
-
-        // Filtro por setores adotados da organização selecionada (requisito: mostrar cursos dos setores adotados)
-        const orgId = sessionStorage.getItem('currentOrganizationId');
-        if (orgId) {
-            try {
-                // Buscar setores adotados dessa organização
-                const { getMyOrganizationSectors } = await import('./api.js');
-                const adopted = await getMyOrganizationSectors(token, orgId);
-                const adoptedIds = new Set((adopted||[]).map(s=> String(s.id||s.sectorId||s._id||'').trim()).filter(Boolean));
-                if (adoptedIds.size > 0) {
-                    base = base.filter(t => {
-                        const secs = extractTrainingSectorIds(t);
-                        return secs.some(id => adoptedIds.has(id));
-                    });
-                    // Marcar para UI que filtramos por setores adotados
-                    sessionStorage.setItem('learningFilteredByOrgSectors', 'true');
-                } else {
-                    sessionStorage.setItem('learningFilteredByOrgSectors', 'empty');
-                }
-            } catch (e) {
-                console.warn('[learning] Falha ao obter setores adotados da org', e);
-                sessionStorage.setItem('learningFilteredByOrgSectors', 'error');
+            const data = await getAdminTrainings(token);
+            list = normalizeTrainingCollection(data);
+            sessionStorage.setItem('learningFilteredByOrgSectors', list.length ? 'system' : 'system-empty');
+        } else if (isOrgAdmin) {
+            sessionStorage.setItem('learningShowOrgBar', 'true');
+            const orgId = sessionStorage.getItem('currentOrganizationId');
+            if (!orgId) {
+                sessionStorage.setItem('learningFilteredByOrgSectors', 'no-org');
+                _learningCache = [];
+                return [];
             }
+            const { getOrgAssignableTrainings, getMyTrainingEnrollments } = await import('./api.js');
+            const [assignableRaw, myEnrollmentsRaw] = await Promise.all([
+                getOrgAssignableTrainings(token, orgId),
+                getMyTrainingEnrollments(token)
+            ]);
+            const assignableList = normalizeTrainingCollection(assignableRaw);
+            const myList = normalizeTrainingCollection(myEnrollmentsRaw, { flattenEnrollment: true });
+
+            const mergedMap = new Map();
+            assignableList.forEach(item => {
+                mergedMap.set(item.id, { ...item, _assignable: true });
+            });
+            myList.forEach(item => {
+                const existing = mergedMap.get(item.id);
+                if (existing) {
+                    mergedMap.set(item.id, { ...existing, ...item, _assignable: true, _enrollment: item._enrollment, _personalEnrollment: true });
+                } else {
+                    mergedMap.set(item.id, { ...item, _personalEnrollment: true });
+                }
+            });
+            list = Array.from(mergedMap.values());
+
+            // ordenar: primeiro os atribuídos a mim, depois os restantes
+            list.sort((a, b) => {
+                const aAssigned = a._enrollment ? 1 : 0;
+                const bAssigned = b._enrollment ? 1 : 0;
+                if (aAssigned !== bAssigned) return bAssigned - aAssigned;
+                return (a.title || '').localeCompare(b.title || '', 'pt-BR');
+            });
+
+            let state = 'org-admin-empty';
+            const hasAssignable = assignableList.length > 0;
+            const hasPersonal = myList.length > 0;
+            if (hasAssignable && hasPersonal) state = 'org-admin-mixed';
+            else if (hasAssignable) state = 'org-admin';
+            else if (hasPersonal) state = 'org-admin-personal';
+            sessionStorage.setItem('learningFilteredByOrgSectors', state);
         } else {
-            // Sem organização selecionada: marcar estado
-            sessionStorage.setItem('learningFilteredByOrgSectors', 'no-org');
+            sessionStorage.setItem('learningShowOrgBar', 'false');
+            sessionStorage.removeItem('learningSectorFilter');
+            const { getMyTrainingEnrollments } = await import('./api.js');
+            const data = await getMyTrainingEnrollments(token);
+            list = normalizeTrainingCollection(data, { flattenEnrollment: true });
+            sessionStorage.setItem('learningFilteredByOrgSectors', list.length ? 'member' : 'member-empty');
         }
 
-        _learningCache = base;
-        return base;
-    } catch(err){ console.error('[learning] erro', err); throw err; } finally { _learningLoading = false; }
+        _learningCache = list;
+        return list;
+    } catch(err){
+        console.error('[learning] erro', err);
+        sessionStorage.setItem('learningShowOrgBar', 'false');
+        sessionStorage.setItem('learningShowStatus', 'false');
+        if (err && (err.status === 401 || err.status === 403)) {
+            sessionStorage.setItem('learningFilteredByOrgSectors', 'no-access');
+        } else if (!sessionStorage.getItem('learningFilteredByOrgSectors')) {
+            sessionStorage.setItem('learningFilteredByOrgSectors', 'error');
+        }
+        _learningCache = [];
+        throw err;
+    } finally {
+        _learningLoading = false;
+    }
+}
+
+function normalizeTrainingCollection(raw, options = {}) {
+    const array = Array.isArray(raw)
+        ? raw
+        : (raw && Array.isArray(raw.items)) ? raw.items
+        : (raw && Array.isArray(raw.data)) ? raw.data
+        : (raw && Array.isArray(raw.content)) ? raw.content
+        : (raw && Array.isArray(raw.results)) ? raw.results
+        : [];
+    return array.map(item => normalizeTrainingItem(item, options)).filter(Boolean);
+}
+
+function normalizeTrainingItem(item, options = {}) {
+    if (!item) return null;
+    const base = item.training || item.content || item;
+    const normalized = { ...base };
+
+    const enrollmentSource = options.flattenEnrollment ? item : item.enrollment;
+    if (enrollmentSource) {
+        normalized._enrollment = enrollmentSource;
+        normalized.enrollmentStatus = normalized.enrollmentStatus || enrollmentSource.enrollmentStatus || enrollmentSource.status;
+        normalized.enrollmentId = normalized.enrollmentId || enrollmentSource.id || enrollmentSource.enrollmentId;
+    }
+
+    normalized.id = normalized.id || base?.id || item.trainingId || item.id || base?.uuid || base?.code || base?.slug;
+    normalized.title = normalized.title || normalized.name || item.trainingTitle || item.title || 'Treinamento';
+    normalized.description = firstDefined(normalized.description, normalized.shortDescription, item.description, item.summary, '');
+    normalized.title = (typeof normalized.title === 'string' && normalized.title.trim()) ? normalized.title : 'Treinamento';
+    normalized.description = typeof normalized.description === 'string' ? normalized.description : '';
+    normalized.entityType = inferEntityType(firstDefined(normalized.entityType, normalized.format, normalized.type, normalized.trainingType, item.entityType, item.format));
+    const statusValue = firstDefined(normalized.publicationStatus, normalized.status, item.status, item.publicationStatus, normalized.enrollmentStatus);
+    normalized.publicationStatus = statusValue ? statusValue.toString().toUpperCase() : 'PUBLISHED';
+
+    const sectors = firstDefined(normalized.sectors, normalized.assignedSectors, item.sectors, item.assignedSectors, []);
+    normalized.sectors = Array.isArray(sectors) ? sectors : [];
+
+    return normalized.id ? normalized : null;
+}
+
+function firstDefined(...values) {
+    for (const value of values) {
+        if (value !== undefined && value !== null) {
+            return value;
+        }
+    }
+    return undefined;
+}
+
+function inferEntityType(raw) {
+    const value = (raw || '').toString().toUpperCase();
+    if (value.includes('EBOOK')) return 'EBOOK';
+    if (value.includes('LIVE') || value.includes('AO_VIVO')) return 'LIVE_TRAINING';
+    if (value.includes('RECORDED') || value.includes('GRAV') || value.includes('COURSE')) return 'RECORDED_COURSE';
+    if (value.includes('TRAINING')) return 'RECORDED_COURSE';
+    return 'EBOOK';
 }
 function initLearningSection(){
     console.debug('[learning] initLearningSection invoked');
@@ -774,14 +873,49 @@ function initLearningSection(){
         .catch(err=>{ listEl.innerHTML = `<p class="error-msg">${escapeHtml(err.message||'Erro ao carregar')}</p>`; listEl.classList.remove('loading'); })
         .finally(()=>{ clearTimeout(timeoutId); });
 }
+
+document.addEventListener('training:progress-updated', (event) => {
+    const detail = event && event.detail ? event.detail : {};
+    if (!detail || !detail.trainingId) return;
+    const trainingId = String(detail.trainingId);
+    let escapedId = trainingId;
+    if (window.CSS && typeof CSS.escape === 'function') {
+        try { escapedId = CSS.escape(trainingId); } catch (_) { escapedId = trainingId; }
+    } else {
+        escapedId = trainingId.replace(/"/g, '\"');
+    }
+    let card = document.querySelector(`.learning-card-member[data-id="${escapedId}"]`);
+    if (!card && escapedId !== trainingId) {
+        card = document.querySelector(`.learning-card-member[data-id="${trainingId}"]`);
+    }
+    if (!card) return;
+    if (typeof detail.percent === 'number' && Number.isFinite(detail.percent)) {
+        const normalized = Math.min(100, Math.max(0, Math.round(detail.percent)));
+        const track = card.querySelector('.learning-progress-track');
+        const fill = card.querySelector('.learning-progress-fill');
+        const label = card.querySelector('.learning-progress-label');
+        if (track) track.setAttribute('aria-valuenow', String(normalized));
+        if (fill) fill.style.width = `${normalized}%`;
+        if (label) label.textContent = `${normalized}% concluído`;
+    }
+});
 function renderLearningCards(){
     console.debug('[learning] renderLearningCards start, cache=', !!_learningCache);
     const listEl = document.getElementById('learningList'); if(!listEl||!_learningCache){ if(!listEl) console.warn('[learning] listEl inexistente'); if(!_learningCache) console.warn('[learning] cache vazio'); return; }
     const activeTab = document.querySelector('#learningTabs .ltab.active');
     const tab = activeTab?activeTab.getAttribute('data-ltab'):'all';
     const q = (document.getElementById('learningSearch')?.value||'').trim().toLowerCase();
-    const statusFilter = (document.getElementById('learningStatusFilter')?.value||'').toUpperCase();
+    const statusSelect = document.getElementById('learningStatusFilter');
+    const canSeeStatus = sessionStorage.getItem('learningShowStatus') === 'true';
+    if (statusSelect) {
+        statusSelect.style.display = canSeeStatus ? '' : 'none';
+        if (!canSeeStatus) {
+            statusSelect.value = '';
+        }
+    }
+    const statusFilter = canSeeStatus ? ((statusSelect?.value||'').toUpperCase()) : '';
     const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
+    const roleContext = sessionStorage.getItem('learningRoleContext') || sysRole || 'USER';
     const sectorFilter = sessionStorage.getItem('learningSectorFilter') || '';
     let list = _learningCache.slice();
     if (tab==='ebooks') list=list.filter(t=>(t.entityType||'').toUpperCase()==='EBOOK');
@@ -796,6 +930,7 @@ function renderLearningCards(){
         });
     }
     listEl.classList.remove('loading');
+    updateLearningRoleNotice(roleContext);
     if(!list.length){
         console.debug('[learning] lista vazia; state=', sessionStorage.getItem('learningFilteredByOrgSectors'));
         const state = sessionStorage.getItem('learningFilteredByOrgSectors');
@@ -813,9 +948,55 @@ function renderLearningCards(){
         else if (state === 'no-org') msg = 'Selecione uma organização para visualizar os cursos dos setores adotados.';
         else if (state === 'error') msg = 'Não foi possível carregar os setores adotados para filtrar os cursos.';
         else if (state === 'no-access') msg = 'Você não tem acesso ao catálogo interno. Aguarde atribuição de treinamentos pelo administrador ou utilize o catálogo público.';
+        else if (state === 'org-admin-empty') msg = 'Nenhum treinamento disponível para os setores adotados da organização.';
+    else if (state === 'org-admin-personal') msg = 'Você possui treinamentos atribuídos a você, mas nenhum conteúdo novo foi disponibilizado para os setores adotados.';
+    else if (state === 'org-admin-mixed') msg = 'Você está visualizando os treinamentos atribuídos a você no topo, seguidos pelo catálogo completo adotado pela organização.';
+        else if (state === 'member-empty') msg = 'Nenhum treinamento foi atribuído a você até o momento.';
+        else if (state === 'system-empty') msg = 'Nenhum treinamento está cadastrado no momento.';
         if (sectorFilter) msg = 'Nenhum curso encontrado para este setor.';
         listEl.innerHTML = `<p class="muted" style="font-size:.7rem;line-height:1.35">${msg}</p>`; return; }
-    listEl.innerHTML = list.map(t=>learningCardHtml(t, sysRole)).join('');
+    listEl.innerHTML = list.map(t=>learningCardHtml(t, sysRole, canSeeStatus, roleContext)).join('');
+}
+
+function updateLearningRoleNotice(roleContext){
+    const notice = document.getElementById('learningRoleNotice');
+    if (!notice) return;
+    const cache = Array.isArray(_learningCache) ? _learningCache : [];
+    const total = cache.length;
+    const assignedCount = cache.filter(item => item && item._enrollment).length;
+    const availableCount = cache.filter(item => item && item._assignable).length;
+    const statusCounts = cache.reduce((acc, item) => {
+        const status = (item && (item.publicationStatus || item.status || '')).toString().toUpperCase();
+        if (!status) return acc;
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+    }, {});
+    let message = '';
+    const normalizedRole = (roleContext || '').toString().toUpperCase();
+    const isMemberView = normalizedRole === 'ORG_MEMBER' || normalizedRole === 'ORG_USER' || normalizedRole === 'MEMBER' || normalizedRole === 'USER' || normalizedRole === 'EMPLOYEE' || !normalizedRole;
+    if (normalizedRole === 'SYSTEM_ADMIN') {
+        const published = statusCounts.PUBLISHED || 0;
+        const draft = statusCounts.DRAFT || 0;
+        message = `<strong>Visão do administrador do sistema.</strong> Utilize os filtros para auditar o catálogo completo, incluindo rascunhos e conteúdos publicados.`;
+        message += `<span class="counts">Total cadastrados: ${total} • Publicados: ${published} • Rascunhos: ${draft}</span>`;
+    } else if (normalizedRole === 'ORG_ADMIN') {
+        message = `<strong>Visão do administrador da organização.</strong> Os treinamentos atribuídos a você aparecem primeiro; o restante está disponível para designar a outros membros.`;
+        message += `<span class="counts">Atribuídos a você: ${assignedCount} • Disponíveis para a organização: ${availableCount}</span>`;
+    } else if (isMemberView) {
+        message = `<strong>Sua trilha personalizada.</strong> Aqui você encontra apenas os treinamentos atribuídos a você pelos administradores da organização.`;
+        message += `<span class="counts">Treinamentos atribuídos: ${assignedCount}</span>`;
+    } else {
+        message = total ? `<strong>Treinamentos disponíveis.</strong> Utilize os filtros para encontrar conteúdos relevantes.` : '';
+        if (total) message += `<span class="counts">Total: ${total}</span>`;
+    }
+
+    if (!message) {
+        notice.innerHTML = '';
+        notice.style.display = 'none';
+    } else {
+        notice.innerHTML = message;
+        notice.style.display = '';
+    }
 }
 function extractTrainingSectorIds(t){
     if(!t||typeof t!=='object') return [];
@@ -825,6 +1006,15 @@ function extractTrainingSectorIds(t){
 async function ensureOrgSectorsBar(){
     const bar = document.getElementById('learningOrgSectorsBar');
     if (!bar) return;
+    const showFlag = sessionStorage.getItem('learningShowOrgBar');
+    if (showFlag !== 'true') {
+        bar.innerHTML = '';
+        bar.classList.add('hidden');
+        bar.classList.remove('empty');
+        return;
+    }
+    bar.classList.remove('hidden');
+    bar.classList.remove('empty');
     let orgId = sessionStorage.getItem('currentOrganizationId');
     bar.innerHTML='';
     // Fallback: se nenhuma org selecionada, tentar auto-selecionar se o usuário só tem uma
@@ -901,36 +1091,163 @@ async function ensureOrgSectorsBar(){
         bar.innerHTML='<span class="los-empty-hint">Não foi possível carregar setores adotados.</span>';
     }
 }
-function learningCardHtml(t, sysRole){
+function learningCardHtml(t, sysRole, showStatus, roleContext){
     const type=(t.entityType||'').toUpperCase();
     const status=(t.publicationStatus||t.status||'').toUpperCase();
     const published=status==='PUBLISHED';
-    const badges=[]; if(type==='EBOOK') badges.push('E-book'); else if(type==='RECORDED_COURSE') badges.push('Gravado'); else if(type==='LIVE_TRAINING') badges.push('Ao Vivo'); badges.push(published?'Publicado':'Rascunho');
-    const canOpen = published || /SYSTEM[_-]?ADMIN/.test(sysRole);
+    const normalizedRole=(roleContext||'').toString().toUpperCase();
+    const isMemberView = normalizedRole === 'ORG_MEMBER' || normalizedRole === 'ORG_USER' || normalizedRole === 'MEMBER' || normalizedRole === 'USER' || normalizedRole === 'EMPLOYEE' || !normalizedRole;
+    const badges=[]; if(type==='EBOOK') badges.push('E-book'); else if(type==='RECORDED_COURSE') badges.push('Gravado'); else if(type==='LIVE_TRAINING') badges.push('Ao Vivo');
+    if (t._enrollment) {
+        badges.push('Atribuído a mim');
+    }
+    if (normalizedRole === 'ORG_ADMIN' && t._assignable) {
+        badges.push('Disponível para a organização');
+    }
+    if (showStatus) {
+        badges.push(published?'Publicado':'Rascunho');
+    }
+    const canOpen = published || /SYSTEM[_-]?ADMIN/.test(sysRole) || (isMemberView && !!t._enrollment);
     const actions = canOpen ? `<button class="btn btn-small" data-action="openLearning" data-id="${escapeHtml(t.id)}">Abrir</button>` : `<button class="btn btn-small" disabled>Indisponível</button>`;
+
+    if (isMemberView && t._enrollment) {
+        return renderMemberLearningCard(t, badges, actions);
+    }
+
     return `<div class="learning-card" data-id="${escapeHtml(t.id)}"><h4>${escapeHtml(t.title||'')}</h4><p>${escapeHtml(t.description||'')}</p><div class="learning-badges">${badges.map(b=>`<span>${escapeHtml(b)}</span>`).join(' ')}</div><div class="learning-actions">${actions}</div></div>`;
 }
+
+function renderMemberLearningCard(t, badges, actions) {
+    const enrollment = t._enrollment || {};
+    const statusInfo = mapEnrollmentStatus(enrollment.enrollmentStatus || enrollment.status || t.enrollmentStatus);
+    const assignedAt = enrollment.enrolledAt || enrollment.assignedAt || enrollment.createdAt || t.enrolledAt || t.assignedAt;
+    const assignedLabel = assignedAt ? formatLearnerAssignedDate(assignedAt) : '';
+    const coverUrl = resolveLearningCoverUrl(t);
+    const placeholderLetter = (String(t.title || 'T').trim().charAt(0) || 'T').toUpperCase();
+    const progressValue = computeEnrollmentProgress(t);
+    const description = truncateText(t.description || '', 190);
+
+    return `
+    <div class="learning-card learning-card-member" data-id="${escapeHtml(t.id)}">
+        <div class="learning-card-cover">
+            ${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="Capa do treinamento ${escapeHtml(t.title || '')}" loading="lazy" decoding="async" />` : `<div class="learning-cover-placeholder" aria-hidden="true">${escapeHtml(placeholderLetter)}</div>`}
+            ${statusInfo.label ? `<span class="learning-card-status status-${statusInfo.className}">${escapeHtml(statusInfo.label)}</span>` : ''}
+        </div>
+        <div class="learning-card-body">
+            ${badges && badges.length ? `<div class="learning-badges">${badges.map(b => `<span>${escapeHtml(b)}</span>`).join(' ')}</div>` : ''}
+            <h4>${escapeHtml(t.title || '')}</h4>
+            ${description ? `<p>${escapeHtml(description)}</p>` : ''}
+            ${assignedLabel ? `<div class="learning-meta-row">Atribuído desde <strong>${escapeHtml(assignedLabel)}</strong></div>` : ''}
+            <div class="learning-progress" role="group" aria-label="Progresso do treinamento">
+                <div class="learning-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progressValue}">
+                    <div class="learning-progress-fill" style="width:${progressValue}%"></div>
+                </div>
+                <span class="learning-progress-label">${progressValue}% concluído</span>
+            </div>
+        </div>
+        <div class="learning-actions">${actions}</div>
+    </div>`;
+}
+
+function mapEnrollmentStatus(status) {
+    const normalized = (status || '').toString().toUpperCase();
+    switch (normalized) {
+        case 'ACTIVE':
+            return { label: 'Em andamento', className: 'active' };
+        case 'COMPLETED':
+            return { label: 'Concluído', className: 'completed' };
+        case 'CANCELLED':
+            return { label: 'Cancelado', className: 'cancelled' };
+        case 'NOT_ENROLLED':
+            return { label: 'Não iniciado', className: 'pending' };
+        default:
+            return { label: '', className: '' };
+    }
+}
+
+function formatLearnerAssignedDate(value) {
+    try {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (_) {
+        return String(value);
+    }
+}
+
+function computeEnrollmentProgress(training) {
+    const enrollment = training && training._enrollment ? training._enrollment : {};
+    let raw = firstDefined(
+        training.progressPercentage,
+        training.progress,
+        enrollment.progressPercentage,
+        enrollment.progress,
+        enrollment.completionRate
+    );
+    if (raw === undefined || raw === null || raw === '') raw = 0;
+    raw = Number(raw);
+    if (!Number.isFinite(raw)) raw = 0;
+    if (raw > 0 && raw <= 1) raw = raw * 100;
+    const clamped = Math.max(0, Math.min(100, Math.round(raw)));
+    return clamped;
+}
+
+function resolveLearningCoverUrl(training) {
+    if (!training) return '';
+    const candidates = [
+        training.coverImageUrl,
+        training.coverUrl,
+        training.thumbnailUrl,
+        training.thumbnail,
+        training.cover,
+        training.imageUrl,
+        training._enrollment && training._enrollment.coverImageUrl
+    ];
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+        if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+        if (candidate && typeof candidate === 'object') {
+            const value = candidate.url || candidate.path || candidate.src;
+            if (value && typeof value === 'string') return value.trim();
+        }
+    }
+    return '';
+}
+
+function truncateText(value, maxLength) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.slice(0, Math.max(0, maxLength - 1)).trimEnd() + '…';
+}
+
 function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s])); }
 
 // Atualizar barra de setores quando organização atual mudar
 document.addEventListener('org:current:changed', ()=>{
     // Limpar cache para forçar recarregamento com setores da nova organização
     _learningCache = null;
-    if (document.getElementById('learningSection')?.classList.contains('active')) {
+    const learningPageActive = document.getElementById('learningPage')?.classList.contains('active');
+    if (learningPageActive) {
         initLearningSection();
     }
 });
 
-// Auto-init quando a página account é carregada e a aba learning for exibida depois sem clique capturado
+// Inicializa automaticamente quando a página de Cursos & Treinamentos é carregada
 document.addEventListener('page:loaded', (ev)=>{
-    if (ev?.detail?.page === 'account') {
-        // Delay curto para garantir que o DOM da seção foi inserido
+    if (ev?.detail?.page === 'learning') {
+        // pequeno delay para garantir que o DOM foi injetado
         setTimeout(()=>{
-            const ls = document.getElementById('learningSection');
-            if (ls && ls.classList.contains('active')) {
-                console.debug('[learning] page:loaded(account) -> learning já ativa -> init');
-                initLearningSection();
-            }
+            console.debug('[learning] page:loaded(learning) -> init');
+            initLearningSection();
         }, 50);
     }
+});
+
+// Fallback dedicado para inicialização da página de cursos quando solicitado manualmente
+document.addEventListener('learning:init', ()=>{
+    setTimeout(()=>{
+        console.debug('[learning] learning:init evento dedicado -> init');
+        initLearningSection();
+    }, 30);
 });

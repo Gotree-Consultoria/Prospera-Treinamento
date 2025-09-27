@@ -566,6 +566,63 @@ export async function getOrgMembers(token, organizationId) {
 }
 
 /**
+ * Lista os treinamentos que uma organização pode adotar com base em seus setores.
+ * Endpoint: GET /organizations/{orgId}/assignable-trainings
+ */
+export async function getOrgAssignableTrainings(token, organizationId) {
+    if (!token) throw new Error('Token ausente');
+    if (!organizationId) throw new Error('ID da organização ausente');
+    const response = await fetch(`${API_BASE_URL}/organizations/${encodeURIComponent(organizationId)}/assignable-trainings`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 404) return [];
+        if (response.status === 401 || response.status === 403) {
+            const err = new Error('Acesso negado aos treinamentos da organização.');
+            err.status = response.status;
+            throw err;
+        }
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao carregar treinamentos da organização.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
+ * Lista os treinamentos em que o usuário logado está matriculado.
+ * Endpoint: GET /trainings/my-enrollments
+ */
+export async function getMyTrainingEnrollments(token) {
+    if (!token) throw new Error('Token ausente');
+    const response = await fetch(`${API_BASE_URL}/trainings/my-enrollments`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        if (response.status === 404) return [];
+        if (response.status === 401 || response.status === 403) {
+            const err = new Error('Acesso negado às suas matrículas.');
+            err.status = response.status;
+            throw err;
+        }
+        const parsed = await safeParseResponse(response);
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao carregar matrículas.');
+        err.status = response.status;
+        throw err;
+    }
+    return safeParseResponse(response);
+}
+
+/**
  * Adiciona um membro por convite
  */
 export async function addOrgMember(token, organizationId, body) {
@@ -1388,14 +1445,36 @@ export function uploadEbookFileWithProgress(token, trainingId, file, onProgress,
 }
 
 /**
+ * Obtém o progresso de leitura do usuário para um e-book específico.
+ * GET /progress/ebooks/{trainingId}
+ */
+export async function fetchEbookProgress(token, trainingId) {
+    if (!token) throw new Error('Token ausente');
+    if (!trainingId) throw new Error('ID ausente');
+    const response = await fetch(`${API_BASE_URL}/progress/ebooks/${encodeURIComponent(trainingId)}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+        let parsed = null; try { parsed = await safeParseResponse(response); } catch(_){}
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao obter progresso do e-book.');
+        err.status = response.status;
+        throw err;
+    }
+    const payload = await safeParseResponse(response);
+    return (payload && typeof payload === 'object') ? payload : null;
+}
+
+/**
  * Atualiza progresso de leitura do e-book.
- * PUT /admin/ebooks/{trainingId}  body: { lastPageRead }
+ * PUT /progress/ebooks/{trainingId}  body: { lastPageRead }
  */
 export async function updateEbookProgress(token, trainingId, lastPageRead) {
     if (!token) throw new Error('Token ausente');
     if (!trainingId) throw new Error('ID ausente');
     const payload = { lastPageRead };
-    const response = await fetch(`${API_BASE_URL}/admin/ebooks/${encodeURIComponent(trainingId)}`, {
+    const response = await fetch(`${API_BASE_URL}/progress/ebooks/${encodeURIComponent(trainingId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)

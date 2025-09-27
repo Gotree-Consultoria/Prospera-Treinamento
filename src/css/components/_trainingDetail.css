@@ -4,7 +4,20 @@
 
 /* Página Detalhe Treinamento */
 #trainingDetailPageRoot { padding:14px 10px 40px; }
-#trainingDetailPageRoot .training-detail-header {
+#trainingReaderPageRoot {
+  padding:24px 16px 70px;
+  margin:0 auto;
+  width:100%;
+  max-width:min(1160px, 96vw);
+  background:linear-gradient(180deg, rgba(241,249,244,0.9) 0%, rgba(255,255,255,0.95) 45%, rgba(255,255,255,1) 100%);
+}
+#trainingReaderPageRoot.training-reader-wrapper { display:flex; flex-direction:column; gap:26px; }
+#trainingReaderPageRoot .learner-detail { gap:26px; }
+@media (max-width:720px) {
+  #trainingReaderPageRoot { padding:20px 12px 60px; }
+}
+#trainingDetailPageRoot .training-detail-header,
+#trainingReaderPageRoot .training-detail-header {
   /* Grid de 3 colunas: esquerda (largura do botão), centro (título), direita (placeholder invisível) */
   display:grid;
   grid-template-columns:auto 1fr auto;
@@ -14,14 +27,17 @@
   min-height:42px;
   width:100%;
 }
-#trainingDetailPageRoot .training-detail-header .btn-back { grid-column:1; }
-#trainingDetailPageRoot .training-detail-header:after {
+#trainingDetailPageRoot .training-detail-header .btn-back,
+#trainingReaderPageRoot .training-detail-header .btn-back { grid-column:1; }
+#trainingDetailPageRoot .training-detail-header:after,
+#trainingReaderPageRoot .training-detail-header:after {
   /* Placeholder invisível para espelhar a largura do botão e assegurar centro geométrico */
   content:"";
   grid-column:3;
   width:0; /* será expandido via JS opcionalmente se necessário */
 }
-#trainingDetailPageRoot .training-detail-header .training-title {
+#trainingDetailPageRoot .training-detail-header .training-title,
+#trainingReaderPageRoot .training-detail-header .training-title {
   grid-column:2;
   margin:0;
   font-size:1.2rem;
@@ -31,7 +47,8 @@
   position:relative;
 }
 /* Fallback absoluto caso o grid seja alterado por algum CSS externo */
-#trainingDetailPageRoot .training-detail-header.is-abs-center .training-title {
+#trainingDetailPageRoot .training-detail-header.is-abs-center .training-title,
+#trainingReaderPageRoot .training-detail-header.is-abs-center .training-title {
   position:absolute;
   left:50%; top:50%; transform:translate(-50%, -50%);
   width:max-content;
@@ -71,7 +88,8 @@
 .td-status.is-published { background:#e3f7e7; color:#1d6b2f; }
 .td-status.is-draft { background:#f7efe3; color:#8a4b14; }
 .td-status.is-archived { background:#eee; color:#555; text-decoration:line-through; }
-#trainingDetailPageRoot h1 { font-size:1.2rem; margin:0 0 8px; }
+#trainingDetailPageRoot h1,
+#trainingReaderPageRoot h1 { font-size:1.2rem; margin:0 0 8px; }
 #trainingDetailActions, .actions-bar { 
   display:flex; 
   gap:10px; 
@@ -226,4 +244,109 @@
 @media (max-width:600px) {
   #trainingDetailActions { gap:6px; }
   .td-grid { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }
+}
+
+/* ===== Visão do aprendiz (ORG_MEMBER / ORG_ADMIN) ===== */
+.learner-detail { display:flex; flex-direction:column; gap:18px; }
+.learner-overview { background:#fff; border:1px solid #dde4e1; border-radius:10px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.04); }
+.learner-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+.learner-status { display:inline-flex; align-items:center; gap:6px; font-size:0.65rem; font-weight:600; padding:6px 12px; border-radius:999px; background:#eff5f2; color:#1d5d39; letter-spacing:.3px; text-transform:uppercase; }
+.learner-badge { display:inline-flex; align-items:center; gap:6px; font-size:0.6rem; font-weight:600; padding:4px 10px; border-radius:999px; background:#f3f7fb; color:#285a7a; letter-spacing:.3px; }
+.learner-title { font-size:1.15rem; margin:0 0 6px; line-height:1.25; color:#1f2f28; }
+.learner-author { margin:0 0 6px; font-size:0.7rem; color:#4a5b52; }
+.learner-description { margin:0; font-size:0.75rem; line-height:1.45; color:#2f3f35; }
+.learner-cover { display:flex; justify-content:center; }
+.learner-cover img { max-width:200px; border-radius:12px; border:1px solid #dfe5e1; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.learner-cover > .learning-cover-placeholder {
+  position:relative;
+  inset:auto;
+  width:200px;
+  height:264px;
+  border-radius:12px;
+  border:1px solid #dfe5e1;
+  background:linear-gradient(135deg,#f4f8f6 0%,#e7efea 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2.4rem;
+  font-weight:700;
+  color:#5f7269;
+  box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+.learner-assignment { background:#f9fbfa; border:1px solid #e1e8e4; border-radius:10px; padding:14px 16px; font-size:0.7rem; color:#2f3f35; box-shadow:0 2px 4px rgba(0,0,0,0.03); }
+.learner-assignment h3 { margin:0 0 10px; font-size:0.8rem; color:#1f5d35; }
+.learner-assignment-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:0; padding:0; }
+.learner-assignment-list div { display:flex; flex-direction:column; gap:2px; }
+.learner-assignment-list dt { font-size:0.58rem; text-transform:uppercase; letter-spacing:.4px; color:#4a5b52; font-weight:600; }
+.learner-assignment-list dd { margin:0; font-size:0.7rem; color:#243128; }
+.learner-notes { margin:12px 0 0; font-size:0.7rem; line-height:1.35; color:#2f3f35; }
+.learner-reader { background:#fff; border:1px solid #d7e2dc; border-radius:14px; padding:20px 24px 26px; box-shadow:0 12px 28px rgba(0,0,0,0.08); }
+.learner-reader h3 { margin:0 0 12px; font-size:0.85rem; color:#1f5d35; }
+
+.training-pdf-shell { position:relative; border-radius:16px; padding:14px; background:linear-gradient(160deg, rgba(232,244,238,0.95) 0%, rgba(255,255,255,0.6) 100%); box-shadow:0 14px 30px rgba(31,93,53,0.08); }
+.training-pdf-container {
+  min-height:clamp(420px, 75vh, 860px);
+  border:1px solid #d4e1da;
+  border-radius:12px;
+  background:linear-gradient(180deg,#ffffff 0%,#fafdfa 100%);
+  padding:28px 24px;
+  overflow:auto;
+  position:relative;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,0.05);
+}
+.training-pdf-container::-webkit-scrollbar { width:10px; }
+.training-pdf-container::-webkit-scrollbar-thumb { background:#c5d5cc; border-radius:10px; }
+.training-pdf-container::-webkit-scrollbar-track { background:transparent; }
+.training-pdf-container .td-empty { margin:0; }
+.pdf-loading { text-align:center; font-size:0.72rem; color:#4a5b52; padding:40px 0; }
+.pdf-loading.inline { padding:28px 0; font-size:0.7rem; }
+.pdf-viewer { display:flex; flex-direction:column; gap:18px; align-items:center; }
+.pdf-viewer-continuous .pdf-page { width:100%; max-width:820px; }
+.pdf-viewer-single { display:flex; align-items:center; justify-content:center; }
+.pdf-viewer-single .pdf-page-single { width:100%; max-width:860px; }
+.pdf-page { background:#fff; border:1px solid #dfe4e3; border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,0.08); padding:18px; }
+.pdf-page canvas { max-width:100%; height:auto; display:block; border-radius:6px; box-shadow:0 0 0 1px rgba(0,0,0,0.04); }
+
+.reader-controls { display:flex; align-items:center; gap:16px; background:#f5fbf7; border:1px solid #d7e7de; border-radius:999px; padding:10px 18px; margin-bottom:18px; box-shadow:0 6px 16px rgba(31,93,53,0.08); flex-wrap:wrap; justify-content:center; }
+.reader-controls.is-single-page { justify-content:center; }
+.reader-nav-btn { background:#ffffff; border:1px solid #c8d8cf; border-radius:999px; padding:10px 18px; font-size:0.7rem; font-weight:600; color:#1f5d35; letter-spacing:.2px; transition:background .2s ease, box-shadow .2s ease, transform .15s ease; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+.reader-nav-btn:hover:not(:disabled) { background:#ecf7ef; box-shadow:0 4px 10px rgba(31,93,53,0.12); }
+.reader-nav-btn:active:not(:disabled) { transform:translateY(1px); }
+.reader-nav-btn:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
+.reader-page-indicator { font-size:0.72rem; font-weight:600; color:#264d35; }
+.reader-progress-display { display:flex; align-items:center; gap:10px; }
+.reader-progress-track { width:160px; height:8px; background:#dce9e2; border-radius:999px; position:relative; overflow:hidden; }
+.reader-progress-fill { position:absolute; inset:0; width:0%; background:linear-gradient(135deg,#3fa068,#2d7a49); border-radius:999px; transition:width .25s ease; }
+.reader-progress-text { font-size:0.7rem; font-weight:600; color:#1f4630; }
+
+.training-pdf-container[data-rendering="true"]::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0.6));
+  pointer-events:none;
+  border-radius:12px;
+}
+
+@media (max-width:720px) {
+  .learner-assignment-list { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }
+  .learner-cover img { max-width:170px; }
+  .learner-cover > .learning-cover-placeholder {
+    width:170px;
+    height:224px;
+    font-size:2.1rem;
+  }
+  .learner-reader { padding:18px; }
+  .reader-controls { border-radius:16px; padding:12px; gap:12px; }
+  .reader-progress-display { width:100%; justify-content:center; }
+  .reader-progress-track { flex:1 1 160px; max-width:260px; }
+}
+
+@media (max-width:520px) {
+  .learner-meta { flex-direction:column; align-items:flex-start; }
+  .learner-status, .learner-badge { width:100%; justify-content:center; }
+  .training-pdf-shell { padding:10px; }
+  .training-pdf-container { padding:18px 14px; }
+  .reader-controls { flex-direction:column; align-items:stretch; }
+  .reader-progress-display { flex-direction:column; gap:6px; }
 }

@@ -30,8 +30,10 @@ export async function loadPartial(page) {
     platformAudit: "src/partials/platformAuditPage.html",
     platformCache: "src/partials/platformCachePage.html",
     trainingDetail: "src/partials/trainingDetailPage.html",
+    trainingReader: "src/partials/trainingReaderPage.html",
     faq: "src/partials/faqPage.html",
-    catalog: "src/partials/catalogPage.html"
+    catalog: "src/partials/catalogPage.html",
+    learning: 'src/partials/learningPage.html'
     };
     const containerMap = {
         home: "homePageContainer",
@@ -61,14 +63,18 @@ export async function loadPartial(page) {
     platformAudit: "platformAuditPageContainer",
     platformCache: "platformCachePageContainer",
     trainingDetail: "trainingDetailPageContainer",
+    trainingReader: "trainingReaderPageContainer",
     faq: "faqPageContainer",
-    catalog: "catalogPageContainer"
+    catalog: "catalogPageContainer",
+    learning: 'learningPageContainer'
     };
     const partialPath = partialMap[page];
     const containerId = containerMap[page];
     if (partialPath && containerId) {
         try {
-            const response = await fetch(partialPath);
+            const url = partialPath.startsWith('/') ? partialPath : `/${partialPath}`;
+            console.debug('[navigation] carregando partial', page, '->', url);
+            const response = await fetch(url);
             if (!response.ok) throw new Error(`Failed to load partial ${partialPath}`);
             const html = await response.text();
             const container = document.getElementById(containerId);
@@ -84,7 +90,7 @@ export async function loadPartial(page) {
                 }
             }
         } catch (err) {
-            console.error('Error loading partial:', err);
+            console.error('[navigation] Error loading partial', page, err);
         }
     }
 }
@@ -115,8 +121,15 @@ const pageMap = {
     platformAudit: "platformAuditPage",
     platformCache: "platformCachePage",
     trainingDetail: "trainingDetailPage",
+    trainingReader: "trainingReaderPage",
     faq: "faqPage",
     catalog: "catalogPage",
+    learning: "learningPage"
+};
+
+// Alias de rotas que apontam para seções internas da página de conta
+const aliasToAccountSection = {
+    plans: 'plans'
 };
 
 // Mapeamento reverso para resolver paths/hashes para chaves de página
@@ -136,7 +149,9 @@ const pathToPage = {
     '/organizations/members': 'orgMembers',
     '/admin/users': 'adminUsers',
     // detalhe ficará com rota dinâmica em SPA (mapeamento por hash)
-    '/faq': 'faq'
+    '/faq': 'faq',
+    '/learning': 'learning', // resolveRouteFromLocation retornará 'learning'
+    '/training-reader': 'trainingReader'
 };
 
 /**
@@ -154,12 +169,19 @@ export function resolveRouteFromLocation() {
                 return 'trainingDetail';
             }
         }
+        if (rawHash.startsWith('trainingReader/')) {
+            const parts = rawHash.split('/');
+            if (parts.length === 2 && parts[1]) {
+                try { window._openTrainingId = parts[1]; } catch(_) {}
+                return 'trainingReader';
+            }
+        }
         return rawHash;
     }
 
     const pathname = window.location.pathname || '/';
     // Normalizar algumas variações simples
-    const normalized = pathname.replace(/\/+$/, ''); // remove trailing slash
+    const normalized = pathname.replace(/\/+$/, ''); // removes trailing slash
     if (pathToPage[normalized]) return pathToPage[normalized];
 
     // tentar mapear segmentos conhecidos (ex: /organizations/123/members)
@@ -180,25 +202,55 @@ export function resolveRouteFromLocation() {
  * Exibe a página principal especificada.
  * @param {string} page - O nome da página a ser exibida.
  */
-export async function showPage(page, opts = {}) {
+export async function showPage(requestedPage, opts = {}) {
+    const options = { ...opts };
+    const accountSection = aliasToAccountSection[requestedPage];
+    const page = accountSection ? 'account' : requestedPage;
+    console.debug('[navigation] showPage requisitado=', requestedPage, 'page resolved=', page, 'opts=', options);
+
+    if (accountSection) {
+        if (!options.selectSection) options.selectSection = accountSection;
+        if (!options.requestedPage) options.requestedPage = requestedPage;
+    }
+
     // Evitar recarregar a mesma página sem necessidade (mantém estado e evita flicker)
-    // Exceção: se opts.forceReload for passado ou se for trainingDetail com ID diferente.
-    if (currentPage === page && !opts.forceReload) {
-        if (page === 'trainingDetail') {
+    // Exceção: se options.forceReload for passado ou se for trainingDetail com ID diferente.
+    const isTrainingDetailPage = page === 'trainingDetail';
+    const isTrainingReaderPage = page === 'trainingReader';
+    if (currentPage === page && !options.forceReload) {
+        if (isTrainingDetailPage || isTrainingReaderPage) {
             // permitir mudança de treinamento sem reload completo
-            const newId = opts.trainingId || window._openTrainingId;
+            const newId = options.trainingId || window._openTrainingId;
             if (newId && newId !== window._openTrainingId) {
                 try { window._openTrainingId = newId; } catch(_) {}
             } else {
                 // mesma página e mesmo contexto -> apenas re-despacha evento e sai
-                try { document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page, refreshed: true } })); } catch(_) {}
+                try {
+                    const detail = { page, refreshed: true };
+                    if (accountSection) {
+                        detail.accountSection = options.selectSection;
+                        detail.requestedPage = options.requestedPage || requestedPage;
+                    }
+                    document.dispatchEvent(new CustomEvent('page:loaded', { detail }));
+                } catch(_) {}
                 return;
             }
         } else {
-            try { document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page, refreshed: true } })); } catch(_) {}
+            if (page === 'account' && options.selectSection) {
+                try { showAccountSection(options.selectSection); } catch (_) {}
+            }
+            try {
+                const detail = { page, refreshed: true };
+                if (accountSection) {
+                    detail.accountSection = options.selectSection;
+                    detail.requestedPage = options.requestedPage || requestedPage;
+                }
+                document.dispatchEvent(new CustomEvent('page:loaded', { detail }));
+            } catch(_) {}
             return;
         }
     }
+    const previouslyActiveLink = document.querySelector('.nav-link.active');
     document.querySelectorAll(".page").forEach((pageEl) => {
         pageEl.classList.remove("active");
         pageEl.classList.add("hidden");
@@ -208,7 +260,10 @@ export async function showPage(page, opts = {}) {
     });
 
     const targetPage = document.getElementById(pageMap[page]);
-    const targetLink = document.querySelector(`.nav-link[data-page='${page}']`);
+    const targetLink = document.querySelector(`.nav-link[data-page='${requestedPage}']`) || document.querySelector(`.nav-link[data-page='${page}']`);
+    if (!targetPage) {
+        console.warn('[navigation] targetPage não encontrado para', page, '-> id esperado', pageMap[page]);
+    }
 
     if (targetPage) {
     targetPage.classList.add("active");
@@ -216,7 +271,7 @@ export async function showPage(page, opts = {}) {
     currentPage = page;
     // Removido scroll automático ao topo para não interromper o usuário em páginas longas
         // Se a página requer autenticação, verificar token antes de carregar o partial
-    const authRequiredPages = ['account', 'createPf', 'organizationsNew', 'orgMembers', 'orgManagement'];
+    const authRequiredPages = ['account', 'createPf', 'organizationsNew', 'orgMembers', 'orgManagement', 'trainingReader'];
         const token = localStorage.getItem('jwtToken');
         if (authRequiredPages.includes(page) && !token) {
             // redirecionar para login e abortar carregamento da página atual
@@ -233,13 +288,19 @@ export async function showPage(page, opts = {}) {
         }
 
         await loadPartial(page); // Carrega o conteúdo do partial sob demanda e aguarda
-        if (page === 'trainingDetail') {
+        if (page === 'account' && options.selectSection) {
+            try { showAccountSection(options.selectSection); } catch (err) {
+                console.warn('Não foi possível selecionar seção da conta:', err);
+            }
+        }
+        if (isTrainingDetailPage || isTrainingReaderPage) {
             // aceitar id vindo de opts ou já setado previamente
-            const id = opts.trainingId || window._openTrainingId;
-            if (opts.trainingId) { try { window._openTrainingId = opts.trainingId; } catch(_) {} }
+            const id = options.trainingId || window._openTrainingId;
+            if (options.trainingId) { try { window._openTrainingId = options.trainingId; } catch(_) {} }
             // atualizar hash para deep link
             if (id) {
-                const newHash = `#trainingDetail/${encodeURIComponent(id)}`;
+                const hashPrefix = isTrainingReaderPage ? '#trainingReader/' : '#trainingDetail/';
+                const newHash = `${hashPrefix}${encodeURIComponent(id)}`;
                 if (window.location.hash !== newHash) {
                     try { history.replaceState(null, '', newHash); } catch(_) { window.location.hash = newHash; }
                 }
@@ -247,13 +308,32 @@ export async function showPage(page, opts = {}) {
         }
         // Notifica outros módulos que a página foi carregada e injetada no DOM
         try {
-            document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page } }));
+            const detail = { page };
+            if (accountSection) {
+                detail.accountSection = options.selectSection;
+                detail.requestedPage = options.requestedPage || requestedPage;
+            }
+            document.dispatchEvent(new CustomEvent('page:loaded', { detail }));
+            if (page === 'learning') {
+                try {
+                    document.dispatchEvent(new CustomEvent('learning:init', { detail }));
+                } catch (err) {
+                    console.warn('Could not dispatch learning:init event', err);
+                }
+            }
         } catch (err) {
             console.warn('Could not dispatch page:loaded event', err);
         }
     }
+    const pagesWithoutNavLink = new Set(['trainingDetail', 'trainingReader']);
     if (targetLink) {
         targetLink.classList.add("active");
+    } else if (pagesWithoutNavLink.has(page)) {
+        if (previouslyActiveLink) {
+            previouslyActiveLink.classList.add('active');
+        }
+    } else {
+        console.warn('[navigation] targetLink não encontrado para', requestedPage, 'ou', page);
     }
 }
 
@@ -272,7 +352,7 @@ export function showAccountSection(section) {
         sectionEl.classList.remove("active");
         sectionEl.classList.add("hidden");
     });
-    const sectionMap = { profile: "profileSection", plans: "plansSection", learning: "learningSection" };
+    const sectionMap = { profile: "profileSection", plans: "plansSection" };
     const targetSection = document.getElementById(sectionMap[section]);
     if (targetSection) {
         targetSection.classList.remove("hidden");
@@ -290,3 +370,5 @@ export function scrollToSection(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) section.scrollIntoView({ behavior: "smooth" });
 }
+
+//# sourceMappingURL=app.js.map

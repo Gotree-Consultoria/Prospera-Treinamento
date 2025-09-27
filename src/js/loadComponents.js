@@ -10,6 +10,7 @@ export async function loadAllComponents() {
         { id: "aboutPageContainer", file: "src/partials/aboutPage.html" },
         { id: "contactPageContainer", file: "src/partials/contactPage.html" },
         { id: "accountPageContainer", file: "src/partials/accountPage.html" },
+    { id: "learningPageContainer", file: "src/partials/learningPage.html" },
         { id: "faqPageContainer", file: "src/partials/faqPage.html" },
         { id: "footerPageContainer", file: "src/partials/footerPage.html" },
         { id: "productCategoriesContainer", file: "src/partials/productCategoriesPage.html" },
@@ -18,7 +19,8 @@ export async function loadAllComponents() {
     try {
         await Promise.all(
             components.map(async (comp) => {
-                const response = await fetch(comp.file);
+                const url = comp.file.startsWith('/') ? comp.file : `/${comp.file}`;
+                const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status} for ${comp.file}`);
                 const html = await response.text();
                 const container = document.getElementById(comp.id);

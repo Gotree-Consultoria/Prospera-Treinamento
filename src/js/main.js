@@ -14,6 +14,20 @@ import './modules/ebooksMini.js'; // mini catálogo de e-books na página de E-b
 
 // Dados legacy de produtos/pacotes removidos (catálogo unificado agora cobre exibição)
 
+let listenersInitialized = false;
+function ensureEventListeners() {
+    if (!listenersInitialized) {
+        try {
+            console.debug('[bootstrap] inicializando event listeners globais');
+            setupEventListeners();
+            listenersInitialized = true;
+            document.dispatchEvent(new CustomEvent('app:listeners-ready'));
+        } catch (err) {
+            console.error('Falha ao inicializar event listeners:', err);
+        }
+    }
+}
+
 async function initializeApp() {
     const pageLoader = document.getElementById("page-loader");
     const mainContent = document.getElementById("mainContent");
@@ -28,6 +42,7 @@ async function initializeApp() {
 
     try {
         await loadAllComponents(); // Aguarda o carregamento dos componentes HTML
+        console.debug('[bootstrap] loadAllComponents concluído com sucesso');
 
         // garantir que os handlers de termos sejam inicializados após os partials do modal existirem
         try {
@@ -40,8 +55,8 @@ async function initializeApp() {
 
         // Removido: carregamento de products.json / packages.json (não usados mais)
 
-        // Sempre configura os listeners, mesmo que os dados falhem
-        setupEventListeners();
+    // Sempre configura os listeners, mesmo que os dados falhem
+    ensureEventListeners();
 
         // Ao inicializar, se houver token, tentar carregar a rota presente na barra de endereço
         const token = localStorage.getItem('jwtToken');
@@ -76,6 +91,7 @@ async function initializeApp() {
     console.log("Aplicação inicializada com sucesso (versão sem produtos legacy)!");
     } catch (error) {
         console.error("Erro ao inicializar a aplicação:", error);
+        ensureEventListeners();
     } finally {
         // Sempre garante que o loader será escondido
         try {
@@ -83,6 +99,7 @@ async function initializeApp() {
                 pageLoader.style.display = "none";
             }
             clearTimeout(loaderTimeout);
+            ensureEventListeners();
         } catch (e) {
             console.error('Erro ao esconder loader no finally:', e);
         }
