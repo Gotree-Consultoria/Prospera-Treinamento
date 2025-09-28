@@ -1478,6 +1478,24 @@ async function initTrainingReaderPage() {
     }
     const initialPage = inferLearnerStartingPage(training, progressData);
     content.innerHTML = renderLearnerTrainingDetailHtml(training, role, { pdfUrl, readerMode: true, progressData, initialPage });
+
+    const focusMode = sessionStorage.getItem('trainingReaderFocus');
+    if (focusMode) {
+      sessionStorage.removeItem('trainingReaderFocus');
+      setTimeout(() => {
+        let target = null;
+        if (focusMode === 'progress') {
+          target = content.querySelector('.learner-assignment') || content.firstElementChild;
+        } else if (focusMode === 'details') {
+          target = content.querySelector('.learner-overview') || content.firstElementChild;
+        }
+        if (target) {
+          try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { /* ignore scroll issues */ }
+          target.classList.add('focus-ring-pulse');
+          setTimeout(() => target.classList.remove('focus-ring-pulse'), 1800);
+        }
+      }, 220);
+    }
     const titleEl = root.querySelector('.training-title');
     if (titleEl) titleEl.textContent = training.title || 'Leitura de E-book';
     const viewer = content.querySelector('#trainingPdfContainer');

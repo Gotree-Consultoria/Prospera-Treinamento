@@ -1,7 +1,8 @@
 // Funções do api.js (import único consolidado evitando duplicação)
-import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole, getMyOrganizationSectors, removeOrganizationSector, addOrganizationSector, getPublicSectors } from './api.js'; // uso simplificado: catálogo público único
+import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole, getMyOrganizationSectors, removeOrganizationSector, addOrganizationSector, getPublicSectors, getOrgMemberEnrollments } from './api.js'; // uso simplificado: catálogo público único
 
 let currentProfile = null;
+let activeOrgMemberModal = null;
 
 // SVG helpers para ícones do menu de ações
 function pencilIconSvg() {
@@ -9,6 +10,404 @@ function pencilIconSvg() {
 }
 function trashIconSvg() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+}
+function infoIconSvg() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+}
+function chartIconSvg() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 13l4 4 6-8"/></svg>';
+}
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function firstDefined(...values) {
+    for (const value of values) {
+        if (value !== undefined && value !== null) {
+            return value;
+        }
+    }
+    return undefined;
+}
+
+function normalizeProgressPercentage(value) {
+    if (value === undefined || value === null || value === '') return 0;
+    let numeric = Number(value);
+    if (Number.isNaN(numeric)) {
+        const parsed = parseFloat(value);
+        numeric = Number.isNaN(parsed) ? 0 : parsed;
+    }
+    if (!Number.isFinite(numeric)) return 0;
+    if (numeric > 0 && numeric <= 1) numeric = numeric * 100;
+    if (numeric < 0) numeric = 0;
+    if (numeric > 100) numeric = 100;
+    return Math.round(numeric);
+}
+
+function mapMemberEnrollmentStatus(status) {
+    const normalized = (status || '').toString().toUpperCase();
+    switch (normalized) {
+        case 'COMPLETED':
+            return { label: 'Concluído', className: 'completed' };
+        case 'ACTIVE':
+        case 'IN_PROGRESS':
+            return { label: 'Em andamento', className: 'active' };
+        case 'NOT_STARTED':
+        case 'NOT_ENROLLED':
+        case 'PENDING':
+            return { label: 'Pendente', className: 'pending' };
+        case 'CANCELLED':
+        case 'CANCELED':
+            return { label: 'Cancelado', className: 'cancelled' };
+        default:
+            return { label: normalized || '—', className: 'neutral' };
+    }
+}
+
+function formatMemberDate(value, withTime = false) {
+    if (!value) return '';
+    try {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+        if (!withTime) return dateStr;
+        const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return `${dateStr} • ${timeStr}`;
+    } catch (err) {
+        return String(value);
+    }
+}
+
+function toArray(value) {
+    if (Array.isArray(value)) return value;
+    if (value && Array.isArray(value.items)) return value.items;
+    if (value && Array.isArray(value.data)) return value.data;
+    if (value && Array.isArray(value.content)) return value.content;
+    if (value && Array.isArray(value.results)) return value.results;
+    if (value && Array.isArray(value.records)) return value.records;
+    if (value && Array.isArray(value.progress)) return value.progress;
+    if (value && Array.isArray(value.enrollments)) return value.enrollments;
+    return [];
+}
+
+function normalizeMemberEnrollmentRecord(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const training = raw.training || raw.content || raw.course || raw.item || raw.trainingInfo || {};
+    const id = firstDefined(raw.enrollmentId, raw.membershipEnrollmentId, raw.id, raw._id, training.enrollmentId);
+    const trainingId = firstDefined(raw.trainingId, training.trainingId, training.id, training._id, raw.courseId);
+    const title = firstDefined(raw.trainingTitle, training.title, training.name, raw.title, raw.name, raw.courseTitle, 'Treinamento');
+    const statusRaw = firstDefined(raw.enrollmentStatus, raw.status, raw.progressStatus, training.status, training.progressStatus);
+    const progressRaw = firstDefined(raw.progressPercentage, raw.progress, raw.completionRate, raw.percentage, raw.progressPercent, training.progressPercentage, training.progress, training.percentage);
+    const assignedAt = firstDefined(raw.enrolledAt, raw.assignedAt, raw.createdAt, raw.startDate, raw.assignedDate, training.enrolledAt, training.assignedAt, training.startDate);
+    const updatedAt = firstDefined(raw.updatedAt, raw.lastActivityAt, raw.lastAccessAt, raw.completedAt, raw.finishDate, training.updatedAt, training.lastActivityAt, training.lastAccessAt, training.completedAt);
+    const dueDate = firstDefined(raw.dueDate, raw.deadline, raw.deadlineAt, training.dueDate, training.deadline);
+
+    const progress = normalizeProgressPercentage(progressRaw);
+    const statusInfo = mapMemberEnrollmentStatus(statusRaw);
+
+    return {
+        id: id ? String(id) : null,
+        trainingId: trainingId ? String(trainingId) : null,
+        title: title ? String(title) : 'Treinamento',
+        statusRaw: statusRaw || '',
+        statusLabel: statusInfo.label,
+        statusClass: statusInfo.className,
+        progress,
+        assignedAt: assignedAt || null,
+        updatedAt: updatedAt || null,
+        dueDate: dueDate || null
+    };
+}
+
+function normalizeMemberEnrollmentCollection(raw) {
+    if (!raw) return [];
+    let collection = toArray(raw);
+    if (!collection.length && raw && typeof raw === 'object') {
+        if (Array.isArray(raw.courses)) collection = raw.courses;
+        else if (Array.isArray(raw.courseProgress)) collection = raw.courseProgress;
+        else if (Array.isArray(raw.items)) collection = raw.items;
+    }
+    return collection.map(normalizeMemberEnrollmentRecord).filter(Boolean);
+}
+
+function closeActiveOrgMemberModal() {
+    if (activeOrgMemberModal && typeof activeOrgMemberModal.close === 'function') {
+        try { activeOrgMemberModal.close(); } catch (err) { /* noop */ }
+    }
+    activeOrgMemberModal = null;
+}
+
+function createOrgMemberModal({ title = 'Detalhes', size = 'medium' } = {}) {
+    closeActiveOrgMemberModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'content-modal-overlay member-inspect-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'content-modal' + (size === 'large' ? ' large' : '');
+    modal.innerHTML = `
+        <div class="member-modal-header">
+            <h3>${escapeHtml(title)}</h3>
+            <button type="button" class="member-modal-close" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="member-modal-body"></div>
+    `;
+
+    overlay.appendChild(modal);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.appendChild(overlay);
+
+    const bodyEl = modal.querySelector('.member-modal-body');
+    const close = () => {
+        document.removeEventListener('keydown', escHandler);
+        overlay.remove();
+        document.body.style.overflow = previousOverflow;
+        activeOrgMemberModal = null;
+    };
+    const escHandler = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            close();
+        }
+    };
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) close();
+    });
+    const closeBtn = modal.querySelector('.member-modal-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            close();
+        });
+    }
+    document.addEventListener('keydown', escHandler);
+    setTimeout(() => {
+        try { closeBtn?.focus(); } catch (err) { /* ignore */ }
+    }, 30);
+
+    const api = {
+        overlay,
+        modal,
+        body: bodyEl,
+        close,
+        setTitle(newTitle) {
+            const header = modal.querySelector('.member-modal-header h3');
+            if (header) header.textContent = newTitle || 'Detalhes';
+        },
+        setContent(html) {
+            if (bodyEl) bodyEl.innerHTML = html;
+        },
+        showMessage(message, cssClass = 'member-progress-loading') {
+            if (bodyEl) {
+                bodyEl.innerHTML = `<p class="${cssClass}">${escapeHtml(message)}</p>`;
+            }
+        }
+    };
+
+    activeOrgMemberModal = api;
+    return api;
+}
+
+function buildMemberHeaderHtml(member = {}) {
+    const name = member.name || member.email || 'Membro';
+    const email = member.email ? `<span>${escapeHtml(member.email)}</span>` : '';
+    const role = member.role ? `<span>Função: ${escapeHtml(member.role)}</span>` : '';
+    return `<div class="member-modal-meta"><strong>${escapeHtml(name)}</strong>${email}${role}</div>`;
+}
+
+function openRowActionsDropdown(menuBtn, dropdown) {
+    if (!menuBtn || !dropdown) return;
+
+    if (!dropdown._originalParent) {
+        dropdown._originalParent = dropdown.parentElement;
+        dropdown._originalNextSibling = dropdown.nextSibling;
+    }
+
+    dropdown._triggerButton = menuBtn;
+
+    if (!dropdown.dataset.portalAttached) {
+        document.body.appendChild(dropdown);
+        dropdown.dataset.portalAttached = 'true';
+    }
+
+    dropdown.classList.add('open');
+    menuBtn.setAttribute('aria-expanded', 'true');
+
+    dropdown.style.visibility = 'hidden';
+    dropdown.style.pointerEvents = 'none';
+    dropdown.style.position = 'fixed';
+    dropdown.style.right = 'auto';
+    dropdown.style.bottom = 'auto';
+    dropdown.style.zIndex = '160';
+
+    requestAnimationFrame(() => {
+        if (!dropdown.classList.contains('open')) {
+            dropdown.style.visibility = '';
+            dropdown.style.pointerEvents = '';
+            return;
+        }
+        const buttonRect = menuBtn.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        const width = dropdownRect.width;
+        const height = dropdownRect.height;
+        const margin = 8;
+
+        let left = buttonRect.right - width;
+        if (left < margin) left = margin;
+        const maxLeft = window.innerWidth - width - margin;
+        if (left > maxLeft) left = maxLeft;
+
+        let top = buttonRect.bottom + 6;
+        if (top + height > window.innerHeight - margin) {
+            top = Math.max(margin, buttonRect.top - height - 6);
+        }
+
+        dropdown.style.left = `${Math.round(left)}px`;
+        dropdown.style.top = `${Math.round(top)}px`;
+        dropdown.style.minWidth = `${Math.round(width)}px`;
+        dropdown.style.visibility = '';
+        dropdown.style.pointerEvents = '';
+    });
+}
+
+function closeRowActionsDropdown(dropdown) {
+    if (!dropdown) return;
+
+    dropdown.classList.remove('open');
+    dropdown.style.visibility = '';
+    dropdown.style.pointerEvents = '';
+    dropdown.style.position = '';
+    dropdown.style.top = '';
+    dropdown.style.left = '';
+    dropdown.style.minWidth = '';
+    dropdown.style.right = '';
+    dropdown.style.bottom = '';
+    dropdown.style.zIndex = '';
+
+    if (dropdown._triggerButton) {
+        dropdown._triggerButton.setAttribute('aria-expanded', 'false');
+        dropdown._triggerButton = null;
+    }
+
+    if (dropdown.dataset.portalAttached === 'true' && dropdown._originalParent) {
+        dropdown._originalParent.insertBefore(dropdown, dropdown._originalNextSibling || null);
+    }
+
+    delete dropdown.dataset.portalAttached;
+}
+
+async function fetchOrgMemberEnrollmentsNormalized(token, orgId, membershipId) {
+    const raw = await getOrgMemberEnrollments(token, orgId, membershipId);
+    return normalizeMemberEnrollmentCollection(raw);
+}
+
+function renderMemberProgressList(enrollments) {
+    if (!enrollments.length) {
+        return '<p class="member-progress-empty">Este membro ainda não possui matrículas em cursos.</p>';
+    }
+    return `<ul class="member-progress-list">${enrollments.map((item) => {
+        const metaParts = [];
+        if (item.statusLabel) {
+            metaParts.push(`<span class="member-status-chip ${item.statusClass}">${escapeHtml(item.statusLabel)}</span>`);
+        }
+        if (item.assignedAt) {
+            metaParts.push(`<span>Vinculado: ${escapeHtml(formatMemberDate(item.assignedAt))}</span>`);
+        }
+        if (item.updatedAt) {
+            metaParts.push(`<span>Atualizado: ${escapeHtml(formatMemberDate(item.updatedAt, true))}</span>`);
+        }
+        if (item.dueDate) {
+            metaParts.push(`<span>Prazo: ${escapeHtml(formatMemberDate(item.dueDate))}</span>`);
+        }
+        const meta = metaParts.length ? `<div class="member-progress-meta">${metaParts.join('<span class="bullet">•</span>')}</div>` : '';
+        return `
+            <li class="member-progress-item">
+                <h4>${escapeHtml(item.title)}</h4>
+                ${meta}
+                <div class="member-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${item.progress}">
+                    <span style="width:${item.progress}%"></span>
+                </div>
+                <div class="member-progress-label">${item.progress}% concluído</div>
+            </li>
+        `;
+    }).join('')}</ul>`;
+}
+
+function renderMemberEnrollmentTable(enrollments) {
+    if (!enrollments.length) {
+        return '<p class="member-enrollment-empty">Nenhuma matrícula encontrada para este membro.</p>';
+    }
+    const rows = enrollments.map((item) => `
+        <tr>
+            <td>${escapeHtml(item.title)}</td>
+            <td><span class="member-status-chip ${item.statusClass}">${escapeHtml(item.statusLabel)}</span></td>
+            <td>${item.progress}%</td>
+            <td>${item.assignedAt ? escapeHtml(formatMemberDate(item.assignedAt)) : '—'}</td>
+            <td>${item.updatedAt ? escapeHtml(formatMemberDate(item.updatedAt, true)) : '—'}</td>
+        </tr>
+    `).join('');
+    return `<table class="member-enrollment-table"><thead><tr><th>Treinamento</th><th>Status</th><th>Progresso</th><th>Vinculado em</th><th>Atualizado em</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function showOrgMemberProgress(member, orgId) {
+    const modal = createOrgMemberModal({ title: 'Progresso do membro', size: 'large' });
+    if (!member || !member.membershipId) {
+        modal.showMessage('Identificador do membro não encontrado.', 'member-progress-error');
+        return;
+    }
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+        modal.showMessage('Sessão expirada. Faça login novamente para acessar os dados.', 'member-progress-error');
+        return;
+    }
+    modal.setContent(`${buildMemberHeaderHtml(member)}<p class="member-progress-loading">Carregando progresso...</p>`);
+    try {
+        const enrollments = await fetchOrgMemberEnrollmentsNormalized(token, orgId, member.membershipId);
+        const content = `${buildMemberHeaderHtml(member)}${renderMemberProgressList(enrollments)}`;
+        modal.setContent(content);
+    } catch (err) {
+        console.error('[orgMembers] erro ao carregar progresso do membro', err);
+        modal.showMessage(err?.message || 'Não foi possível carregar o progresso deste membro.', 'member-progress-error');
+    }
+}
+
+async function showOrgMemberDetails(member, orgId) {
+    const modal = createOrgMemberModal({ title: 'Detalhes do membro', size: 'large' });
+    if (!member || !member.membershipId) {
+        modal.showMessage('Identificador do membro não encontrado.', 'member-progress-error');
+        return;
+    }
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+        modal.showMessage('Sessão expirada. Faça login novamente para acessar os dados.', 'member-progress-error');
+        return;
+    }
+    const detailGrid = `
+        <div class="member-detail-grid">
+            <div class="member-detail-field"><span class="member-detail-label">Nome</span><span class="member-detail-value">${escapeHtml(member.name || '—')}</span></div>
+            <div class="member-detail-field"><span class="member-detail-label">E-mail</span><span class="member-detail-value">${escapeHtml(member.email || '—')}</span></div>
+            <div class="member-detail-field"><span class="member-detail-label">Função</span><span class="member-detail-value">${escapeHtml(member.role || '—')}</span></div>
+            <div class="member-detail-field"><span class="member-detail-label">Membership ID</span><span class="member-detail-value">${escapeHtml(member.membershipId || '—')}</span></div>
+            <div class="member-detail-field"><span class="member-detail-label">User ID</span><span class="member-detail-value">${escapeHtml(member.userId || '—')}</span></div>
+        </div>
+    `;
+    modal.setContent(`${buildMemberHeaderHtml(member)}${detailGrid}<p class="member-progress-loading">Carregando matrículas...</p>`);
+    try {
+        const enrollments = await fetchOrgMemberEnrollmentsNormalized(token, orgId, member.membershipId);
+        const tableHtml = renderMemberEnrollmentTable(enrollments);
+        modal.setContent(`${buildMemberHeaderHtml(member)}${detailGrid}${tableHtml}`);
+    } catch (err) {
+        console.error('[orgMembers] erro ao carregar detalhes do membro', err);
+        modal.setContent(`${buildMemberHeaderHtml(member)}${detailGrid}<p class="member-progress-error">${escapeHtml(err?.message || 'Não foi possível carregar as matrículas deste membro.')}</p>`);
+    }
 }
 
 function maskEmail(email) {
@@ -798,6 +1197,7 @@ async function renderOrgMembers(members, orgId) {
     const messages = document.getElementById('orgMembersMessages');
     const tbody = document.querySelector('#orgMembersTable tbody');
     if (!tbody) return;
+    document.querySelectorAll('.row-actions-dropdown.open').forEach(d => closeRowActionsDropdown(d));
     tbody.innerHTML = '';
     // verificar meu papel nesta organização (persistido por loadUserProfile em myOrgRole_<orgId>)
     const myRole = sessionStorage.getItem('myOrgRole_' + orgId) || '';
@@ -855,16 +1255,30 @@ async function renderOrgMembers(members, orgId) {
                 menuBtn.setAttribute('title','Ações');
                 menuBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
 
-                const dropdown = document.createElement('div');
-                dropdown.className = 'row-actions-dropdown';
-                dropdown.setAttribute('role','menu');
-                dropdown.innerHTML = `
-                    <button type="button" class="action-item change-role-btn" role="menuitem" data-membership-id="${membershipId||''}" data-member-name="${(displayName||'').replace(/"/g,'&quot;')}" data-current-role="${(m.role||m.userRole||'')}">
-                      <span class="icon">${pencilIconSvg()}</span><span>Alterar</span>
-                    </button>
-                    <button type="button" class="action-item remove-member-btn" role="menuitem" data-membership-id="${membershipId||''}">
-                      <span class="icon">${trashIconSvg()}</span><span>Remover</span>
-                    </button>`;
+                                const memberPayload = {
+                                        membershipId: membershipId ? String(membershipId) : '',
+                                        userId: possibleAuthUserId ? String(possibleAuthUserId) : '',
+                                        name: displayName || '',
+                                        email: emailValue || '',
+                                        role: m.role || m.userRole || ''
+                                };
+
+                                const dropdown = document.createElement('div');
+                                dropdown.className = 'row-actions-dropdown';
+                                dropdown.setAttribute('role','menu');
+                                dropdown.innerHTML = `
+                                        <button type="button" class="action-item member-progress-btn" role="menuitem">
+                                            <span class="icon">${chartIconSvg()}</span><span>Ver progresso</span>
+                                        </button>
+                                        <button type="button" class="action-item member-details-btn" role="menuitem">
+                                            <span class="icon">${infoIconSvg()}</span><span>Ver detalhes</span>
+                                        </button>
+                                        <button type="button" class="action-item change-role-btn" role="menuitem" data-membership-id="${membershipId||''}" data-member-name="${(displayName||'').replace(/"/g,'&quot;')}" data-current-role="${(m.role||m.userRole||'')}">
+                                            <span class="icon">${pencilIconSvg()}</span><span>Alterar</span>
+                                        </button>
+                                        <button type="button" class="action-item remove-member-btn" role="menuitem" data-membership-id="${membershipId||''}">
+                                            <span class="icon">${trashIconSvg()}</span><span>Remover</span>
+                                        </button>`;
 
                 menuWrap.appendChild(menuBtn);
                 menuWrap.appendChild(dropdown);
@@ -873,28 +1287,48 @@ async function renderOrgMembers(members, orgId) {
                 // Toggle do menu
                 menuBtn.addEventListener('click', (ev) => {
                     ev.preventDefault();
-                    // fechar outros menus
+                    if (dropdown.classList.contains('open')) {
+                        closeRowActionsDropdown(dropdown);
+                        return;
+                    }
                     document.querySelectorAll('.row-actions-dropdown.open').forEach(d => {
                         if (d !== dropdown) {
-                            d.classList.remove('open');
-                            const btn = d.parentElement?.querySelector('.row-actions-menu-btn');
-                            btn && btn.setAttribute('aria-expanded','false');
+                            closeRowActionsDropdown(d);
                         }
                     });
-                    const opened = dropdown.classList.toggle('open');
-                    menuBtn.setAttribute('aria-expanded', opened ? 'true':'false');
+                    openRowActionsDropdown(menuBtn, dropdown);
                 });
+
+                // Ação Ver progresso
+                const progressBtn = dropdown.querySelector('.member-progress-btn');
+                if (progressBtn) {
+                    progressBtn.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        closeRowActionsDropdown(dropdown);
+                        try { showOrgMemberProgress(memberPayload, orgId); } catch (error) { console.error('Erro ao abrir progresso do membro:', error); }
+                    });
+                }
+
+                // Ação Ver detalhes
+                const detailBtn = dropdown.querySelector('.member-details-btn');
+                if (detailBtn) {
+                    detailBtn.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        closeRowActionsDropdown(dropdown);
+                        try { showOrgMemberDetails(memberPayload, orgId); } catch (error) { console.error('Erro ao abrir detalhes do membro:', error); }
+                    });
+                }
 
                 // Ação Alterar
                 dropdown.querySelector('.change-role-btn').addEventListener('click', (ev) => {
                     ev.preventDefault();
-                    dropdown.classList.remove('open');
-                    menuBtn.setAttribute('aria-expanded','false');
+                    closeRowActionsDropdown(dropdown);
                     openInlineRolePopup({ membershipId: membershipId, name: displayName, currentRole: m.role || m.userRole || '' }, menuBtn);
                 });
                 // Ação Remover
                 dropdown.querySelector('.remove-member-btn').addEventListener('click', async (ev) => {
                     ev.preventDefault();
+                    closeRowActionsDropdown(dropdown);
                     const btn = ev.currentTarget;
                     const membershipToRemove = btn.getAttribute('data-membership-id');
                     if (!membershipToRemove) return;
@@ -920,25 +1354,28 @@ async function renderOrgMembers(members, orgId) {
                 // Listener global (uma vez) para fechar menu ao clicar fora
                 if (!window._rowActionsOutsideBound) {
                     window._rowActionsOutsideBound = true;
+                    const closeAllDropdowns = () => {
+                        document.querySelectorAll('.row-actions-dropdown.open').forEach(d => closeRowActionsDropdown(d));
+                    };
                     document.addEventListener('mousedown', (evt) => {
                         document.querySelectorAll('.row-actions-dropdown.open').forEach(d => {
-                            if (!d.contains(evt.target) && !d.parentElement.contains(evt.target)) {
-                                d.classList.remove('open');
-                                const btn = d.parentElement?.querySelector('.row-actions-menu-btn');
-                                btn && btn.setAttribute('aria-expanded','false');
+                            const trigger = d._triggerButton;
+                            const triggerWrap = trigger ? trigger.parentElement : null;
+                            const isTrigger = trigger && (trigger === evt.target || trigger.contains(evt.target));
+                            const insideWrap = triggerWrap && triggerWrap.contains(evt.target);
+                            if (!d.contains(evt.target) && !isTrigger && !insideWrap) {
+                                closeRowActionsDropdown(d);
                             }
                         });
                     });
                     // fechar com ESC
                     document.addEventListener('keydown', (evt) => {
                         if (evt.key === 'Escape') {
-                            document.querySelectorAll('.row-actions-dropdown.open').forEach(d => {
-                                d.classList.remove('open');
-                                const btn = d.parentElement?.querySelector('.row-actions-menu-btn');
-                                btn && btn.setAttribute('aria-expanded','false');
-                            });
+                            closeAllDropdowns();
                         }
                     });
+                    window.addEventListener('scroll', closeAllDropdowns, true);
+                    window.addEventListener('resize', closeAllDropdowns);
                 }
             } else {
                 // manter célula vazia para alinhamento

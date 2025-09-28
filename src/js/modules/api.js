@@ -553,16 +553,134 @@ export async function getMyOrganizations(token) {
  * Lista membros de uma organização
  */
 export async function getOrgMembers(token, organizationId) {
-    const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/members`, {
+    if (!token) throw new Error('Token ausente');
+    if (!organizationId) throw new Error('ID da organização ausente');
+    const response = await fetch(`${API_BASE_URL}/organizations/${encodeURIComponent(organizationId)}/members`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!response.ok) {
-        if (response.status === 401) throw new Error('Unauthorized');
-        const err = await safeParseResponse(response);
-        throw new Error((err && err.message) || 'Erro ao obter membros');
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (_) { /* ignore */ }
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao obter membros');
+        err.status = response.status;
+        throw err;
     }
     return safeParseResponse(response);
+}
+
+export async function enrollOrgMembersInTraining(token, organizationId, payload = {}) {
+    if (!token) throw new Error('Token ausente');
+    if (!organizationId) throw new Error('ID da organização ausente');
+    const trainingId = payload && payload.trainingId ? String(payload.trainingId) : null;
+    if (!trainingId) throw new Error('ID do treinamento ausente');
+
+    const membershipIds = Array.isArray(payload.membershipIds)
+        ? payload.membershipIds.map(id => String(id)).filter(Boolean)
+        : [];
+    const userIds = Array.isArray(payload.userIds)
+        ? payload.userIds.map(id => String(id)).filter(Boolean)
+        : [];
+
+    if (!membershipIds.length && !userIds.length) {
+        throw new Error('Selecione ao menos um membro para matricular.');
+    }
+
+    const body = { trainingId };
+    if (membershipIds.length) body.membershipIds = membershipIds;
+    if (userIds.length) body.userIds = userIds;
+
+    const response = await fetch(`${API_BASE_URL}/organizations/${encodeURIComponent(organizationId)}/enrollments`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (_) { /* ignore */ }
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao matricular membros no treinamento.');
+        err.status = response.status;
+        if (parsed && parsed.code) err.code = parsed.code;
+        throw err;
+    }
+
+    try {
+        return await safeParseResponse(response);
+    } catch (_) {
+        return null;
+    }
+}
+
+/**
+ * Lista as matrículas de um membro específico da organização.
+ * Endpoint esperado: GET /organizations/{orgId}/members/{membershipId}/enrollments
+ */
+export async function getOrgMemberEnrollments(token, organizationId, membershipId) {
+    if (!token) throw new Error('Token ausente');
+    if (!organizationId) throw new Error('ID da organização ausente');
+    if (!membershipId) throw new Error('ID do membro ausente');
+
+    const baseUrl = `${API_BASE_URL}/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(membershipId)}`;
+    const attempts = [
+        { url: `${baseUrl}/progress`, allowFallback: true },
+        { url: `${baseUrl}/enrollments`, allowFallback: false }
+    ];
+
+    let lastError = null;
+
+    for (const attempt of attempts) {
+        let response;
+        try {
+            response = await fetch(attempt.url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (networkErr) {
+            lastError = networkErr;
+            continue;
+        }
+
+        if (response.ok) {
+            try {
+                const parsed = await safeParseResponse(response);
+                return parsed ?? [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        if (response.status === 404) {
+            if (attempt.allowFallback) {
+                // tentar endpoint legado
+                lastError = null;
+                continue;
+            }
+            return [];
+        }
+
+        if (response.status === 401 || response.status === 403) {
+            const err = new Error('Acesso negado ao progresso do membro.');
+            err.status = response.status;
+            throw err;
+        }
+
+        let parsed = null;
+        try { parsed = await safeParseResponse(response); } catch (_) { /* ignore */ }
+        const err = new Error((parsed && (parsed.message || parsed.error || parsed.erro)) || 'Erro ao carregar progresso do membro.');
+        err.status = response.status;
+        throw err;
+    }
+
+    if (lastError) throw lastError;
+    return [];
 }
 
 /**

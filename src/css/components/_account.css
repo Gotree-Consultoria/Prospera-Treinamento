@@ -194,14 +194,20 @@
 }
 
 /* ---- Menu de ações (lista de membros) ---- */
-.row-actions { position: relative; display: inline-block; }
+.row-actions { position: relative; display: inline-block; overflow: visible; z-index: 10; }
 .row-actions-menu-btn { background: #fff; border:1px solid #dce3e9; border-radius:6px; padding:4px 6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:#475569; transition:.15s; }
 .row-actions-menu-btn:hover { background:#f1f5f9; color:#111; }
-.row-actions-dropdown { position:absolute; top:110%; right:0; background:#fff; border:1px solid #e2e8f0; box-shadow:0 8px 18px -4px rgba(0,0,0,0.12); border-radius:8px; padding:4px 4px; display:none; min-width:118px; z-index:50; }
+.row-actions-dropdown { position:absolute; top:110%; right:0; background:#fff; border:1px solid #e2e8f0; box-shadow:0 8px 18px -4px rgba(0,0,0,0.12); border-radius:8px; padding:4px 4px; display:none; min-width:118px; z-index:150; opacity:0; pointer-events:none; transform:translateY(-4px); transition:opacity .12s ease, transform .12s ease; }
+.row-actions-dropdown.open { display:block; opacity:1; pointer-events:auto; transform:translateY(0); }
 .row-actions-dropdown .action-item { width:100%; background:none; border:none; display:flex; align-items:center; gap:6px; padding:5px 8px; font-size:.72rem; text-align:left; cursor:pointer; color:#334155; border-radius:5px; }
 .row-actions-dropdown .action-item:hover { background:#f1f5f9; }
 .row-actions-dropdown .icon { width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; color:#475569; }
 .row-actions-dropdown .spinner { border:2px solid #cbd5e1; border-top-color:#334155; border-radius:50%; width:14px; height:14px; animation: spin 0.7s linear infinite; }
+.members-table,
+#orgMembersTable,
+#orgMembersTable tbody,
+#orgMembersTable tr,
+#orgMembersTable td { overflow: visible; position: relative; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:translateY(0); } }
 
@@ -224,6 +230,47 @@
 .learning-role-notice { margin: 8px 0 14px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: .78rem; color: #1f2937; line-height: 1.45; }
 .learning-role-notice strong { color: #0f172a; }
 .learning-role-notice .counts { display: block; margin-top: 6px; font-size: .72rem; color: #475569; }
+.learning-admin-catalog { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.6rem; box-shadow: 0 10px 28px rgba(15,23,42,0.05); transition: box-shadow .2s ease; }
+.learning-admin-catalog[aria-busy="true"] { opacity: .7; }
+.learning-admin-catalog.hidden { display: none !important; }
+.learning-admin-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.learning-admin-header h2 { margin: 0 0 .4rem; font-size: 1.18rem; color: #0f172a; }
+.learning-admin-header p { margin: 0; font-size: .8rem; color: #475569; max-width: 640px; }
+.learning-admin-list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.learning-admin-list .learning-card { margin: 0; }
+.learning-admin-empty { margin-top: .8rem; font-size: .76rem; color: #64748b; }
+.learning-admin-empty.hidden { display: none !important; }
+.learning-enroll-modal h4 { margin: 0 0 6px; font-size: 1rem; color: #0f172a; }
+.learning-enroll-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.9rem; margin-bottom: 1rem; }
+.learning-enroll-info { flex: 1 1 320px; }
+.learning-enroll-info p { margin: 4px 0 0; font-size: 0.78rem; color: #475569; }
+.learning-enroll-selected { font-size: 0.72rem; font-weight: 600; color: #1e3a8a; background: #eef2ff; padding: 4px 10px; border-radius: 999px; align-self: flex-start; }
+.learning-enroll-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.8rem; }
+.learning-enroll-controls input { flex: 1 1 220px; min-width: 200px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; }
+.learning-enroll-shortcuts { display: flex; gap: 0.4rem; }
+.learning-enroll-shortcuts button { background: none; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 0.72rem; cursor: pointer; color: #1f2937; transition: background 0.12s ease; }
+.learning-enroll-shortcuts button:hover { background: #f1f5f9; }
+.learning-enroll-members { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.55rem; padding-right: 2px; }
+.learning-enroll-member { display: flex; align-items: flex-start; gap: 0.6rem; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; transition: background 0.12s ease, border-color 0.12s ease; }
+.learning-enroll-member:hover { background: #eef2ff; border-color: #c7d2fe; }
+.learning-enroll-member input { margin-top: 4px; }
+.learning-enroll-member .member-meta { display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem; color: #475569; }
+.learning-enroll-member .member-name { font-weight: 600; color: #0f172a; }
+.learning-enroll-member .member-email { font-size: 0.72rem; color: #2563eb; }
+.learning-enroll-member .member-role { font-size: 0.68rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+.learning-enroll-feedback { margin-top: 0.9rem; font-size: 0.74rem; padding: 6px 8px; border-radius: 6px; background: rgba(30, 64, 175, 0.08); color: #1e3a8a; }
+.learning-enroll-feedback.error { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+.learning-enroll-feedback.success { background: rgba(16, 185, 129, 0.12); color: #047857; }
+.learning-enroll-feedback.hidden { display: none; }
+.learning-enroll-shortcuts button:focus,
+.learning-enroll-controls input:focus { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; }
+@media (max-width: 540px) {
+    .learning-enroll-summary { flex-direction: column; align-items: stretch; }
+    .learning-enroll-selected { align-self: flex-start; }
+    .learning-enroll-controls { flex-direction: column; align-items: stretch; }
+    .learning-enroll-controls input { width: 100%; }
+    .learning-enroll-shortcuts { width: 100%; justify-content: flex-end; }
+}
 @media (max-width: 640px) {
   .osa-inline { flex-direction: column; align-items: stretch; }
   .osa-meta { flex-direction: column; align-items: flex-start; }
@@ -582,6 +629,10 @@
         max-width: 1280px; /* aumentado para dar mais espaço à tabela de membros */
         margin: 0 auto;
         padding: 1.2rem 1.5rem;
+}
+.org-members-card .table-responsive {
+    overflow: visible;
+    overflow-x: auto;
 }
 /* Ajuste intermediário para telas grandes mas não ultra-wide */
 @media (min-width: 1400px) {

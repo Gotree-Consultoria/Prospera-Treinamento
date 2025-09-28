@@ -15,6 +15,12 @@
 .content-modal .form-messages { background:rgba(220,20,60,0.06); color:#b33; padding:6px 8px; border-radius:4px; font-size:0.75rem; min-height:18px; }
 @media (max-width:520px){ .content-modal { width:94vw; padding:16px 16px 20px; } }
 
+.member-modal-header { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; margin-bottom:0.8rem; }
+.member-modal-header h3 { margin:0; font-size:1.05rem; color:#0f172a; }
+.member-modal-close { background:none; border:none; font-size:1.6rem; line-height:1; cursor:pointer; color:#475569; padding:2px 6px; border-radius:6px; }
+.member-modal-close:hover { background:#f1f5f9; color:#0f172a; }
+.member-modal-body { display:flex; flex-direction:column; }
+
 /* Viewer interno */
 .ebook-viewer-frame-wrapper { flex:1; min-height:60vh; border:1px solid #d9d9d9; border-radius:6px; overflow:hidden; background:#fafafa; }
 .ebook-viewer-actions { margin-top:10px; }
@@ -35,3 +41,41 @@
 
 /* Acessibilidade: esconder input de file se substituído por label custom */
 .visually-hidden { position:absolute !important; left:-9999px !important; width:1px !important; height:1px !important; opacity:0 !important; }
+
+.member-modal-meta { display:flex; flex-direction:column; gap:2px; margin-bottom:12px; font-size:0.85rem; color:#475569; }
+.member-modal-meta strong { font-size:0.95rem; color:#0f172a; }
+
+.member-progress-loading,
+.member-progress-empty,
+.member-progress-error { font-size:0.85rem; text-align:center; margin:12px 0; }
+.member-progress-loading { color:#475569; }
+.member-progress-empty { color:#475569; }
+.member-progress-error { color:#b91c1c; }
+
+.member-progress-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.75rem; }
+.member-progress-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; background:#f8fafc; }
+.member-progress-item h4 { margin:0 0 6px; font-size:0.95rem; color:#0f172a; }
+.member-progress-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:0.75rem; color:#475569; margin-bottom:8px; }
+.member-progress-meta .bullet { color:#cbd5f5; }
+
+.member-progress-bar { height:6px; background:#e2e8f0; border-radius:999px; overflow:hidden; }
+.member-progress-bar span { display:block; height:100%; background:#0ea5e9; transition:width .3s ease; }
+.member-progress-label { margin-top:6px; font-size:0.75rem; font-weight:600; color:#0f172a; }
+
+.member-status-chip { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.4px; background:#e2e8f0; color:#475569; }
+.member-status-chip.active { background:#dbeafe; color:#1d4ed8; }
+.member-status-chip.completed { background:#dcfce7; color:#166534; }
+.member-status-chip.pending { background:#fef3c7; color:#b45309; }
+.member-status-chip.cancelled { background:#fee2e2; color:#b91c1c; }
+.member-status-chip.neutral { background:#e2e8f0; color:#475569; }
+
+.member-detail-grid { display:grid; gap:10px; margin:12px 0; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); }
+.member-detail-field { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
+.member-detail-label { display:block; font-size:0.68rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; margin-bottom:4px; }
+.member-detail-value { font-size:0.9rem; color:#0f172a; word-break:break-word; }
+
+.member-enrollment-table { width:100%; border-collapse:collapse; margin-top:12px; font-size:0.85rem; }
+.member-enrollment-table th,
+.member-enrollment-table td { border-bottom:1px solid #e2e8f0; padding:8px 10px; text-align:left; }
+.member-enrollment-table th { background:#f1f5f9; font-size:0.7rem; letter-spacing:.4px; text-transform:uppercase; color:#475569; }
+.member-enrollment-empty { font-size:0.85rem; color:#475569; text-align:center; margin:12px 0; }

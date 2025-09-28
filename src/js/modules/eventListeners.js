@@ -11,6 +11,7 @@ import { nextCard, prevCard } from './carousel.js';
 import { scrollLeft, scrollRight } from './scroll.js';
 import { filterProductsByCategory, searchProducts } from './products.js';
 import { formatCNPJ } from './utils.js';
+import { showToast } from './notifications.js';
 
 /**
  * Configura todos os event listeners principais da aplicação.
@@ -672,26 +673,33 @@ document.body.addEventListener('click', (e) => {
             tabBtn.classList.add('active');
             renderLearningCards();
         }
+        const progressBtn = e.target.closest('[data-action="viewProgress"]');
+        if (progressBtn) {
+            e.preventDefault();
+            const id = progressBtn.getAttribute('data-id');
+            openLearningTraining(id, { focus: 'progress' });
+            return;
+        }
+        const detailsBtn = e.target.closest('[data-action="viewDetails"]');
+        if (detailsBtn) {
+            e.preventDefault();
+            const id = detailsBtn.getAttribute('data-id');
+            openLearningTraining(id, { focus: 'details' });
+            return;
+        }
         const openBtn = e.target.closest('[data-action="openLearning"]');
         if (openBtn) {
             e.preventDefault();
             const id = openBtn.getAttribute('data-id');
-            let preloaded = null;
-            try {
-                if (Array.isArray(_learningCache)) {
-                    preloaded = _learningCache.find(item => String(item.id) === String(id));
-                }
-            } catch (err) {
-                console.warn('[learning] falha ao buscar treinamento selecionado', err);
-            }
-            if (preloaded) {
-                try { window._trainingDetailPreloaded = preloaded; } catch (err) { console.warn('[learning] não foi possível armazenar pré-carga do treinamento', err); }
-            }
-            import('./adminContent.js').then(m => {
-                if (m.navigateToTrainingDetail) {
-                    m.navigateToTrainingDetail(id, { source: 'learning', training: preloaded });
-                }
-            });
+            openLearningTraining(id);
+            return;
+        }
+        const enrollBtn = e.target.closest('[data-action="openOrgEnrollment"]');
+        if (enrollBtn) {
+            e.preventDefault();
+            const trainingId = enrollBtn.getAttribute('data-id');
+            openOrgAdminEnrollmentModal(trainingId);
+            return;
         }
     });
     document.body.addEventListener('input', (e)=>{
@@ -702,7 +710,66 @@ document.body.addEventListener('click', (e) => {
     });
 })();
 
-let _learningCache = null; let _learningLoading = false;
+let _learningCache = null;
+let _learningLoading = false;
+let _learningOrgMembersCache = null;
+let _learningOrgMembersCacheOrgId = null;
+let _learningAdminModalOverlay = null;
+
+function openLearningTraining(id, options = {}) {
+    if (!id) return;
+    const focus = options && options.focus ? String(options.focus) : '';
+    if (focus) {
+        const roleCtx = sessionStorage.getItem('learningRoleContext') || resolveCurrentSystemRole();
+        const normalizedRole = roleCtx ? roleCtx.toString().toUpperCase() : '';
+        const shouldPersistFocus = normalizedRole !== 'SYSTEM_ADMIN' && normalizedRole !== 'ORG_ADMIN';
+        if (shouldPersistFocus) {
+            try { sessionStorage.setItem('trainingReaderFocus', focus); } catch (_) { /* ignore */ }
+        } else {
+            try { sessionStorage.removeItem('trainingReaderFocus'); } catch (_) { /* ignore */ }
+        }
+    }
+    let preloaded = null;
+    try {
+        if (Array.isArray(_learningCache)) {
+            preloaded = _learningCache.find(item => String(item.id) === String(id));
+        }
+    } catch (err) {
+        console.warn('[learning] falha ao buscar treinamento selecionado', err);
+    }
+    if (preloaded) {
+        try { window._trainingDetailPreloaded = preloaded; } catch (err) { console.warn('[learning] não foi possível armazenar pré-carga do treinamento', err); }
+    }
+    import('./adminContent.js').then(m => {
+        if (m.navigateToTrainingDetail) {
+            m.navigateToTrainingDetail(id, { source: 'learning', training: preloaded });
+        }
+    });
+}
+
+function resolveCurrentSystemRole(){
+    const currentOrgId = sessionStorage.getItem('currentOrganizationId');
+    const orgRole = currentOrgId ? sessionStorage.getItem('myOrgRole_' + currentOrgId) : null;
+    const candidates = [
+        localStorage.getItem('systemRole'),
+        localStorage.getItem('userRole'),
+        sessionStorage.getItem('currentSystemRole'),
+        sessionStorage.getItem('selectedProfileRole'),
+        orgRole,
+        window && window.profileData ? (window.profileData.systemRole || window.profileData.role) : null,
+    ];
+    for (const raw of candidates){
+        if (raw){
+            try {
+                const normalized = raw.toString().trim();
+                if (normalized) return normalized.toUpperCase();
+            } catch (_) {
+                // ignore parsing issues
+            }
+        }
+    }
+    return '';
+}
 async function loadLearningContent(){
     if (_learningCache) return _learningCache;
     if (_learningLoading) return new Promise(r=>{ const iv=setInterval(()=>{ if(_learningCache){clearInterval(iv); r(_learningCache);} },200); });
@@ -712,11 +779,14 @@ async function loadLearningContent(){
         const token = localStorage.getItem('jwtToken');
         if (!token) throw new Error('Sessão expirada. Faça login.');
 
-    const rawRole = (localStorage.getItem('systemRole') || '').toUpperCase();
+    const rawRole = resolveCurrentSystemRole();
+    const currentOrgId = sessionStorage.getItem('currentOrganizationId');
+    const orgSpecificRole = currentOrgId ? (sessionStorage.getItem('myOrgRole_' + currentOrgId) || '') : '';
+    const normalizedOrgRole = orgSpecificRole ? orgSpecificRole.toString().toUpperCase() : '';
     const isSystemAdmin = /SYSTEM[_-]?ADMIN/.test(rawRole);
-    const isOrgAdmin = /ORG[_-]?ADMIN/.test(rawRole);
+    const isOrgAdmin = /ORG[_-]?ADMIN/.test(rawRole) || normalizedOrgRole === 'ORG_ADMIN';
     sessionStorage.setItem('learningShowStatus', isSystemAdmin ? 'true' : 'false');
-    const roleContext = isSystemAdmin ? 'SYSTEM_ADMIN' : (isOrgAdmin ? 'ORG_ADMIN' : (rawRole || 'ORG_MEMBER'));
+    const roleContext = isSystemAdmin ? 'SYSTEM_ADMIN' : (isOrgAdmin ? 'ORG_ADMIN' : (rawRole || normalizedOrgRole || 'ORG_MEMBER'));
     sessionStorage.setItem('learningRoleContext', roleContext);
         let list = [];
 
@@ -901,10 +971,16 @@ document.addEventListener('training:progress-updated', (event) => {
 });
 function renderLearningCards(){
     console.debug('[learning] renderLearningCards start, cache=', !!_learningCache);
-    const listEl = document.getElementById('learningList'); if(!listEl||!_learningCache){ if(!listEl) console.warn('[learning] listEl inexistente'); if(!_learningCache) console.warn('[learning] cache vazio'); return; }
+    const listEl = document.getElementById('learningList');
+    if (!listEl || !_learningCache) {
+        if (!listEl) console.warn('[learning] listEl inexistente');
+        if (!_learningCache) console.warn('[learning] cache vazio');
+        return;
+    }
+
     const activeTab = document.querySelector('#learningTabs .ltab.active');
-    const tab = activeTab?activeTab.getAttribute('data-ltab'):'all';
-    const q = (document.getElementById('learningSearch')?.value||'').trim().toLowerCase();
+    const tab = activeTab ? activeTab.getAttribute('data-ltab') : 'all';
+    const q = (document.getElementById('learningSearch')?.value || '').trim().toLowerCase();
     const statusSelect = document.getElementById('learningStatusFilter');
     const canSeeStatus = sessionStorage.getItem('learningShowStatus') === 'true';
     if (statusSelect) {
@@ -913,25 +989,67 @@ function renderLearningCards(){
             statusSelect.value = '';
         }
     }
-    const statusFilter = canSeeStatus ? ((statusSelect?.value||'').toUpperCase()) : '';
-    const sysRole = (localStorage.getItem('systemRole')||'').toUpperCase();
+    const statusFilter = canSeeStatus ? ((statusSelect?.value || '').toUpperCase()) : '';
+    const sysRole = resolveCurrentSystemRole();
     const roleContext = sessionStorage.getItem('learningRoleContext') || sysRole || 'USER';
+    const currentOrgId = sessionStorage.getItem('currentOrganizationId');
+    const orgSpecificRole = currentOrgId ? (sessionStorage.getItem('myOrgRole_' + currentOrgId) || '') : '';
+    const normalizedRole = roleContext.toString().toUpperCase();
+    const normalizedOrgRole = orgSpecificRole ? orgSpecificRole.toString().toUpperCase() : '';
+    const isOrgAdminView = normalizedRole === 'ORG_ADMIN' || normalizedOrgRole === 'ORG_ADMIN';
     const sectorFilter = sessionStorage.getItem('learningSectorFilter') || '';
-    let list = _learningCache.slice();
-    if (tab==='ebooks') list=list.filter(t=>(t.entityType||'').toUpperCase()==='EBOOK');
-    else if (tab==='courses') list=list.filter(t=>(t.entityType||'').toUpperCase()==='RECORDED_COURSE');
-    else if (tab==='live') list=list.filter(t=>(t.entityType||'').toUpperCase()==='LIVE_TRAINING');
-    if (q) list=list.filter(t=>(t.title||'').toLowerCase().includes(q));
-    if (statusFilter) list=list.filter(t=>(t.publicationStatus||t.status||'').toUpperCase()===statusFilter);
-    if (sectorFilter) {
-        list = list.filter(t => {
-            const ids = extractTrainingSectorIds(t);
-            return ids.includes(sectorFilter);
-        });
+
+    const applyFilters = (sourceList) => {
+        let arr = Array.isArray(sourceList) ? sourceList.slice() : [];
+        if (!arr.length) return [];
+        if (tab === 'ebooks') arr = arr.filter(t => (t.entityType || '').toUpperCase() === 'EBOOK');
+        else if (tab === 'courses') arr = arr.filter(t => (t.entityType || '').toUpperCase() === 'RECORDED_COURSE');
+        else if (tab === 'live') arr = arr.filter(t => (t.entityType || '').toUpperCase() === 'LIVE_TRAINING');
+        if (q) arr = arr.filter(t => (t.title || '').toLowerCase().includes(q));
+        if (statusFilter) arr = arr.filter(t => (t.publicationStatus || t.status || '').toUpperCase() === statusFilter);
+        if (sectorFilter) {
+            arr = arr.filter(t => {
+                const ids = extractTrainingSectorIds(t);
+                return ids.includes(sectorFilter);
+            });
+        }
+        return arr;
+    };
+
+    const filteredAll = applyFilters(_learningCache);
+    let adminFiltered = [];
+    const adminCatalog = document.getElementById('learningOrgAdminCatalog');
+    const adminListEl = document.getElementById('learningAdminCatalogList');
+    const adminEmptyEl = document.getElementById('learningAdminCatalogEmpty');
+
+    if (isOrgAdminView && adminCatalog && adminListEl && adminEmptyEl) {
+        adminCatalog.classList.remove('hidden');
+        adminCatalog.setAttribute('aria-hidden', 'false');
+        adminCatalog.setAttribute('aria-busy', 'false');
+
+        adminFiltered = applyFilters(_learningCache.filter(item => item && item._assignable));
+
+        if (adminFiltered.length) {
+            adminListEl.innerHTML = adminFiltered.map(t => learningCardHtml(t, sysRole, canSeeStatus, roleContext)).join('');
+            adminEmptyEl.classList.add('hidden');
+        } else {
+            adminListEl.innerHTML = '';
+            adminEmptyEl.classList.remove('hidden');
+        }
+    } else if (adminCatalog) {
+        adminCatalog.classList.add('hidden');
+        adminCatalog.setAttribute('aria-hidden', 'true');
+        adminCatalog.setAttribute('aria-busy', 'false');
+        if (adminListEl) adminListEl.innerHTML = '';
+        if (adminEmptyEl) adminEmptyEl.classList.add('hidden');
     }
+
     listEl.classList.remove('loading');
     updateLearningRoleNotice(roleContext);
-    if(!list.length){
+
+    const displayList = filteredAll;
+
+    if (!displayList.length) {
         console.debug('[learning] lista vazia; state=', sessionStorage.getItem('learningFilteredByOrgSectors'));
         const state = sessionStorage.getItem('learningFilteredByOrgSectors');
         let msg = 'Nenhum conteúdo encontrado.';
@@ -943,19 +1061,22 @@ function renderLearningCards(){
             if (orgRole === 'ORG_MEMBER') base = 'Nenhum setor adotado pela organização.';
             const notice = 'Caso você tenha adotado um setor para sua organização, os cursos aparecerão nesta tela.';
             const obs = 'Obs.: Para um ORG_MEMBER o que irá aparecer é somente os treinamentos atribuídos pelo ORG_ADMIN. Fora isso ele só pode ver o catálogo público.';
-            msg = `${base}<br><br><strong>${escapeHtml(notice)}</strong><br><span class=\"muted\" style=\"font-size:.65rem;line-height:1.3\">${escapeHtml(obs)}</span>`;
+            msg = `${base}<br><br><strong>${escapeHtml(notice)}</strong><br><span class="muted" style="font-size:.65rem;line-height:1.3">${escapeHtml(obs)}</span>`;
         }
         else if (state === 'no-org') msg = 'Selecione uma organização para visualizar os cursos dos setores adotados.';
         else if (state === 'error') msg = 'Não foi possível carregar os setores adotados para filtrar os cursos.';
         else if (state === 'no-access') msg = 'Você não tem acesso ao catálogo interno. Aguarde atribuição de treinamentos pelo administrador ou utilize o catálogo público.';
         else if (state === 'org-admin-empty') msg = 'Nenhum treinamento disponível para os setores adotados da organização.';
-    else if (state === 'org-admin-personal') msg = 'Você possui treinamentos atribuídos a você, mas nenhum conteúdo novo foi disponibilizado para os setores adotados.';
-    else if (state === 'org-admin-mixed') msg = 'Você está visualizando os treinamentos atribuídos a você no topo, seguidos pelo catálogo completo adotado pela organização.';
+        else if (state === 'org-admin-personal') msg = 'Você possui treinamentos atribuídos a você, mas nenhum conteúdo novo foi disponibilizado para os setores adotados.';
+        else if (state === 'org-admin-mixed') msg = 'Você está visualizando os treinamentos atribuídos a você no topo, seguidos pelo catálogo completo adotado pela organização.';
         else if (state === 'member-empty') msg = 'Nenhum treinamento foi atribuído a você até o momento.';
         else if (state === 'system-empty') msg = 'Nenhum treinamento está cadastrado no momento.';
         if (sectorFilter) msg = 'Nenhum curso encontrado para este setor.';
-        listEl.innerHTML = `<p class="muted" style="font-size:.7rem;line-height:1.35">${msg}</p>`; return; }
-    listEl.innerHTML = list.map(t=>learningCardHtml(t, sysRole, canSeeStatus, roleContext)).join('');
+        listEl.innerHTML = `<p class="muted" style="font-size:.7rem;line-height:1.35">${msg}</p>`;
+        return;
+    }
+
+    listEl.innerHTML = displayList.map(t => learningCardHtml(t, sysRole, canSeeStatus, roleContext)).join('');
 }
 
 function updateLearningRoleNotice(roleContext){
@@ -1091,30 +1212,347 @@ async function ensureOrgSectorsBar(){
         bar.innerHTML='<span class="los-empty-hint">Não foi possível carregar setores adotados.</span>';
     }
 }
+
+function closeOrgAdminEnrollmentModal(){
+    if (!_learningAdminModalOverlay) return;
+    const overlay = _learningAdminModalOverlay;
+    if (overlay._escHandler) {
+        document.removeEventListener('keydown', overlay._escHandler);
+    }
+    if (overlay._originalOverflow !== undefined) {
+        document.body.style.overflow = overlay._originalOverflow;
+    } else {
+        document.body.style.overflow = '';
+    }
+    overlay.remove();
+    _learningAdminModalOverlay = null;
+}
+
+async function ensureOrgMembersForOrg(orgId){
+    if (!orgId) throw new Error('Selecione uma organização.');
+    if (_learningOrgMembersCache && _learningOrgMembersCacheOrgId === orgId) {
+        return _learningOrgMembersCache.map(member => ({ ...member }));
+    }
+    const token = localStorage.getItem('jwtToken');
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+    const { getOrgMembers } = await import('./api.js');
+    const raw = await getOrgMembers(token, orgId);
+    const collection = normalizeOrgMembersCollection(raw).map(normalizeOrgMemberForSelection).filter(Boolean);
+    _learningOrgMembersCache = collection;
+    _learningOrgMembersCacheOrgId = orgId;
+    return collection.map(member => ({ ...member }));
+}
+
+function normalizeOrgMembersCollection(raw){
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.items)) return raw.items;
+    if (raw && Array.isArray(raw.data)) return raw.data;
+    if (raw && Array.isArray(raw.results)) return raw.results;
+    if (raw && Array.isArray(raw.content)) return raw.content;
+    return [];
+}
+
+function normalizeOrgMemberForSelection(raw){
+    if (!raw || typeof raw !== 'object') return null;
+    const membershipId = firstDefined(
+        raw.membershipId,
+        raw.membership_id,
+        raw.id,
+        raw._id,
+        raw.memberId,
+        raw.member_id,
+        raw.membership && raw.membership.id,
+        raw.membership && raw.membership.membershipId
+    );
+    if (!membershipId) return null;
+    const user = raw.user || {};
+    const name = firstDefined(raw.fullName, raw.full_name, raw.fullname, raw.name, user.fullName, user.full_name, user.name, '') || '';
+    const email = firstDefined(raw.email, raw.userEmail, raw.user_email, user.email, user.emailAddress, user.mail, '') || '';
+    const roleRaw = firstDefined(raw.role, raw.userRole, raw.user_role, user.role, user.systemRole, '');
+    return {
+        membershipId: String(membershipId),
+        userId: firstDefined(raw.userId, raw.user_id, user.id, user._id, null) ? String(firstDefined(raw.userId, raw.user_id, user.id, user._id)) : null,
+        name: name ? String(name).trim() : (email || `Membro ${membershipId}`),
+        email: email ? String(email).trim() : '',
+        role: roleRaw ? String(roleRaw).trim() : '',
+        searchable: [name, email, roleRaw].filter(Boolean).map(val => String(val).toLowerCase()).join(' ')
+    };
+}
+
+async function openOrgAdminEnrollmentModal(trainingId){
+    const roleContext = (sessionStorage.getItem('learningRoleContext') || '').toUpperCase();
+    if (roleContext !== 'ORG_ADMIN') return;
+    if (!trainingId) {
+        showToast('Treinamento não encontrado.', { type: 'error' });
+        return;
+    }
+    const training = Array.isArray(_learningCache) ? _learningCache.find(item => String(item.id) === String(trainingId)) : null;
+    if (!training) {
+        showToast('Não foi possível localizar este treinamento.', { type: 'error' });
+        return;
+    }
+    const orgId = sessionStorage.getItem('currentOrganizationId');
+    if (!orgId) {
+        showToast('Selecione uma organização para matricular membros.', { type: 'error' });
+        return;
+    }
+
+    closeOrgAdminEnrollmentModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'content-modal-overlay learning-enroll-overlay';
+    overlay._originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const modal = document.createElement('div');
+    modal.className = 'content-modal large learning-enroll-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'learningEnrollModalTitle');
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+        <div class="member-modal-header">
+            <h3 id="learningEnrollModalTitle">Matricular membros</h3>
+            <button type="button" class="member-modal-close" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="member-modal-body">
+            <div class="learning-enroll-summary">
+                <div class="learning-enroll-info">
+                    <h4>${escapeHtml(training.title || 'Treinamento')}</h4>
+                    ${training.description ? `<p>${escapeHtml(truncateText(training.description, 200))}</p>` : ''}
+                </div>
+                <span class="learning-enroll-selected" data-selected-count>Selecionados: 0</span>
+            </div>
+            <div class="learning-enroll-controls">
+                <label class="sr-only" for="learningEnrollSearch">Buscar membros</label>
+                <input type="search" id="learningEnrollSearch" placeholder="Buscar por nome ou e-mail" autocomplete="off" />
+                <div class="learning-enroll-shortcuts">
+                    <button type="button" data-action="selectAll">Selecionar filtrados</button>
+                    <button type="button" data-action="clearSelection">Limpar seleção</button>
+                </div>
+            </div>
+            <div class="learning-enroll-members" data-members-container><p class="muted">Carregando membros...</p></div>
+            <div class="learning-enroll-feedback hidden" data-feedback></div>
+        </div>
+        <div class="content-modal-actions">
+            <button type="button" class="btn btn-small btn-secondary" data-action="cancel">Cancelar</button>
+            <button type="button" class="btn btn-small" data-action="confirm">Confirmar matrículas</button>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    _learningAdminModalOverlay = overlay;
+
+    const closeButtons = modal.querySelectorAll('.member-modal-close, [data-action="cancel"]');
+    closeButtons.forEach(btn => btn.addEventListener('click', closeOrgAdminEnrollmentModal));
+    overlay.addEventListener('click', (ev)=>{ if (ev.target === overlay) closeOrgAdminEnrollmentModal(); });
+    const escHandler = (ev) => { if (ev.key === 'Escape') closeOrgAdminEnrollmentModal(); };
+    document.addEventListener('keydown', escHandler);
+    overlay._escHandler = escHandler;
+
+    const feedbackEl = modal.querySelector('[data-feedback]');
+    const membersContainer = modal.querySelector('[data-members-container]');
+    const searchInput = modal.querySelector('#learningEnrollSearch');
+    const selectAllBtn = modal.querySelector('[data-action="selectAll"]');
+    const clearBtn = modal.querySelector('[data-action="clearSelection"]');
+    const confirmBtn = modal.querySelector('[data-action="confirm"]');
+    const selectedLabel = modal.querySelector('[data-selected-count]');
+
+    const state = {
+        members: [],
+        filtered: [],
+        selected: new Set(),
+        search: ''
+    };
+
+    const updateSelectedLabel = () => {
+        if (selectedLabel) {
+            selectedLabel.textContent = `Selecionados: ${state.selected.size}`;
+        }
+    };
+
+    const showFeedback = (message = '', type = 'info') => {
+        if (!feedbackEl) return;
+        if (!message) {
+            feedbackEl.textContent = '';
+            feedbackEl.classList.add('hidden');
+            feedbackEl.classList.remove('error', 'success');
+            return;
+        }
+        feedbackEl.textContent = message;
+        feedbackEl.classList.remove('hidden', 'error', 'success');
+        if (type === 'error') feedbackEl.classList.add('error');
+        if (type === 'success') feedbackEl.classList.add('success');
+    };
+
+    const renderMembers = () => {
+        if (!membersContainer) return;
+        if (!state.filtered.length) {
+            membersContainer.innerHTML = '<p class="muted">Nenhum membro encontrado.</p>';
+            return;
+        }
+        membersContainer.innerHTML = state.filtered.map(member => `
+            <label class="learning-enroll-member" data-membership-id="${escapeHtml(member.membershipId)}">
+                <input type="checkbox" value="${escapeHtml(member.membershipId)}" ${state.selected.has(member.membershipId) ? 'checked' : ''} />
+                <div class="member-meta">
+                    <span class="member-name">${escapeHtml(member.name)}</span>
+                    ${member.email ? `<span class="member-email">${escapeHtml(member.email)}</span>` : ''}
+                    ${member.role ? `<span class="member-role">${escapeHtml(member.role)}</span>` : ''}
+                </div>
+            </label>
+        `).join('');
+
+        membersContainer.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', (ev) => {
+                const id = ev.target.value;
+                if (ev.target.checked) {
+                    state.selected.add(id);
+                } else {
+                    state.selected.delete(id);
+                }
+                updateSelectedLabel();
+                showFeedback('');
+            });
+        });
+    };
+
+    try {
+        state.members = await ensureOrgMembersForOrg(orgId);
+        state.filtered = state.members.slice();
+        renderMembers();
+        updateSelectedLabel();
+    } catch (err) {
+        console.error('[learning] erro ao carregar membros', err);
+        if (membersContainer) {
+            membersContainer.innerHTML = `<p class="error-msg">${escapeHtml(err.message || 'Erro ao carregar membros da organização.')}</p>`;
+        }
+        if (confirmBtn) confirmBtn.disabled = true;
+        showFeedback(err.message || 'Erro ao carregar membros da organização.', 'error');
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (ev) => {
+            state.search = (ev.target.value || '').trim().toLowerCase();
+            if (!state.search) {
+                state.filtered = state.members.slice();
+            } else {
+                state.filtered = state.members.filter(member => member.searchable.includes(state.search));
+            }
+            renderMembers();
+        });
+    }
+
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            state.filtered.forEach(member => state.selected.add(member.membershipId));
+            renderMembers();
+            updateSelectedLabel();
+            showFeedback('');
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            state.selected.clear();
+            renderMembers();
+            updateSelectedLabel();
+            showFeedback('');
+        });
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            if (!state.selected.size) {
+                showFeedback('Selecione ao menos um membro para matricular.', 'error');
+                return;
+            }
+            const token = localStorage.getItem('jwtToken');
+            if (!token) {
+                showFeedback('Sessão expirada. Faça login novamente.', 'error');
+                return;
+            }
+            confirmBtn.disabled = true;
+            const originalText = confirmBtn.textContent;
+            confirmBtn.textContent = 'Matriculando...';
+            try {
+                const { enrollOrgMembersInTraining } = await import('./api.js');
+                await enrollOrgMembersInTraining(token, orgId, {
+                    trainingId: training.id,
+                    membershipIds: Array.from(state.selected)
+                });
+                showToast('Matrículas enviadas com sucesso.');
+                closeOrgAdminEnrollmentModal();
+                _learningCache = null;
+                initLearningSection();
+            } catch (err) {
+                console.error('[learning] falha ao matricular membros', err);
+                showFeedback(err && err.message ? err.message : 'Erro ao matricular membros.', 'error');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = originalText || 'Confirmar matrículas';
+            }
+        });
+    }
+
+    setTimeout(() => {
+        try { modal.focus(); } catch (e) { /* ignore */ }
+    }, 30);
+}
+
+function renderOrgAdminAssignableCatalog(){
+    renderLearningCards();
+}
 function learningCardHtml(t, sysRole, showStatus, roleContext){
     const type=(t.entityType||'').toUpperCase();
     const status=(t.publicationStatus||t.status||'').toUpperCase();
     const published=status==='PUBLISHED';
     const normalizedRole=(roleContext||'').toString().toUpperCase();
-    const isMemberView = normalizedRole === 'ORG_MEMBER' || normalizedRole === 'ORG_USER' || normalizedRole === 'MEMBER' || normalizedRole === 'USER' || normalizedRole === 'EMPLOYEE' || !normalizedRole;
-    const badges=[]; if(type==='EBOOK') badges.push('E-book'); else if(type==='RECORDED_COURSE') badges.push('Gravado'); else if(type==='LIVE_TRAINING') badges.push('Ao Vivo');
+    const isOrgAdminView = normalizedRole === 'ORG_ADMIN';
+    const isMemberRole = normalizedRole === 'ORG_MEMBER' || normalizedRole === 'ORG_USER' || normalizedRole === 'MEMBER' || normalizedRole === 'USER' || normalizedRole === 'EMPLOYEE' || !normalizedRole;
+    const showMemberCard = (isMemberRole && t._enrollment) || (isOrgAdminView && t._enrollment);
+
+    const badges=[];
+    if(type==='EBOOK') badges.push('E-book');
+    else if(type==='RECORDED_COURSE') badges.push('Gravado');
+    else if(type==='LIVE_TRAINING') badges.push('Ao Vivo');
     if (t._enrollment) {
         badges.push('Atribuído a mim');
     }
-    if (normalizedRole === 'ORG_ADMIN' && t._assignable) {
+    if (isOrgAdminView && t._assignable) {
         badges.push('Disponível para a organização');
     }
     if (showStatus) {
         badges.push(published?'Publicado':'Rascunho');
     }
-    const canOpen = published || /SYSTEM[_-]?ADMIN/.test(sysRole) || (isMemberView && !!t._enrollment);
-    const actions = canOpen ? `<button class="btn btn-small" data-action="openLearning" data-id="${escapeHtml(t.id)}">Abrir</button>` : `<button class="btn btn-small" disabled>Indisponível</button>`;
 
-    if (isMemberView && t._enrollment) {
-        return renderMemberLearningCard(t, badges, actions);
+    const actionsParts = [];
+    if (isOrgAdminView && t._assignable) {
+        actionsParts.push(`<button class="btn btn-small btn-secondary" data-action="openOrgEnrollment" data-id="${escapeHtml(t.id)}">Matricular membros</button>`);
+    }
+    const canOpen = published || /SYSTEM[_-]?ADMIN/.test(sysRole) || (!!t._enrollment);
+
+    if (showMemberCard) {
+        actionsParts.push(`<button class="btn btn-small btn-secondary" data-action="viewProgress" data-id="${escapeHtml(t.id)}">Ver progresso</button>`);
+        if (canOpen) {
+            actionsParts.push(`<button class="btn btn-small" data-action="viewDetails" data-id="${escapeHtml(t.id)}">Ver detalhes</button>`);
+        } else {
+            actionsParts.push(`<button class="btn btn-small" disabled>Ver detalhes</button>`);
+        }
+        return renderMemberLearningCard(t, badges, actionsParts.join(''));
     }
 
-    return `<div class="learning-card" data-id="${escapeHtml(t.id)}"><h4>${escapeHtml(t.title||'')}</h4><p>${escapeHtml(t.description||'')}</p><div class="learning-badges">${badges.map(b=>`<span>${escapeHtml(b)}</span>`).join(' ')}</div><div class="learning-actions">${actions}</div></div>`;
+    if (canOpen) {
+        actionsParts.push(`<button class="btn btn-small" data-action="openLearning" data-id="${escapeHtml(t.id)}">Abrir</button>`);
+    } else {
+        actionsParts.push(`<button class="btn btn-small" disabled>Indisponível</button>`);
+    }
+    const actions = actionsParts.join('');
+
+    const description = truncateText(t.description || '', 220);
+    return `<div class="learning-card" data-id="${escapeHtml(t.id)}"><h4>${escapeHtml(t.title||'')}</h4>${description?`<p>${escapeHtml(description)}</p>`:''}<div class="learning-badges">${badges.map(b=>`<span>${escapeHtml(b)}</span>`).join(' ')}</div><div class="learning-actions">${actions}</div></div>`;
 }
 
 function renderMemberLearningCard(t, badges, actions) {
@@ -1227,6 +1665,9 @@ function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g,s=>({'&':'&a
 document.addEventListener('org:current:changed', ()=>{
     // Limpar cache para forçar recarregamento com setores da nova organização
     _learningCache = null;
+    _learningOrgMembersCache = null;
+    _learningOrgMembersCacheOrgId = null;
+    closeOrgAdminEnrollmentModal();
     const learningPageActive = document.getElementById('learningPage')?.classList.contains('active');
     if (learningPageActive) {
         initLearningSection();
