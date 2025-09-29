@@ -1,8 +1,8 @@
 // Importa as dependências necessárias de outros módulos
-import { products, packages } from './render.js';
-import { getTrainingById } from './trainings.js';
-import { formatPrice } from './utils.js';
-import { showCartNotification } from './notifications.js'; // Assumindo um novo módulo para notificações
+import { products, packages } from '../../shared/render.js';
+import { getTrainingById } from '../trainings/trainings.js';
+import { formatPrice } from '../../shared/utils.js';
+import { showCartNotification } from '../../shared/notifications.js'; // Assumindo um novo módulo para notificações
 
 export let cartItems = [];
 

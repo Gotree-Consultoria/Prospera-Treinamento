@@ -4,16 +4,16 @@
  */
 export async function loadAllComponents() {
     const components = [
-        { id: "headerPageContainer", file: "src/partials/headerPage.html" },
-        { id: "ebooksPageContainer", file: "src/partials/ebooksPage.html" },
-        { id: "packagesPageContainer", file: "src/partials/packagesPage.html" },
-        { id: "aboutPageContainer", file: "src/partials/aboutPage.html" },
-        { id: "contactPageContainer", file: "src/partials/contactPage.html" },
-        { id: "accountPageContainer", file: "src/partials/accountPage.html" },
-    { id: "learningPageContainer", file: "src/partials/learningPage.html" },
-        { id: "faqPageContainer", file: "src/partials/faqPage.html" },
-        { id: "footerPageContainer", file: "src/partials/footerPage.html" },
-        { id: "productCategoriesContainer", file: "src/partials/productCategoriesPage.html" },
+        { id: "headerPageContainer", file: "src/pages/headerPage.html" },
+        { id: "ebooksPageContainer", file: "src/pages/ebooksPage.html" },
+        { id: "packagesPageContainer", file: "src/pages/packagesPage.html" },
+        { id: "aboutPageContainer", file: "src/pages/aboutPage.html" },
+        { id: "contactPageContainer", file: "src/pages/contactPage.html" },
+        { id: "accountPageContainer", file: "src/pages/accountPage.html" },
+        { id: "learningPageContainer", file: "src/pages/learningPage.html" },
+        { id: "faqPageContainer", file: "src/pages/faqPage.html" },
+        { id: "footerPageContainer", file: "src/pages/footerPage.html" },
+        { id: "productCategoriesContainer", file: "src/pages/productCategoriesPage.html" },
     ];
 
     try {

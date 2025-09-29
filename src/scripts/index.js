@@ -1,16 +1,16 @@
 import { loadAllComponents } from './loadComponents.js';
-import { setupEventListeners } from './modules/eventListeners.js';
+import { setupEventListeners } from './modules/shared/eventListeners.js';
 // Import admin modules that register page-level handlers (ensures page:loaded listeners are attached)
-import './modules/adminUsers.js';
-import './modules/adminOrgs.js';
-import './modules/adminOrgDetail.js';
-import './modules/adminPlatformSectors.js';
-import './modules/adminContent.js';
-import { showPage, scrollToSection, resolveRouteFromLocation } from './modules/navigation.js';
-import { initCarousel } from './modules/carousel.js';
-import { checkUserLoggedIn } from './modules/auth.js';
-import './modules/catalog.js';
-import './modules/ebooksMini.js'; // mini catálogo de e-books na página de E-books
+import './modules/features/admin/adminUsers.js';
+import './modules/features/admin/adminOrgs.js';
+import './modules/features/admin/adminOrgDetail.js';
+import './modules/features/admin/adminPlatformSectors.js';
+import './modules/features/admin/adminContent.js';
+import { showPage, scrollToSection, resolveRouteFromLocation } from './modules/shared/navigation.js';
+import { initCarousel } from './modules/shared/carousel.js';
+import { checkUserLoggedIn } from './modules/shared/auth.js';
+import './modules/features/catalog/catalog.js';
+import './modules/features/ebooks/ebooksMini.js'; // mini catálogo de e-books na página de E-books
 
 // Dados legacy de produtos/pacotes removidos (catálogo unificado agora cobre exibição)
 

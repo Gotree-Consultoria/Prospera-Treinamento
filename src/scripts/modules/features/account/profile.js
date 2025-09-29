@@ -1,5 +1,5 @@
 // Funções do api.js (import único consolidado evitando duplicação)
-import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole, getMyOrganizationSectors, removeOrganizationSector, addOrganizationSector, getPublicSectors, getOrgMemberEnrollments } from './api.js'; // uso simplificado: catálogo público único
+import { updateUserProfile, updateUserEmail, updateUserPassword, completeUserProfile, fetchUserProfile, requestEmailChange, createPFProfile, createOrganization, getOrgMembers, addOrgMember, removeOrgMember, removeMyOrgMembership, updateOrgMemberRole, getMyOrganizationSectors, removeOrganizationSector, addOrganizationSector, getPublicSectors, getOrgMemberEnrollments } from '../../shared/api.js'; // uso simplificado: catálogo público único
 
 let currentProfile = null;
 let activeOrgMemberModal = null;
@@ -771,7 +771,7 @@ document.addEventListener('page:loaded', (e) => {
                         lastLookup = digits;
                         if (messages) messages.textContent = 'Consultando CNPJ...';
                         try {
-                            const mod = await import('./api.js');
+                            const mod = await import('../../shared/api.js');
                             const data = await mod.lookupCnpj(digits);
 
                             if (data && data.razao_social && razaoInput) {
@@ -1047,7 +1047,7 @@ export async function handleCreatePfSubmit(event) {
         setTimeout(() => {
             try { window.appShowPage && window.appShowPage('account'); } catch (e) { /* fallback */ }
             // também usamos showPage se estiver disponível via import dinâmico
-            try { import('./navigation.js').then(m => m.showPage('account')); } catch (e) { /* ignore */ }
+            try { import('../../shared/navigation.js').then(m => m.showPage('account')); } catch (e) { /* ignore */ }
         }, 600);
     } catch (err) {
         console.error('Erro ao criar PF profile:', err);
@@ -1125,7 +1125,7 @@ export async function handleOrgCreateSubmit(event) {
             sessionStorage.setItem('currentOrganizationName', razaoSocial);
             // Voltar para Gestão de Empresas e atualizar a lista para que a org criada apareça
             try {
-                import('./navigation.js').then(m => m.showPage('orgManagement'));
+                import('../../shared/navigation.js').then(m => m.showPage('orgManagement'));
             } catch (e) { /* ignore */ }
             // tentar refrescar a lista (se o listener da página já disparou, ele chamará renderMyOrganizations)
             try { const ev = new CustomEvent('page:loaded', { detail: { page: 'orgManagement' } }); document.dispatchEvent(ev); } catch (e) { /* silent */ }
@@ -1587,7 +1587,7 @@ document.addEventListener('page:loaded', (e) => {
                         // recarregar perfil para atualizar flags (hasMembership, isCompanyAdmin, myOrgRole_...)
                         try { await loadUserProfile(); } catch (e) { console.warn('Falha ao recarregar perfil após leave:', e); }
                         // Navegar para Gestão de Empresas para mostrar claramente que a organização não aparece mais
-                        try { const m = await import('./navigation.js'); await m.showPage('orgManagement'); } catch (e) { try { window.location.href = '/organizations'; } catch(_) { /* silent */ } }
+                        try { const m = await import('../../shared/navigation.js'); await m.showPage('orgManagement'); } catch (e) { try { window.location.href = '/organizations'; } catch(_) { /* silent */ } }
                     } catch (err) {
                         console.error('Erro ao sair da organização:', err);
                         const rawMsg = (err && (err.message || err.error || err.msg)) ? (err.message || err.error || err.msg) : '';

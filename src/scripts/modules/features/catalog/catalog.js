@@ -1,8 +1,8 @@
 // Módulo Catálogo Completo
 // Consolida EBOOK, RECORDED_COURSE e LIVE_TRAINING em uma única listagem
 
-import { navigateToTrainingDetail, getAuthToken } from './adminContent.js';
-import { API_BASE_URL, getPublicCatalogSectors } from './api.js';
+import { navigateToTrainingDetail, getAuthToken } from '../admin/adminContent.js';
+import { API_BASE_URL, getPublicCatalogSectors } from '../../shared/api.js';
 
 // Fonte: reutilizar treinamentos carregados em adminContent (se expuser cache) + produtos mock (ebooks)
 // Para simplificação inicial, vamos importar dinamicamente adminContent para acessar getAllTrainings se existir.
@@ -57,7 +57,7 @@ export async function initCatalogPage() {
     // tentar obter treinamentos do adminContent
     let trainings = [];
     try {
-      const mod = await import('./adminContent.js');
+  const mod = await import('../admin/adminContent.js');
       if (mod && mod._getCachedTrainings) {
         trainings = mod._getCachedTrainings();
       }
@@ -353,7 +353,7 @@ if (document) {
     // Definir preset global antes de mostrar a página
     try { window._catalogPreset = { sector, format: '' }; } catch(_) {}
     // Forçar navegação via roteador existente
-    import('./navigation.js').then(m => m.showPage('catalog'));
+  import('../../shared/navigation.js').then(m => m.showPage('catalog'));
   });
 }
 

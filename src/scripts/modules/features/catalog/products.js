@@ -1,8 +1,8 @@
-import { products } from './render.js';
-import { renderProducts } from './render.js';
-import { showPage, currentPage } from './navigation.js';
-import { renderTrainingsForSector } from './trainings.js';
-import { getAdminTrainings } from './api.js';
+import { products } from '../../shared/render.js';
+import { renderProducts } from '../../shared/render.js';
+import { showPage, currentPage } from '../../shared/navigation.js';
+import { renderTrainingsForSector } from '../trainings/trainings.js';
+import { getAdminTrainings } from '../../shared/api.js';
 
 // Cache para e-books globais e lista completa (todos os EBOOKS)
 let _cachedGlobalEbooks = null;

@@ -1,7 +1,7 @@
-import { getAdminTrainings, createAdminTraining, publishAdminTraining, assignTrainingToSector, getAdminSectors, getAdminTrainingById, updateAdminTraining, deleteAdminTraining, uploadEbookFileWithProgress, buildEbookFileUrl, getAdminSectorById, API_BASE_URL, unlinkTrainingSector, orgUnfollowSector, updateEbookProgress, fetchEbookProgress } from './api.js';
-import { uploadTrainingCoverImage } from './api.js';
-import { showToast } from './notifications.js';
-import { showPage, currentPage } from './navigation.js';
+import { getAdminTrainings, createAdminTraining, publishAdminTraining, assignTrainingToSector, getAdminSectors, getAdminTrainingById, updateAdminTraining, deleteAdminTraining, uploadEbookFileWithProgress, buildEbookFileUrl, getAdminSectorById, API_BASE_URL, unlinkTrainingSector, orgUnfollowSector, updateEbookProgress, fetchEbookProgress } from '../../shared/api.js';
+import { uploadTrainingCoverImage } from '../../shared/api.js';
+import { showToast } from '../../shared/notifications.js';
+import { showPage, currentPage } from '../../shared/navigation.js';
 
 const READER_PROGRESS_KEY_PREFIX = 'prospera:readerProgress:';
 
@@ -1600,7 +1600,7 @@ async function fetchLearnerTrainingData(id, token) {
     }
   } catch (_) { /* ignore */ }
   if (!training) {
-    const { getMyTrainingEnrollments } = await import('./api.js');
+  const { getMyTrainingEnrollments } = await import('../../shared/api.js');
     const raw = await getMyTrainingEnrollments(token);
     training = extractLearnerTrainingFromCollection(raw, id);
   }

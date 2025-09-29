@@ -1,4 +1,29 @@
-## 📝 Changelog
+## �️ Estrutura reorganizada (set/2025)
+
+```
+src/
+   assets/              # PDFs, imagens e demais mídias
+   pages/               # Partials HTML existentes (aboutPage.html, catalogPage.html ...)
+   scripts/
+      index.js           # Bootstrap principal do front
+      loadComponents.js  # Carrega os partials em runtime
+      modules/
+         shared/          # API, navegação, eventos, utilitários globais
+         features/
+            admin/
+            account/
+            catalog/
+            ebooks/
+            trainings/
+            documents/
+   styles/
+      styles.css         # Estilos base + tokens
+      components/        # CSS específico por página/componente
+```
+
+> A estrutura antiga (`src/js`, `src/css`, `src/partials`) foi migrada para os blocos acima sem alterar o conteúdo das páginas. Os imports já apontam para os novos caminhos.
+
+## �📝 Changelog
 
 ### 📅 30/06/2025
 - ✅ Corrigida a formatação monetária da API: alterado de Euro (€) para Real (R$).  

@@ -3,7 +3,7 @@
 // 1) GET {API_BASE_URL}/public/catalog?type=EBOOK  -> lista (PublicTrainingDTO: id, title, author, coverImageUrl)
 // 2) GET {API_BASE_URL}/public/catalog/{id}        -> detalhe (inclui description)
 
-import { API_BASE_URL } from './api.js';
+import { API_BASE_URL } from '../../shared/api.js';
 
 const PUBLIC_CATALOG_LIST_URL = `${API_BASE_URL}/public/catalog?type=EBOOK`;
 const PUBLIC_CATALOG_DETAIL_URL = (id) => `${API_BASE_URL}/public/catalog/${encodeURIComponent(id)}`;

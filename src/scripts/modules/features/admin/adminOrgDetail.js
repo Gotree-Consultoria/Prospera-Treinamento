@@ -1,4 +1,4 @@
-import { getAdminOrganizationById, getAdminOrganizationSectors } from './api.js';
+import { getAdminOrganizationById, getAdminOrganizationSectors } from '../../shared/api.js';
 import { isSystemAdmin } from './adminUsers.js';
 
 function renderOrgDetail(detail) {

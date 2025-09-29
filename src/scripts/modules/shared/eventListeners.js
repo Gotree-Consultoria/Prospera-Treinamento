@@ -3,13 +3,13 @@ import { showPage, showAccountSection, scrollToSection } from './navigation.js';
 import { handleLogin, handleRegister, logout, checkUserLoggedIn, handlePageLogin } from './auth.js';
 // Carrinho removido permanentemente; lógica migrada para modelo de planos.
 import { openAuthModal, closeAuthModal, showAuthTab } from './modals.js';
-import { toggleProfileEdit, toggleEmailEdit, togglePasswordEdit, handleEmailChange, handlePasswordChange, updateProfile, handleCompleteProfile, loadUserProfile, inviteSubuser, importCSV, exportReport, showCompanyAdminPanel } from './profile.js';
-import { handleCreatePfSubmit, handleOrgCreateSubmit, initOrgMembersPage, handleInviteMemberSubmit } from './profile.js';
+import { toggleProfileEdit, toggleEmailEdit, togglePasswordEdit, handleEmailChange, handlePasswordChange, updateProfile, handleCompleteProfile, loadUserProfile, inviteSubuser, importCSV, exportReport, showCompanyAdminPanel } from '../features/account/profile.js';
+import { handleCreatePfSubmit, handleOrgCreateSubmit, initOrgMembersPage, handleInviteMemberSubmit } from '../features/account/profile.js';
 import { subscribeNewsletter, sendMessage as sendContactMessage, getMyOrganizations, addOrgMember } from './api.js';
 import { highlightFilterButton } from './render.js';
 import { nextCard, prevCard } from './carousel.js';
 import { scrollLeft, scrollRight } from './scroll.js';
-import { filterProductsByCategory, searchProducts } from './products.js';
+import { filterProductsByCategory, searchProducts } from '../features/catalog/products.js';
 import { formatCNPJ } from './utils.js';
 import { showToast } from './notifications.js';
 
@@ -70,7 +70,7 @@ export function setupEventListeners() {
         if (target.classList.contains('view-training-btn')) {
             const id = target.dataset.id;
             // Navegação para detalhe (usa a página trainingDetail existente quando disponível)
-            import('./adminContent.js').then(m => { if (m.navigateToTrainingDetail) m.navigateToTrainingDetail(id); });
+            import('../features/admin/adminContent.js').then(m => { if (m.navigateToTrainingDetail) m.navigateToTrainingDetail(id); });
         }
 
     // Lógica de autenticação e perfil
@@ -740,7 +740,7 @@ function openLearningTraining(id, options = {}) {
     if (preloaded) {
         try { window._trainingDetailPreloaded = preloaded; } catch (err) { console.warn('[learning] não foi possível armazenar pré-carga do treinamento', err); }
     }
-    import('./adminContent.js').then(m => {
+    import('../features/admin/adminContent.js').then(m => {
         if (m.navigateToTrainingDetail) {
             m.navigateToTrainingDetail(id, { source: 'learning', training: preloaded });
         }

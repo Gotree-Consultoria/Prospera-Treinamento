@@ -1,6 +1,6 @@
-import { getAdminOrganizations, getAdminOrganizationById, API_BASE_URL, patchAdminOrganizationStatus } from './api.js';
+import { getAdminOrganizations, getAdminOrganizationById, API_BASE_URL, patchAdminOrganizationStatus } from '../../shared/api.js';
 import { isSystemAdmin } from './adminUsers.js';
-import { showPage } from './navigation.js';
+import { showPage } from '../../shared/navigation.js';
 
 // Render da lista resumida (AdminOrganizationSummaryDTO: id, razaoSocial, cnpj, memberCount)
 async function renderAdminOrgsList(container) {

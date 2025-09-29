@@ -1,8 +1,8 @@
 // Módulo para gerenciamento de listagem e detalhe de usuários (requisição ao /admin/users)
-import { showPage } from './navigation.js';
-import { getAdminUsers, getAdminUserById, API_BASE_URL, patchAdminUserStatus, getAdminOrganizations, patchAdminOrganizationStatus, getAdminContentSummary, getAdminAnalyticsSummary, deactivateAdminUser, activateAdminUser } from './api.js';
+import { showPage } from '../../shared/navigation.js';
+import { getAdminUsers, getAdminUserById, API_BASE_URL, patchAdminUserStatus, getAdminOrganizations, patchAdminOrganizationStatus, getAdminContentSummary, getAdminAnalyticsSummary, deactivateAdminUser, activateAdminUser } from '../../shared/api.js';
 import { loadTrainings as loadAdminTrainings } from './adminContent.js';
-import { showToast } from './notifications.js';
+import { showToast } from '../../shared/notifications.js';
 
 // Normaliza strings de role: remove espaços e converte para UPPERCASE para comparações robustas
 function normalizeRole(value) {

@@ -1,5 +1,5 @@
-import { getAdminSectors, createAdminSector, deleteAdminSector } from './api.js';
-import { showToast } from './notifications.js';
+import { getAdminSectors, createAdminSector, deleteAdminSector } from '../../shared/api.js';
+import { showToast } from '../../shared/notifications.js';
 
 function isSystemAdmin() {
   const raw = localStorage.getItem('systemRole') || localStorage.getItem('userRole') || '';
