@@ -41,3 +41,9 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Patterns from repo root tailored for this frontend app
+/src/angular/frontend/node_modules/
+/src/angular/frontend/dist/
+/.angular/
+/.cache/
