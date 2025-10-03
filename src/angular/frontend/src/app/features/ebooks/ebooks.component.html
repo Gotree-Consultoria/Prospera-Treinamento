@@ -1,0 +1,94 @@
+<section class="page-header ebooks-hero">
+  <div class="container">
+    <h1>Catálogo de E-books</h1>
+    <p>Materiais práticos com modelos editáveis, checklists e conteúdos exclusivos para a sua operação.</p>
+  <a class="btn btn-secondary" routerLink="/catalog">Ver catálogo completo</a>
+  </div>
+</section>
+
+<section class="ebooks-list" aria-live="polite">
+  <div class="container">
+    <div class="loading" *ngIf="isLoading">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Buscando conteúdos atualizados…</p>
+    </div>
+
+    <div class="error" *ngIf="!isLoading && errorMessage">
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div class="grid" *ngIf="!isLoading && !errorMessage">
+      <article class="ebook-card" *ngFor="let ebook of ebooks; trackBy: trackById">
+        <div class="ebook-cover" *ngIf="ebook.coverImageUrl">
+          <img
+            [src]="ebook.coverImageUrl"
+            [attr.alt]="ebook.title"
+            [title]="ebook.title"
+            loading="lazy"
+          />
+        </div>
+        <h2>{{ ebook.title }}</h2>
+        <p class="sr-only" *ngIf="ebook.description">
+          {{ ebook.description }}
+        </p>
+        <div class="ebook-meta">
+          <span class="badge">{{ ebook.format | lowercase | titlecase }}</span>
+          <span class="badge" *ngFor="let sector of ebook.sectors">{{ sector | uppercase }}</span>
+        </div>
+        <button class="btn btn-primary" type="button" (click)="showDetails(ebook)">Detalhes</button>
+      </article>
+    </div>
+  </div>
+</section>
+
+<div
+  class="details-modal"
+  *ngIf="selectedEbook as detail"
+  (click)="closeDetails()"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="'ebook-modal-title-' + detail.id"
+  [attr.aria-describedby]="'ebook-modal-description-' + detail.id"
+>
+  <article class="details-modal__card" (click)="$event.stopPropagation()">
+    <button class="details-modal__close" type="button" (click)="closeDetails()" aria-label="Fechar detalhes">
+      ×
+    </button>
+
+    <div class="details-modal__cover" *ngIf="detail.coverImageUrl">
+      <img
+        [src]="detail.coverImageUrl"
+        [attr.alt]="detail.title"
+        [title]="detail.title"
+        loading="lazy"
+      />
+    </div>
+
+    <h2 [id]="'ebook-modal-title-' + detail.id">{{ detail.title }}</h2>
+    <p [id]="'ebook-modal-description-' + detail.id">
+      {{ detail.description || 'Conteúdo atualizado e pronto para aplicar na sua rotina.' }}
+    </p>
+
+    <div class="details-modal__meta" *ngIf="detail.format || detail.sectors?.length">
+      <span class="badge">{{ detail.format | lowercase | titlecase }}</span>
+      <span class="badge" *ngFor="let sector of detail.sectors">{{ sector | uppercase }}</span>
+    </div>
+
+    <div class="details-modal__actions">
+      <a class="btn btn-primary" routerLink="/contato">Falar com especialista</a>
+      <button class="btn btn-secondary" type="button" (click)="closeDetails()">Fechar</button>
+    </div>
+  </article>
+</div>
+
+<section class="ebooks-cta">
+  <div class="container">
+    <div class="cta-card">
+      <div>
+        <h2>Combo de treinamentos e e-books?</h2>
+        <p>Combine cursos gravados, trilhas ao vivo e materiais de apoio em um único pacote.</p>
+      </div>
+      <a class="btn btn-primary" routerLink="/planos">Conhecer planos</a>
+    </div>
+  </div>
+</section>

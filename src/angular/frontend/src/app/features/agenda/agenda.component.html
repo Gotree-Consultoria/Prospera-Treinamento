@@ -1,0 +1,21 @@
+<section class="page-header agenda-hero">
+  <div class="container">
+    <h1>Agenda de eventos</h1>
+    <p>Experiências ao vivo e encontros exclusivos para acelerar a implantação dos programas de SST.</p>
+  </div>
+</section>
+
+<section class="agenda-list">
+  <div class="container">
+    <div class="event-card" *ngFor="let event of upcomingEvents">
+      <div class="event-header">
+        <span class="badge" [class.badge-online]="event.modality === 'online'" [class.badge-presencial]="event.modality === 'presencial'">
+          {{ event.modality === 'online' ? 'On-line' : 'Presencial' }}
+        </span>
+        <h2>{{ event.title }}</h2>
+      </div>
+      <p>{{ event.description }}</p>
+      <p class="event-date">{{ event.date }}</p>
+    </div>
+  </div>
+</section>

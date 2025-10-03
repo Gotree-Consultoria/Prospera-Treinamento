@@ -1,0 +1,38 @@
+<section class="page-header faq-hero">
+  <div class="container">
+    <h1>Perguntas Frequentes</h1>
+    <p>Respostas rápidas sobre acesso, conteúdos e suporte.</p>
+  </div>
+</section>
+
+<section class="faq-content">
+  <div class="container">
+    <div class="faq-grid">
+      <div class="faq-list">
+        <h2>Dúvidas comuns</h2>
+        <dl>
+          <div *ngFor="let item of faqItems">
+            <dt>{{ item.question }}</dt>
+            <dd>{{ item.answer }}</dd>
+          </div>
+        </dl>
+        <a class="btn btn-secondary" routerLink="/suporte">Precisa de ajuda adicional?</a>
+      </div>
+
+      <div class="faq-policies">
+        <article>
+          <h2>Política de Privacidade</h2>
+          <ul>
+            <li *ngFor="let item of privacyHighlights">{{ item }}</li>
+          </ul>
+        </article>
+        <article>
+          <h2>Termos de Uso</h2>
+          <ul>
+            <li *ngFor="let item of termsHighlights">{{ item }}</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>

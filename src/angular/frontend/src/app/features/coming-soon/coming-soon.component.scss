@@ -1,0 +1,26 @@
+.coming-soon {
+  padding: var(--spacing-xxl) 0;
+  text-align: center;
+}
+
+.coming-soon-card {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-xl);
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.coming-soon-card i {
+  font-size: 2.5rem;
+  color: var(--verde-escuro);
+}
+
+.coming-soon-card p {
+  color: var(--gray-medium);
+}

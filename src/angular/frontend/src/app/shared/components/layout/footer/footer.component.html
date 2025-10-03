@@ -1,0 +1,67 @@
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <section class="footer-section footer-brand">
+        <h3>{{ brand }}</h3>
+        <p *ngIf="description">{{ description }}</p>
+        <div class="social-links" *ngIf="safeSocialLinks.length">
+          <ng-container *ngFor="let link of safeSocialLinks; trackBy: trackLink">
+            <a
+              *ngIf="link.externalUrl; else internalSocialLink"
+              [href]="link.externalUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              [attr.aria-label]="link.label"
+            >
+              <ng-container *ngIf="link.svgSafe; else legacyIcon">
+                <span class="icon-svg" [innerHTML]="link.svgSafe"></span>
+              </ng-container>
+              <ng-template #legacyIcon>
+                <i class="{{ link.iconClass || 'fas fa-link' }}" aria-hidden="true"></i>
+              </ng-template>
+            </a>
+            <ng-template #internalSocialLink>
+              <a
+                [routerLink]="link.route || '/'"
+                [queryParams]="link.queryParams || null"
+                [attr.aria-label]="link.label"
+              >
+                <ng-container *ngIf="link.svgSafe; else legacyIconInternal">
+                  <span class="icon-svg" [innerHTML]="link.svgSafe"></span>
+                </ng-container>
+                <ng-template #legacyIconInternal>
+                  <i class="{{ link.iconClass || 'fas fa-link' }}" aria-hidden="true"></i>
+                </ng-template>
+              </a>
+            </ng-template>
+          </ng-container>
+        </div>
+      </section>
+
+      <section class="footer-section" *ngFor="let column of columns; trackBy: trackColumn">
+        <h4>{{ column.title }}</h4>
+        <ul>
+          <li *ngFor="let link of column.links; trackBy: trackLink">
+            <a
+              *ngIf="link.externalUrl; else internalLink"
+              [href]="link.externalUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ link.label }}
+            </a>
+            <ng-template #internalLink>
+              <a [routerLink]="link.route || '/'" [queryParams]="link.queryParams || null">
+                {{ link.label }}
+              </a>
+            </ng-template>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="footer-bottom" *ngIf="copyright">
+      <p>{{ copyright }}</p>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,678 @@
+<div class="admin-dashboard" *ngIf="isSystemAdmin(); else noAccess">
+  <h2 class="panel-title">Painel de Administração</h2>
+  <p class="muted">Visão central para gestão de usuários, organizações, conteúdo e taxonomia.</p>
+
+  <div class="cards-grid">
+    <!-- Users Card -->
+  <section class="card" [class.expanded]="activeCard()==='users'">
+  <div class="card-header" (click)="toggleCard('users')" (keydown.enter)="toggleCard('users')" (keydown.space)="toggleCard('users'); $event.preventDefault()" role="button" tabindex="0" [attr.aria-expanded]="activeCard()==='users'">
+        <h3>Usuários</h3>
+        <span class="toggle" aria-hidden="true">▼</span>
+      </div>
+      <div class="card-body" *ngIf="activeCard()==='users'">
+        <div class="filters users-filters">
+          <input type="search" placeholder="Buscar e-mail" [value]="userSearch()" (input)="userSearch.set($any($event.target).value)" />
+          <select aria-label="Filtro status" title="Filtrar por status" [value]="userStatusFilter()" (change)="userStatusFilter.set($any($event.target).value)">
+            <option value="all">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
+          <select aria-label="Filtro role" title="Filtrar por role" [value]="userRoleFilter()" (change)="userRoleFilter.set($any($event.target).value)">
+            <option value="all">Todas as Roles</option>
+            <option value="USER">USER</option>
+            <option value="SYSTEM_ADMIN">SYSTEM_ADMIN</option>
+          </select>
+          <button type="button" class="btn-small" (click)="clearUserFilters()">Limpar</button>
+        </div>
+        <div *ngIf="loading()['users']" class="loading">Carregando usuários...</div>
+        <div *ngIf="error()['users']" class="error">{{error()['users']}}</div>
+        <table *ngIf="!loading()['users'] && !error()['users']" class="table responsive" aria-label="Lista de Usuários">
+          <thead>
+          <tr>
+            <th>ID</th><th>Email</th><th>Role</th><th>Status</th><th>Ações</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let u of filteredUsers()">
+            <td data-label="ID">{{u.id}}</td>
+            <td data-label="Email">{{u.email}}</td>
+            <td data-label="Role">{{u.role || '—'}}</td>
+            <td data-label="Status"><span class="badge" [class.badge-active]="u.enabled" [class.badge-inactive]="!u.enabled">{{u.enabled? 'Ativo':'Inativo'}}</span></td>
+            <td data-label="Ações" class="actions-col">
+              <button type="button" class="btn-ghost-small" (click)="toggleUserEnabled(u)" [disabled]="loading()['userToggle']">
+                {{ u.enabled ? 'Inativar' : 'Ativar' }}
+              </button>
+              <button type="button" class="btn-ghost-small" (click)="$event.stopPropagation(); viewUserDetails(u)">Detalhes</button>
+            </td>
+          </tr>
+          <tr *ngIf="!filteredUsers().length">
+            <td colspan="5" class="empty">Nenhum usuário encontrado.</td>
+          </tr>
+          </tbody>
+        </table>
+        <!-- User Details Drawer -->
+        <div class="user-details" *ngIf="selectedUserId()">
+          <div class="user-details-header">
+            <strong>Detalhes do Usuário</strong>
+            <button type="button" class="close" (click)="closeUserDetails()" aria-label="Fechar">×</button>
+          </div>
+          <div *ngIf="loading()['userDetails']" class="loading small">Carregando detalhes...</div>
+          <div *ngIf="error()['userDetails']" class="error small">{{error()['userDetails']}}</div>
+          <div class="user-details-body" *ngIf="!loading()['userDetails'] && selectedUserDetails() as d">
+            <div class="detail-grid">
+              <div>
+                <label>ID</label>
+                <div class="value mono">{{d.id}}</div>
+              </div>
+              <div>
+                <label>Email</label>
+                <div class="value">{{d.email}}</div>
+              </div>
+              <div>
+                <label>Role</label>
+                <div class="value">{{d.role || '—'}}</div>
+              </div>
+              <div>
+                <label>Status</label>
+                <div class="value"><span class="badge" [class.badge-active]="d.enabled" [class.badge-inactive]="!d.enabled">{{d.enabled? 'Ativo':'Inativo'}}</span></div>
+              </div>
+            </div>
+            <div class="section" *ngIf="d.personalProfile as p">
+              <h4>Perfil Pessoal</h4>
+              <ul class="kv">
+                <li><span>Nome:</span><strong>{{p.fullName || '—'}}</strong></li>
+                <li><span>CPF:</span><strong>{{p.cpf || '—'}}</strong></li>
+                <li><span>Nascimento:</span><strong>{{p.birthDate | date:'dd/MM/yyyy'}}</strong></li>
+                <li><span>Telefone:</span><strong>{{p.phone || '—'}}</strong></li>
+              </ul>
+            </div>
+            <div class="section" *ngIf="d.memberships?.length">
+              <h4>Associações (Memberships)</h4>
+              <table class="table mini" aria-label="Associações do usuário">
+                <thead>
+                  <tr><th>Org</th><th>Nome</th><th>Perfil</th></tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let m of d.memberships">
+                    <td data-label="Org ID" class="mono">{{m.organizationId}}</td>
+                    <td data-label="Nome">{{m.organizationName}}</td>
+                    <td data-label="Perfil">{{m.role}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Organizations Card -->
+    <section class="card" [class.expanded]="activeCard()==='organizations'">
+  <div class="card-header" (click)="toggleCard('organizations')" (keydown.enter)="toggleCard('organizations')" (keydown.space)="toggleCard('organizations'); $event.preventDefault()" role="button" tabindex="0" [attr.aria-expanded]="activeCard()==='organizations'">
+        <h3>Organizações</h3>
+        <span class="toggle" aria-hidden="true">▼</span>
+      </div>
+      <div class="card-body" *ngIf="activeCard()==='organizations'">
+        <div class="filters org-filters">
+          <input type="search" placeholder="Buscar por nome, CNPJ ou ID" [value]="orgSearch()" (input)="orgSearch.set($any($event.target).value)" />
+          <select aria-label="Filtro status" title="Filtrar por status" [value]="orgStatusFilter()" (change)="orgStatusFilter.set($any($event.target).value)">
+            <option value="all">Todas</option>
+            <option value="active">Ativas</option>
+            <option value="inactive">Inativas</option>
+          </select>
+          <button type="button" class="btn-small" (click)="clearOrgFilters()">Limpar</button>
+        </div>
+        <div *ngIf="loading()['organizations']" class="loading">Carregando organizações...</div>
+        <div *ngIf="error()['organizations']" class="error">{{error()['organizations']}}</div>
+        <table *ngIf="!loading()['organizations'] && !error()['organizations']" class="table responsive" aria-label="Lista de Organizações">
+          <thead>
+          <tr>
+            <th>ID</th><th>Razão Social</th><th>CNPJ</th><th>Membros</th><th>Status</th><th>Ações</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let o of filteredOrganizations()">
+            <td data-label="ID">{{o.id}}</td>
+            <td data-label="Razão Social">{{o.name}}</td>
+            <td data-label="CNPJ">{{o.cnpj || '—'}}</td>
+            <td data-label="Membros">{{o.memberCount ?? 0}}</td>
+            <td data-label="Status"><span class="badge" [class.badge-active]="o.enabled" [class.badge-inactive]="!o.enabled">{{o.enabled? 'Ativa':'Inativa'}}</span></td>
+            <td data-label="Ações" class="actions-col">
+              <button type="button" class="btn-ghost-small" (click)="viewOrganizationDetails(o); $event.stopPropagation()">Detalhes</button>
+              <button type="button" class="btn-ghost-small" (click)="toggleOrganizationEnabled(o)" [disabled]="loading()['orgToggle']">{{ o.enabled ? 'Inativar' : 'Ativar' }}</button>
+            </td>
+          </tr>
+          <tr *ngIf="!filteredOrganizations().length">
+            <td colspan="6" class="empty">Nenhuma organização encontrada.</td>
+          </tr>
+          </tbody>
+        </table>
+        <div class="org-details" *ngIf="selectedOrgId()">
+          <div class="org-details-header">
+            <strong>Detalhes da Organização</strong>
+            <button type="button" class="close" aria-label="Fechar" (click)="closeOrganizationDetails()">×</button>
+          </div>
+          <div *ngIf="loading()['orgDetails']" class="loading small">Carregando detalhe...</div>
+          <div *ngIf="error()['orgDetails']" class="error small">{{error()['orgDetails']}}</div>
+          <div *ngIf="!loading()['orgDetails'] && selectedOrgDetails() as d" class="org-details-body">
+            <div class="detail-grid">
+              <div>
+                <label>ID</label>
+                <div class="value mono">{{d.id}}</div>
+              </div>
+              <div>
+                <label>Razão Social</label>
+                <div class="value">{{d.razaoSocial || d.name}}</div>
+              </div>
+              <div>
+                <label>CNPJ</label>
+                <div class="value">{{d.cnpj || '—'}}</div>
+              </div>
+              <div>
+                <label>Status</label>
+                <div class="value"><span class="badge" [class.badge-active]="d.enabled" [class.badge-inactive]="!d.enabled">{{d.enabled? 'Ativa':'Inativa'}}</span></div>
+              </div>
+              <div *ngIf="d.memberCount != null">
+                <label>Membros</label>
+                <div class="value">{{d.memberCount}}</div>
+              </div>
+            </div>
+            <div class="section" *ngIf="d.members?.length">
+              <h4>Membros</h4>
+              <table class="table mini" aria-label="Membros da organização">
+                <thead><tr><th>ID Usuário</th><th>Email</th><th>Role</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let m of d.members">
+                    <td data-label="ID" class="mono">{{m.userId || m.id}}</td>
+                    <td data-label="Email">{{m.email || m.userEmail}}</td>
+                    <td data-label="Role">{{m.role || m.userRole}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Card -->
+    <section class="card" [class.expanded]="activeCard()==='content'">
+  <div class="card-header" (click)="toggleCard('content')" (keydown.enter)="toggleCard('content')" (keydown.space)="toggleCard('content'); $event.preventDefault()" role="button" tabindex="0" [attr.aria-expanded]="activeCard()==='content'">
+        <h3>Conteúdo</h3>
+        <span class="toggle" aria-hidden="true">▼</span>
+      </div>
+      <div class="card-body" *ngIf="activeCard()==='content'">
+        <div class="filters trainings-filters">
+          <input type="search" placeholder="Buscar por título, autor ou ID" [value]="trainingSearch()" (input)="trainingSearch.set($any($event.target).value)" />
+          <select aria-label="Filtro publicação" [value]="trainingStatusFilter()" (change)="trainingStatusFilter.set($any($event.target).value)">
+            <option value="all">Todos</option>
+            <option value="published">Publicados</option>
+            <option value="draft">Rascunhos</option>
+          </select>
+          <button type="button" class="btn-small" (click)="clearTrainingFilters()">Limpar</button>
+          <button type="button" class="btn btn--primary new-training-btn" (click)="openCreateTraining()">+ Novo</button>
+        </div>
+        <div *ngIf="loading()['trainings']" class="loading">Carregando treinamentos...</div>
+        <div *ngIf="error()['trainings']" class="error">{{error()['trainings']}}</div>
+        <table *ngIf="!loading()['trainings'] && !error()['trainings']" class="table responsive" aria-label="Lista de Conteúdos">
+          <thead>
+          <tr>
+            <th>ID</th><th>Título</th><th>Tipo</th><th>Status</th><th>Atualizado</th><th>PDF</th><th>Ações</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let t of filteredTrainings()">
+            <td data-label="ID">{{t.id}}</td>
+            <td data-label="Título">{{t.title}}</td>
+            <td data-label="Tipo">{{t.entityType || '—'}}</td>
+            <td data-label="Status"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{ (t.publicationStatus || '—') }}</span></td>
+            <td data-label="Atualizado">{{ t.updatedAt | date:'dd/MM/yyyy' }}</td>
+            <td data-label="PDF" class="pdf-col">
+              <span class="pdf-icon" [ngClass]="trainingHasPdf(t) ? 'has' : 'missing'" [title]="pdfDebugInfo(t)">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2Z" fill="currentColor" opacity="0.25"/>
+                  <path d="M13 2v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                  <path d="M8.5 14h1c.8 0 1.5.7 1.5 1.5v0c0 .8-.7 1.5-1.5 1.5h-1v-3Zm0 0v3M14 14h1.2c.44 0 .8.36.8.8v1.4c0 .44-.36.8-.8.8H14v-3Zm0 0v3M11.5 14v3M17 14v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="sr-only">{{ pdfDebugInfo(t) }}</span>
+              </span>
+              <!-- Botão de debug (descomente se quiser ver no UI)
+              <button type="button" class="btn-ghost-small" (click)="logPdfDebug(t)" style="margin-left:4px" aria-label="Debug PDF">?</button>
+              -->
+            </td>
+            <td data-label="Ações" class="actions-col">
+              <div class="actions-wrapper">
+                <button type="button" class="btn-ghost-small more-trigger" (click)="toggleTrainingActionsMenu(t.id, $event)" [attr.aria-expanded]="openActionMenuId()===t.id" aria-haspopup="true" [attr.aria-controls]="'menu-' + t.id">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                  <span class="sr-only">Ações</span>
+                </button>
+                <div class="actions-menu" *ngIf="openActionMenuId()===t.id" id="menu-{{t.id}}" (click)="$event.stopPropagation()" role="menu">
+                  <button type="button" class="menu-item" routerLink="/admin/conteudo/{{t.id}}" (click)="closeTrainingActionsMenu()" role="menuitem">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20c4.418 0 8-3.582 8-8 0-1.74-.559-3.348-1.508-4.661l-5.538 9.063A1 1 0 0 1 12 17a1 1 0 0 1-.847-.474l-5.63-9.21A7.963 7.963 0 0 0 4 12c0 4.418 3.582 8 8 8Zm0-18a9.956 9.956 0 0 1 6.53 2.39l.056.048.052.053c.31.317.598.654.86 1.009L12 15 4.502 5.5c.262-.355.55-.692.86-1.009l.052-.053.056-.048A9.956 9.956 0 0 1 12 2Z" fill="currentColor"/></svg>
+                    <span>Detalhes</span>
+                  </button>
+                  <button type="button" class="menu-item" (click)="publishTraining(t)" [disabled]="(t.publicationStatus||'').toLowerCase()==='published' || loading()['publishTraining']" role="menuitem">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14M12 4v12m0 0 5-5m-5 5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Publicar</span>
+                  </button>
+                  <label class="menu-item as-label upload-label" role="menuitem">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18v-3m0 0 3 3-3 3m16-3v3m0 0-3-3 3-3M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Upload PDF</span>
+                    <input type="file" accept="application/pdf" (change)="uploadEbook(t, $any($event.target).files[0]); $event.target.value=''; closeTrainingActionsMenu();" hidden />
+                  </label>
+                  <label class="menu-item as-label upload-label" role="menuitem">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h4l2 3h10v11H4V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="13" r="3" stroke="currentColor" stroke-width="2"/><path d="M6 11h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span>Upload Capa</span>
+                    <input type="file" accept="image/*" (change)="uploadCover(t, $any($event.target).files[0]); $event.target.value=''; closeTrainingActionsMenu();" hidden />
+                  </label>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!filteredTrainings().length"><td colspan="7" class="empty">Nenhum conteúdo encontrado.</td></tr>
+          </tbody>
+        </table>
+        <div class="progress-bar" *ngIf="uploadProgress() !== null">
+          <div class="bar" [style.width.%]="uploadProgress() || 0"></div>
+        </div>
+        <div class="training-details" *ngIf="selectedTrainingId()">
+          <div class="training-details-header">
+            <strong>Detalhes do Conteúdo</strong>
+            <button type="button" class="close" aria-label="Fechar" (click)="closeTrainingDetails()">×</button>
+          </div>
+          <div *ngIf="loading()['trainingDetails']" class="loading small">Carregando detalhe...</div>
+          <div *ngIf="error()['trainingDetails']" class="error small">{{error()['trainingDetails']}}</div>
+          <div *ngIf="!loading()['trainingDetails'] && selectedTrainingDetails() as d" class="training-details-body">
+            <div class="detail-grid">
+              <div><label>ID</label><div class="value mono">{{d.id}}</div></div>
+              <div><label>Título</label><div class="value">{{d.title}}</div></div>
+              <div><label>Autor</label><div class="value">{{d.author || '—'}}</div></div>
+              <div><label>Status</label><div class="value"><span class="badge" [class.badge-active]="(d.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(d.publicationStatus||'').toLowerCase()!=='published'">{{d.publicationStatus || '—'}}</span></div></div>
+              <div><label>Tipo</label><div class="value">{{d.entityType || '—'}}</div></div>
+            </div>
+            <div class="section">
+              <h4>Descrição</h4>
+              <p class="description">{{d.description || '—'}}</p>
+            </div>
+            <div class="section" *ngIf="trainingHasPdf(d)">
+              <h4>PDF</h4>
+              <ng-container *ngIf="buildEbookFileUrl(extractPdfFileName(d)) as pdfUrl">
+                <a [href]="pdfUrl" target="_blank" rel="noopener" [title]="pdfDebugInfo(d)">Abrir PDF</a>
+                <div class="pdf-meta">
+                  {{ pdfDebugInfo(d) }}
+                </div>
+              </ng-container>
+            </div>
+            <div class="section" *ngIf="getTrainingSectorAssignments(d).length">
+              <h4>Setores Vinculados</h4>
+              <table class="table mini" aria-label="Setores vinculados">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nome do Setor</th>
+                    <th>Tipo</th>
+                    <th>Base Legal</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let a of getTrainingSectorAssignments(d)">
+                    <td data-label="ID" class="mono">{{ a.sectorId }}</td>
+                    <td data-label="Nome do Setor">{{ sectorName(a.sectorId) || '—' }}</td>
+                    <td data-label="Tipo">{{ a.trainingType || '—' }}</td>
+                    <td data-label="Base Legal">{{ a.legalBasis || '—' }}</td>
+                    <td data-label="Ações" class="actions-col">
+                      <button type="button" class="btn-ghost-small" (click)="removeTrainingSector(d.id, a.sectorId)" [disabled]="removingTrainingSectorId()===a.sectorId">{{ removingTrainingSectorId()===a.sectorId ? '...' : 'Remover' }}</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Modal criação -->
+        <div class="overlay" *ngIf="showCreateTraining()" (click)="closeCreateTraining()"></div>
+        <div class="create-modal" *ngIf="showCreateTraining()" role="dialog" aria-modal="true" aria-label="Criar treinamento" (click)="$event.stopPropagation()">
+          <h3>Novo Treinamento</h3>
+          <form (submit)="$event.preventDefault(); submitCreateTraining();">
+            <label>Título<span>*</span>
+              <input type="text" required [value]="createTrainingForm().title" (input)="updateCreateField('title',$any($event.target).value)" />
+            </label>
+            <label>Descrição
+              <textarea rows="4" [value]="createTrainingForm().description" (input)="updateCreateField('description',$any($event.target).value)"></textarea>
+            </label>
+            <label>Autor
+              <input type="text" [value]="createTrainingForm().author" (input)="updateCreateField('author',$any($event.target).value)" />
+            </label>
+            <label>Tipo<span>*</span>
+              <select [value]="createTrainingForm().entityType" (change)="updateCreateField('entityType',$any($event.target).value)">
+                <option value="EBOOK">EBOOK</option>
+                <option value="RECORDED_COURSE">RECORDED_COURSE</option>
+                <option value="LIVE_COURSE">LIVE_COURSE</option>
+              </select>
+            </label>
+            <label>Organization ID (opcional)
+              <input type="text" [value]="createTrainingForm().organizationId || ''" (input)="updateCreateField('organizationId',$any($event.target).value || null)" />
+            </label>
+            <div class="form-messages" *ngIf="createTrainingError()">{{createTrainingError()}}</div>
+            <div class="actions-row modal-actions">
+              <button type="button" class="btn btn--subtle" (click)="closeCreateTraining()" [disabled]="createTrainingLoading()">Cancelar</button>
+              <button type="submit" class="btn btn--primary" [disabled]="createTrainingLoading()">{{ createTrainingLoading() ? 'Criando...' : 'Criar' }}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analytics & Relatórios Card (Novo) -->
+    <section class="card" [class.expanded]="activeCard()==='analytics'">
+      <div class="card-header" (click)="toggleCard('analytics')" (keydown.enter)="toggleCard('analytics')" (keydown.space)="toggleCard('analytics'); $event.preventDefault()" role="button" tabindex="0" [attr.aria-expanded]="activeCard()==='analytics'">
+        <h3>Analytics & Relatórios</h3>
+        <span class="toggle" aria-hidden="true">▼</span>
+      </div>
+      <div class="card-body" *ngIf="activeCard()==='analytics'">
+        <p class="muted small">Visão resumida (preview). Valores reais & gráficos chegarão em breve.</p>
+        <div class="analytics-placeholder">
+          <div class="analytics-grid">
+            <div class="metric-box" data-metric="users" data-state="empty">
+              <div class="metric-top">
+                <span class="metric-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-3.33 0-6 2.13-6 4.75V21h12v-2.25C18 16.13 15.33 14 12 14Z" fill="currentColor"/></svg>
+                </span>
+                <strong>Usuários Ativos</strong>
+              </div>
+              <span class="value">—</span>
+              <span class="trend placeholder" aria-hidden="true"></span>
+            </div>
+            <div class="metric-box" data-metric="trainings" data-state="empty">
+              <div class="metric-top">
+                <span class="metric-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 5h16v2H4V5Zm2 4h12v2H6V9Zm-2 4h16v2H4v-2Zm2 4h12v2H6v-2Z" fill="currentColor"/></svg>
+                </span>
+                <strong>Treinamentos Publicados</strong>
+              </div>
+              <span class="value">—</span>
+              <span class="trend placeholder" aria-hidden="true"></span>
+            </div>
+            <div class="metric-box" data-metric="downloads" data-state="empty">
+              <div class="metric-top">
+                <span class="metric-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v10.17l3.59-3.58L17 11l-5 5-5-5 1.41-1.41L11 13.17V3h2Zm-7 14h14v2H5v-2Z" fill="currentColor"/></svg>
+                </span>
+                <strong>Downloads de PDFs</strong>
+              </div>
+              <span class="value">—</span>
+              <span class="trend placeholder" aria-hidden="true"></span>
+            </div>
+            <div class="metric-box" data-metric="lastUpload" data-state="empty">
+              <div class="metric-top">
+                <span class="metric-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 8V4l8 8-8 8v-4H4V8h8Zm2 4  -2-2v2H6v4h6v2l2-2 2-2-2-2Z" fill="currentColor"/></svg>
+                </span>
+                <strong>Último Upload</strong>
+              </div>
+              <span class="value">—</span>
+              <span class="trend placeholder" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="muted tiny legend">Em breve: evolução temporal, funil de conclusão e ranking de engajamento.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Monetização Card -->
+    <section class="card" [class.expanded]="activeCard()==='monetization'">
+      <div class="card-header" (click)="toggleCard('monetization')" (keydown.enter)="toggleCard('monetization')" (keydown.space)="toggleCard('monetization'); $event.preventDefault()" role="button" tabindex="0" [attr.aria-expanded]="activeCard()==='monetization'">
+        <h3>Monetização</h3>
+        <span class="toggle" aria-hidden="true">▼</span>
+      </div>
+      <div class="card-body" *ngIf="activeCard()==='monetization'">
+        <p class="muted small">Gestão de planos, assinaturas e (em breve) cupons, faturas e métricas de receita.</p>
+        <div class="monetization-grid">
+          <!-- Subsec: Criar Plano -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v2H3V5a2 2 0 0 1 2-2Zm-2 7h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10Zm5 2v2h8v-2H8Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Novo Plano</h4>
+                <p class="subtitle">Cadastrar assinatura</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body">
+              <form class="form-vertical" (submit)="$event.preventDefault(); submitCreatePlan();">
+                <label>Nome<span>*</span>
+                  <input type="text" [value]="monetizationPlanForm().name" (input)="updatePlanField('name',$any($event.target).value)" required />
+                </label>
+                <label>Descrição (até 512)
+                  <textarea rows="3" maxlength="512" [value]="monetizationPlanForm().description" (input)="updatePlanField('description',$any($event.target).value)"></textarea>
+                </label>
+                <div class="row two">
+                  <label>Preço Original<span>*</span>
+                    <input type="text" inputmode="decimal" placeholder="Ex: 29.90" [value]="monetizationPlanForm().originalPrice" (input)="updatePlanField('originalPrice',$any($event.target).value)" required />
+                  </label>
+                  <label>Preço Atual<span>*</span>
+                    <input type="text" inputmode="decimal" placeholder="Ex: 19.90" [value]="monetizationPlanForm().currentPrice" (input)="updatePlanField('currentPrice',$any($event.target).value)" required />
+                  </label>
+                </div>
+                <label>Duração (dias)
+                  <input type="number" min="1" [value]="monetizationPlanForm().durationInDays" (input)="updatePlanField('durationInDays', $any($event.target).value)" />
+                </label>
+                <div class="actions-row">
+                  <button type="submit" class="btn btn--primary" [disabled]="creatingPlan()">{{ creatingPlan() ? 'Criando...' : 'Criar Plano' }}</button>
+                </div>
+              </form>
+              <div class="feedback" *ngIf="monetizationMessage()" aria-live="polite">{{ monetizationMessage() }}</div>
+              <div class="form-error" *ngIf="monetizationError()">{{ monetizationError() }}</div>
+              <div class="created-plans" *ngIf="createdPlans().length">
+                <h5>Planos Criados na Sessão</h5>
+                <table class="table mini">
+                  <thead><tr><th>Nome</th><th>Preço</th><th>Duração</th><th>Desc%</th></tr></thead>
+                  <tbody>
+                    <tr *ngFor="let p of createdPlans()">
+                      <td data-label="Nome">{{p.name}}</td>
+                      <td data-label="Preço">{{p.currentPrice}} <span class="old" *ngIf="p.originalPrice && p.originalPrice!==p.currentPrice">{{p.originalPrice}}</span></td>
+                      <td data-label="Duração">{{p.durationInDays}}d</td>
+                      <td data-label="Desc%">{{ discountPercent(p) || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <!-- Subsec: Criar Assinatura Manual -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-3.31 0-6 2.69-6 6v1h12v-1c0-3.31-2.69-6-6-6Zm7.5-4h-2a5.5 5.5 0 0 1-5.5 5.5V18a7.5 7.5 0 0 0 7.5-7.5ZM6.5 10h-2A7.5 7.5 0 0 0 12 17.5V15A5.5 5.5 0 0 1 6.5 10Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Assinatura Manual</h4>
+                <p class="subtitle">Atribuir plano a usuário</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body">
+              <form class="form-vertical" (submit)="$event.preventDefault(); submitCreateSubscription();">
+                <label>User ID<span>*</span>
+                  <input type="text" [value]="monetizationSubscriptionForm().userId" (input)="updateSubscriptionField('userId',$any($event.target).value)" required />
+                </label>
+                <label>Plan ID<span>*</span>
+                  <input type="text" [value]="monetizationSubscriptionForm().planId" (input)="updateSubscriptionField('planId',$any($event.target).value)" required />
+                </label>
+                <div class="actions-row">
+                  <button type="submit" class="btn btn--primary" [disabled]="creatingSubscription()">{{ creatingSubscription() ? 'Criando...' : 'Criar Assinatura' }}</button>
+                </div>
+              </form>
+              <div class="form-error" *ngIf="monetizationError() && !creatingSubscription()">{{ monetizationError() }}</div>
+              <div class="feedback" *ngIf="monetizationMessage() && !creatingSubscription()">{{ monetizationMessage() }}</div>
+            </div>
+          </div>
+          <!-- Subsec: Cupons (Mock) -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4V4Zm0 10h6v6H4v-6Zm10-10h6v6h-6V4Zm0 10h6v6h-6v-6Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Gestão de Cupons</h4>
+                <p class="subtitle">(Mock)</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body placeholder muted tiny">Em breve: CRUD de cupons, tipos (percentual / valor fixo), limites de uso e expiração.</div>
+          </div>
+          <!-- Subsec: Logs de Transações (Mock) -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 4h14v2H5V4Zm0 4h10v2H5V8Zm0 4h14v2H5v-2Zm0 4h10v2H5v-2Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Logs de Transações</h4>
+                <p class="subtitle">(Mock)</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body">
+              <table class="table mini" aria-label="Logs transações (mock)">
+                <thead><tr><th>Data</th><th>Usuário</th><th>Plano</th><th>Valor</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+                </tbody>
+              </table>
+              <div class="placeholder muted tiny">Em breve: paginação, filtros por status (paid, pending, failed) e gateway details.</div>
+            </div>
+          </div>
+          <!-- Subsec: Faturas (Mock) -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2Zm0 2v16h12V9h-5V4H6Zm2 4h5v2H8V8Zm0 4h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Faturas (Invoices)</h4>
+                <p class="subtitle">(Mock)</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body placeholder muted tiny">Em breve: listagem de faturas, reenvio de segunda via e status de pagamento.</div>
+          </div>
+          <!-- Subsec: Métricas de Faturamento (Mock) -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 4h2v16H4V4Zm7 6h2v10h-2V10Zm7-4h2v14h-2V6Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Métricas de Faturamento</h4>
+                <p class="subtitle">(Mock)</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body">
+              <div class="metrics-mock">
+                <div class="metric-line"><strong>MRR:</strong> —</div>
+                <div class="metric-line"><strong>Churn:</strong> —</div>
+                <div class="metric-line"><strong>Clientes Ativos:</strong> —</div>
+              </div>
+              <div class="placeholder muted tiny">Em breve: cálculos baseados em assinaturas ativas, expansão/contração e cancelamentos.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gestão da Plataforma (substitui Taxonomia) -->
+    <section class="card" [class.expanded]="activeCard()==='platform'">
+      <div class="card-header" (click)="toggleCard('platform')" (keydown.enter)="toggleCard('platform')" (keydown.space)="toggleCard('platform'); $event.preventDefault()" role="button" tabindex="0" [attr.aria-expanded]="activeCard()==='platform'">
+        <h3>Gestão da Plataforma</h3>
+        <span class="toggle" aria-hidden="true">▼</span>
+      </div>
+      <div class="card-body" *ngIf="activeCard()==='platform'">
+        <p class="muted small">Configuração estrutural, comportamento global e ferramentas de manutenção.</p>
+        <div class="platform-subcards">
+          <!-- Subcard: Taxonomia e Estrutura -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4V4Zm0 10h6v6H4v-6Zm10-10h6v6h-6V4Zm0 10h6v6h-6v-6Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Taxonomia e Estrutura</h4>
+                <p class="subtitle">Como a informação é organizada</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body">
+              <div class="platform-tabs" aria-label="Navegação Taxonomia">
+                <button class="platform-tab active" type="button">Setores</button>
+                <button class="platform-tab" type="button" disabled>Tags / Habilidades</button>
+                <button class="platform-tab" type="button" disabled>Níveis de Dificuldade</button>
+              </div>
+              <div class="platform-tab-panel">
+                <div *ngIf="loading()['sectors']" class="loading">Carregando setores...</div>
+                <div *ngIf="error()['sectors']" class="error">{{error()['sectors']}}</div>
+                <div class="sector-create" *ngIf="!loading()['sectors'] && !error()['sectors']">
+                  <form class="sector-form" (submit)="$event.preventDefault(); createSector();">
+                    <input type="text" placeholder="Novo setor" [value]="newSectorName()" (input)="newSectorName.set($any($event.target).value)" [disabled]="creatingSector()" />
+                    <button type="submit" class="btn btn--primary btn--sector-create" [disabled]="creatingSector() || !newSectorName().trim()">{{ creatingSector() ? 'Criando...' : 'Incluir' }}</button>
+                  </form>
+                  <div class="form-error" *ngIf="sectorError()">{{ sectorError() }}</div>
+                  <ul class="chips sectors-list">
+                    <li *ngFor="let s of sectors()" class="chip chip--sector">
+                      <span class="chip-label">{{s.name}}</span>
+                      <button type="button" class="chip-remove" (click)="deleteSector(s)" [disabled]="deletingSectorId()===s.id" aria-label="Excluir setor {{s.name}}">&times;</button>
+                    </li>
+                    <li *ngIf="!sectors().length" class="chip empty-chip">Nenhum setor cadastrado</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Subcard: Configurações Globais -->
+          <div class="admin-subcard">
+            <div class="admin-subcard-header">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 2 4 7v10l8 5 8-5V7l-8-5Zm0 2.18L18 8l-6 3.82L6 8l6-3.82ZM6 10.62l5 3.18v5.04L6 15.66v-5.04Zm7 8.22v-5.04l5-3.18v5.04l-5 3.18Z" fill="currentColor"/></svg>
+              </div>
+              <div class="titles">
+                <h4>Configurações Globais</h4>
+                <p class="subtitle">Como a plataforma se comporta</p>
+              </div>
+            </div>
+            <div class="admin-subcard-body">
+              <div class="platform-tabs" aria-label="Navegação Globais">
+                <button class="platform-tab" type="button" disabled>Modelos de E-mail</button>
+                <button class="platform-tab" type="button" disabled>Termos & Políticas</button>
+                <button class="platform-tab" type="button" disabled>Integrações</button>
+              </div>
+              <div class="platform-tab-panel placeholder muted tiny">Em breve: CRUD de templates, editor de políticas e configurações de integrações (webhooks / SSO).</div>
+            </div>
+          </div>
+          <!-- Subcard: Ferramentas Administrativas -->
+            <div class="admin-subcard">
+              <div class="admin-subcard-header">
+                <div class="icon-wrap" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M9 2h6v2H9V2ZM5 6h14v2h2v2h-2v2h2v2h-2v2h2v2h-2v2H5v-2H3v-2h2v-2H3v-2h2v-2H3V8h2V6h14v2H5V6Zm0 4v2h14v-2H5Zm0 4v2h14v-2H5Z" fill="currentColor"/></svg>
+                </div>
+                <div class="titles">
+                  <h4>Ferramentas Administrativas</h4>
+                  <p class="subtitle">Manutenção e Monitoramento</p>
+                </div>
+              </div>
+              <div class="admin-subcard-body">
+                <div class="platform-tabs" aria-label="Navegação Ferramentas">
+                  <button class="platform-tab" type="button" disabled>Logs de Auditoria</button>
+                  <button class="platform-tab" type="button" disabled>Gestão de Cache</button>
+                </div>
+                <div class="platform-tab-panel placeholder muted tiny">Em breve: visualização de eventos de auditoria e ações de limpeza de cache.</div>
+              </div>
+            </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #noAccess>
+  <div class="no-access">
+    <h2>Sem acesso</h2>
+    <p>Apenas usuários com perfil de <strong>System Admin</strong> podem acessar este painel.</p>
+  </div>
+</ng-template>

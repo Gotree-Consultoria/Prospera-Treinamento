@@ -1,0 +1,45 @@
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 12px 32px rgba(31, 36, 43, 0.08);
+  border: 1px solid rgba(106, 90, 205, 0.08);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .25s ease, transform .25s ease;
+}
+
+.plan-card:hover {
+  box-shadow: 0 16px 40px rgba(31,36,43,.12);
+  transform: translateY(-4px);
+}
+
+.plan-header h2 { margin: .5rem 0 0.75rem; font-size: 1.35rem; }
+.plan-description { color: var(--color-text-muted,#5b5f63); flex-grow: 0; }
+
+.badge { display:inline-flex; padding:.35rem .75rem; border-radius:999px; font-size:.65rem; letter-spacing:.12em; background:rgba(106,90,205,.12); color:var(--color-primary-600,#5a4bcf); font-weight:600; text-transform:uppercase; }
+
+.plan-pricing { margin-top:1.25rem; display:flex; align-items:flex-end; gap:.75rem; }
+.plan-pricing .price-values { display:flex; align-items:baseline; gap:.5rem; }
+.price-old { text-decoration: line-through; color:#888; font-size:.9rem; }
+.price-current { font-size:1.5rem; font-weight:700; color:var(--color-primary-600,#5a4bcf); }
+.price-badge { background:#ff5252; color:#fff; font-size:.7rem; font-weight:600; padding:.35rem .5rem; border-radius:6px; letter-spacing:.05em; }
+
+.plan-sectors { margin-top:1rem; }
+.plan-sectors ul { list-style:none; padding:0; margin:0; display:flex; flex-wrap:wrap; gap:.5rem; }
+.plan-sectors li { background:rgba(91,95,99,.08); padding:.35rem .65rem; border-radius:999px; font-size:.65rem; letter-spacing:.08em; }
+
+.plan-actions { margin-top:auto; }
+.plan-actions .btn { width:100%; margin-top:1.25rem; text-align:center; }
+
+[data-discount="true"]::before { content:"Oferta"; position:absolute; top:0; right:0; background:linear-gradient(135deg,#ff8a5b,#ff5252); color:#fff; font-size:.6rem; font-weight:600; padding:.4rem .6rem; border-bottom-left-radius:10px; letter-spacing:.08em; text-transform:uppercase; }
+
+@media (min-width: 680px) {
+  .plan-card { padding: 2.25rem; }
+  .plan-header h2 { font-size:1.5rem; }
+  .price-current { font-size:1.75rem; }
+}
+
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); border:0; }

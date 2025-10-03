@@ -1,0 +1,140 @@
+<section class="catalog-page">
+  <div class="container">
+    <header class="page-header catalog-header">
+      <h1>Catálogo de Conteúdos</h1>
+      <p>Explore e-books, cursos gravados e treinamentos ao vivo disponíveis para sua equipe.</p>
+    </header>
+
+    <div class="catalog-filters" role="group" aria-label="Filtros do catálogo">
+      <div class="catalog-filter-bar">
+        <div class="catalog-search">
+          <label class="sr-only" for="catalogSearch">Buscar no catálogo</label>
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <input
+            id="catalogSearch"
+            type="search"
+            [(ngModel)]="searchTerm"
+            placeholder="Buscar por título ou descrição"
+          />
+        </div>
+
+        <div class="catalog-format-toggle" role="group" aria-label="Filtrar por formato">
+          <button type="button" [class.active]="selectedFormat === ''" (click)="selectFormat('')">Todos</button>
+          <button type="button" [class.active]="selectedFormat === 'EBOOK'" (click)="selectFormat('EBOOK')">E-books</button>
+          <button
+            type="button"
+            [class.active]="selectedFormat === 'RECORDED_COURSE'"
+            (click)="selectFormat('RECORDED_COURSE')"
+          >
+            Cursos gravados
+          </button>
+          <button
+            type="button"
+            [class.active]="selectedFormat === 'LIVE_TRAINING'"
+            (click)="selectFormat('LIVE_TRAINING')"
+          >
+            Ao vivo
+          </button>
+          <button type="button" [class.active]="selectedFormat === 'PACKAGE'" (click)="selectFormat('PACKAGE')">
+            Pacotes
+          </button>
+        </div>
+      </div>
+
+      <div class="catalog-quick-filters" role="radiogroup" aria-label="Filtrar por setor">
+        <button type="button" [class.active]="selectedSector === ''" (click)="clearSector()">
+          Todos os setores
+        </button>
+        <button
+          type="button"
+          *ngFor="let sector of sectors"
+          [class.active]="selectedSector === sector.id"
+          (click)="selectSector(sector.id)"
+        >
+          {{ sector.name }}
+        </button>
+      </div>
+    </div>
+
+    <div class="catalog-state" *ngIf="isLoading">
+      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+      <p>Carregando conteúdos…</p>
+    </div>
+
+    <div class="catalog-state error" *ngIf="hasError">
+      <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+      <p>Não foi possível carregar o catálogo agora. Tente novamente mais tarde.</p>
+    </div>
+
+    <div class="catalog-grid" *ngIf="!isLoading && !hasError && filteredItems.length">
+      <article class="catalog-card" *ngFor="let item of filteredItems; trackBy: trackById">
+        <span class="catalog-card-badge" [ngClass]="item.format.toLowerCase()">{{ item.format | formatLabel }}</span>
+        <div class="catalog-card-cover" [ngClass]="{ 'no-cover': !item.coverImageUrl }">
+          <img
+            *ngIf="item.coverImageUrl"
+            [src]="item.coverImageUrl"
+            [attr.alt]="item.title"
+            [title]="item.title"
+            loading="lazy"
+          />
+        </div>
+        <h2 class="catalog-card-title">{{ item.title }}</h2>
+        <p class="sr-only" *ngIf="item.description">{{ item.description }}</p>
+        <div class="catalog-card-meta" *ngIf="item.sectors?.length">
+          <span class="catalog-card-sector" *ngFor="let sector of item.sectors">{{ sector | uppercase }}</span>
+        </div>
+        <div class="catalog-card-actions">
+          <button class="btn" type="button" (click)="showDetails(item)">Detalhes</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="catalog-state" *ngIf="!isLoading && !hasError && !filteredItems.length">
+      <i class="fas fa-folder-open" aria-hidden="true"></i>
+      <p>Nenhum conteúdo encontrado com os filtros atuais.</p>
+    </div>
+  </div>
+</section>
+
+<div
+  class="catalog-details-modal"
+  *ngIf="selectedItem as detail"
+  (click)="closeDetails()"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="'catalog-modal-title-' + detail.id"
+  [attr.aria-describedby]="'catalog-modal-description-' + detail.id"
+>
+  <article class="catalog-details-card" (click)="$event.stopPropagation()">
+    <button class="catalog-details-close" type="button" (click)="closeDetails()" aria-label="Fechar detalhes">
+      ×
+    </button>
+
+    <div class="catalog-details-cover" [ngClass]="{ 'no-cover': !detail.coverImageUrl }">
+      <img
+        *ngIf="detail.coverImageUrl"
+        [src]="detail.coverImageUrl"
+        [attr.alt]="detail.title"
+        [title]="detail.title"
+        loading="lazy"
+      />
+    </div>
+
+    <div class="catalog-details-info">
+      <h2 [id]="'catalog-modal-title-' + detail.id">{{ detail.title }}</h2>
+      <p class="catalog-details-format">{{ detail.format | formatLabel }}</p>
+      <p [id]="'catalog-modal-description-' + detail.id">
+        {{ detail.description || 'Conteúdo atualizado e em breve disponível.' }}
+      </p>
+
+      <div class="catalog-details-sectors" *ngIf="detail.sectors?.length">
+        <span *ngFor="let sector of detail.sectors">{{ sector | uppercase }}</span>
+      </div>
+
+      <div class="catalog-details-actions">
+        <a class="btn btn-primary" routerLink="/contato">Falar com especialista</a>
+        <button class="btn btn-secondary" type="button" (click)="closeDetails()">Fechar</button>
+      </div>
+    </div>
+  </article>
+</div>

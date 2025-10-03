@@ -1,0 +1,93 @@
+<section class="page-header contact-hero">
+  <div class="container">
+    <h1>Contato</h1>
+    <p>Estamos prontos para apoiar a sua empresa em cada etapa da jornada de desenvolvimento.</p>
+  </div>
+</section>
+
+<section class="contact-wrapper">
+  <div class="container contact-grid">
+    <div class="contact-info">
+      <h2>Fale com a Prospera</h2>
+      <p>
+        Tire suas dúvidas, solicite uma demonstração ou compartilhe necessidades específicas. Nosso time responde em até um dia útil.
+      </p>
+      <ul>
+        <li>
+          <i class="fas fa-envelope" aria-hidden="true"></i>
+          <div>
+            <strong>E-mail</strong>
+            <span>contato@gotreeconsultoria.com.br</span>
+          </div>
+        </li>
+        <li>
+          <i class="fas fa-phone" aria-hidden="true"></i>
+          <div>
+            <strong>Telefone</strong>
+            <span>+55 (81) 98944-4164</span>
+          </div>
+        </li>
+        <li>
+          <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+          <div>
+            <strong>Atendimento</strong>
+            <span>Brasil · Atendimento remoto e híbrido</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <form class="contact-form" [formGroup]="contactForm" (ngSubmit)="submit()" novalidate>
+      <div class="form-field">
+        <label for="contactName">Nome</label>
+        <input id="contactName" type="text" formControlName="name" placeholder="Seu nome completo" />
+        <small class="error" *ngIf="contactForm.get('name')?.invalid && contactForm.get('name')?.touched">
+          Informe um nome com pelo menos 3 caracteres.
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="contactEmail">E-mail</label>
+        <input id="contactEmail" type="email" formControlName="email" placeholder="voce@empresa.com" />
+        <small class="error" *ngIf="contactForm.get('email')?.invalid && contactForm.get('email')?.touched">
+          Informe um e-mail válido.
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="contactSubject">Assunto</label>
+        <input id="contactSubject" type="text" formControlName="subject" placeholder="Como podemos ajudar?" />
+        <small class="error" *ngIf="contactForm.get('subject')?.invalid && contactForm.get('subject')?.touched">
+          Descreva brevemente o assunto.
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="contactMessage">Mensagem</label>
+        <textarea id="contactMessage" rows="5" formControlName="message" placeholder="Conte detalhes sobre a necessidade"></textarea>
+        <small class="error" *ngIf="contactForm.get('message')?.invalid && contactForm.get('message')?.touched">
+          Escreva uma mensagem com pelo menos 10 caracteres.
+        </small>
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Enviando…' : 'Enviar mensagem' }}
+      </button>
+
+      <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
+      <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+    </form>
+  </div>
+</section>
+
+<section class="contact-cta">
+  <div class="container">
+    <div class="cta-card">
+      <div>
+        <h2>Preferir falar diretamente?</h2>
+        <p>Envie um e-mail para <strong>contato@gotreeconsultoria.com.br</strong> ou chame no WhatsApp: <strong>+55 (81) 98944-4164</strong>.</p>
+      </div>
+      <a class="btn btn-secondary" href="mailto:contato@gotreeconsultoria.com.br">Enviar e-mail</a>
+    </div>
+  </div>
+</section>

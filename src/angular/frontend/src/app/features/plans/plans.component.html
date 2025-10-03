@@ -1,0 +1,41 @@
+<section class="plans-grid" aria-live="polite">
+  <div class="container">
+    <div class="loading" *ngIf="isLoading">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Carregando planos estratégicos…</p>
+    </div>
+
+    <div class="error" *ngIf="!isLoading && errorMessage">
+      <p>{{ errorMessage }}</p>
+      <button class="btn btn-secondary" (click)="ngOnInit()">Tentar novamente</button>
+    </div>
+
+    <div class="grid" *ngIf="!isLoading && !errorMessage">
+      <pros-plan-card *ngFor="let plan of plans; trackBy: trackById" [plan]="plan"></pros-plan-card>
+    </div>
+  </div>
+  </section>
+
+
+  <section class="page-header plans-header">
+    <div class="container">
+      <h1>Programas completos para acelerar a sua jornada em SST</h1>
+      <p class="subtitle">
+        Combine mentorias, materiais práticos e acompanhamentos contínuos para evoluir a cultura de segurança e bem-estar da sua organização.
+      </p>
+      <a class="btn btn-secondary" routerLink="/catalog">Explorar catálogo completo</a>
+    </div>
+  </section>
+
+
+<section class="plans-cta">
+  <div class="container">
+    <div class="cta-card">
+      <div>
+        <h2>Precisa de um plano personalizado?</h2>
+        <p>Montamos trilhas exclusivas de acordo com o porte, maturidade e indicadores da sua empresa.</p>
+      </div>
+      <a class="btn btn-primary" routerLink="/suporte">Solicitar proposta</a>
+    </div>
+  </div>
+</section>

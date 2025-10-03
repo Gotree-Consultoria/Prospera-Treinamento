@@ -1,0 +1,136 @@
+.contact-hero {
+  text-align: center;
+  padding: 5rem 0 3rem;
+
+  h1 {
+    font-size: clamp(2.25rem, 5vw, 3rem);
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--color-text-muted, #5b5f63);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+}
+
+.contact-wrapper {
+  padding: 3rem 0 4rem;
+
+  .contact-grid {
+    display: grid;
+    gap: 2.5rem;
+    grid-template-columns: 1fr;
+
+    @media (min-width: 900px) {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .contact-info {
+    background: #fff;
+    border-radius: 18px;
+    padding: 2.5rem;
+    box-shadow: 0 16px 32px rgba(27, 34, 48, 0.08);
+
+    h2 {
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      color: var(--color-text-muted, #5b5f63);
+      margin-bottom: 1.5rem;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 1rem;
+    }
+
+    li {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    i {
+      font-size: 1.5rem;
+      color: var(--color-primary-500, #6a5acd);
+    }
+
+    strong {
+      display: block;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  .contact-form {
+    background: #fff;
+    border-radius: 18px;
+    padding: 2.5rem;
+    box-shadow: 0 16px 32px rgba(27, 34, 48, 0.08);
+    display: grid;
+    gap: 1.25rem;
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    input,
+    textarea {
+      border: 1px solid rgba(27, 34, 48, 0.12);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--color-primary-500, #6a5acd);
+      box-shadow: 0 0 0 3px rgba(106, 90, 205, 0.12);
+    }
+
+    .error {
+      color: var(--color-danger-500, #c0392b);
+      font-size: 0.85rem;
+    }
+
+    .success {
+      color: var(--color-success-600, #1d7d4f);
+      font-weight: 600;
+    }
+  }
+}
+
+.contact-cta {
+  padding: 0 0 5rem;
+
+  .cta-card {
+    background: linear-gradient(135deg, rgba(106, 90, 205, 0.1), rgba(106, 90, 205, 0.22));
+    border-radius: 20px;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+}
