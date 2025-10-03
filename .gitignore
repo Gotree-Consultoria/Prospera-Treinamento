@@ -1,2 +1,22 @@
 /.metadata/
 docs/migracao-angular.md
+
+# Arquivos de documentação arquivados
+docs/
+
+# Node and build artifacts
+/node_modules/
+/dist/
+**/node_modules/
+**/dist/
+/src/angular/frontend/node_modules/
+/src/angular/frontend/dist/
+/src/dist/
+/src/angular/dist/
+/src/angular/frontend/.angular/
+/src/angular/frontend/.cache/
+
+# IDEs
+/.vscode/
+.idea/
+.DS_Store
