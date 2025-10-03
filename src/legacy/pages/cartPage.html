@@ -1,0 +1,56 @@
+<!-- Cart Page -->
+   <div class="page" id="cartPage">
+    <section class="page-header">
+     <div class="container">
+      <h1>
+       Carrinho de Compras
+      </h1>
+     </div>
+    </section>
+    <section class="cart-content">
+     <div class="container">
+      <div class="cart-empty" id="cartEmpty">
+       <i class="fas fa-shopping-cart">
+       </i>
+       <h2>
+        Seu carrinho está vazio
+       </h2>
+       <p>
+        Adicione alguns e-books para começar suas compras.
+       </p>
+   <button class="btn btn-primary" data-page="ebooks">
+        Explorar E-books
+       </button>
+      </div>
+      <div class="cart-items" id="cartItems" style="display: none;">
+       <div class="cart-list" id="cartList">
+        <!-- Cart items will be loaded here -->
+       </div>
+       <div class="cart-summary">
+        <div class="summary-row">
+         <span>
+          Subtotal:
+         </span>
+         <span id="cartSubtotal">
+          R$ 0,00
+         </span>
+        </div>
+        <div class="summary-row">
+         </span>
+        </div>
+        <div class="summary-row total">
+         <span>
+          Total:
+         </span>
+         <span id="cartTotal">
+          R$ 0,00
+         </span>
+        </div>
+   <button class="btn btn-primary btn-full" data-action="checkout">
+    Finalizar Compra
+   </button>
+       </div>
+      </div>
+     </div>
+    </section>
+   </div>

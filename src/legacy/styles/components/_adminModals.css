@@ -1,0 +1,81 @@
+/* Estilos unificados para modais administrativos (antes injetados via JS) */
+.content-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; padding:24px 14px; }
+@media (max-width:520px){ .content-modal-overlay { padding:18px 10px; } }
+.content-modal { background:#fff; width:min(92vw,520px); padding:18px 20px 22px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.25); animation:contentModalIn .25s ease; max-height:calc(100vh - 48px); overflow-y:auto; }
+.content-modal.large { width:min(94vw,680px); display:flex; flex-direction:column; max-height:90vh; }
+.content-modal::-webkit-scrollbar { width:0; height:0; }
+.content-modal { -ms-overflow-style:none; }
+@keyframes contentModalIn { from { opacity:0; transform:translateY(12px);} to { opacity:1; transform:translateY(0);} }
+.content-form { display:flex; flex-direction:column; gap:10px; }
+.content-form label { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.content-form input, .content-form textarea, .content-form select { padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem; font-family:inherit; }
+.content-form textarea { resize: vertical; min-height:80px; }
+.content-form input:focus, .content-form textarea:focus, .content-form select:focus { outline:2px solid var(--verde-claro); outline-offset:2px; }
+.content-modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+.content-modal .form-messages { background:rgba(220,20,60,0.06); color:#b33; padding:6px 8px; border-radius:4px; font-size:0.75rem; min-height:18px; }
+@media (max-width:520px){ .content-modal { width:94vw; padding:16px 16px 20px; } }
+
+.member-modal-header { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; margin-bottom:0.8rem; }
+.member-modal-header h3 { margin:0; font-size:1.05rem; color:#0f172a; }
+.member-modal-close { background:none; border:none; font-size:1.6rem; line-height:1; cursor:pointer; color:#475569; padding:2px 6px; border-radius:6px; }
+.member-modal-close:hover { background:#f1f5f9; color:#0f172a; }
+.member-modal-body { display:flex; flex-direction:column; }
+
+/* Viewer interno */
+.ebook-viewer-frame-wrapper { flex:1; min-height:60vh; border:1px solid #d9d9d9; border-radius:6px; overflow:hidden; background:#fafafa; }
+.ebook-viewer-actions { margin-top:10px; }
+
+/* Barra de progresso upload PDF */
+.modal-progress-row { display:none; flex-direction:column; gap:4px; }
+.modal-progress-bar-container { height:6px; background:#eee; border-radius:4px; overflow:hidden; }
+.modal-progress-bar { height:100%; width:0; background:var(--verde-claro); transition:width .2s linear; }
+.modal-progress-pct { font-size:.65rem; }
+
+/* Confirm modal */
+.confirm-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:10000; }
+.confirm-modal { background:#fff; width:min(92vw,400px); padding:18px 20px 22px; border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,0.28); animation:contentModalIn .25s ease; }
+.confirm-modal h4 { margin:0 0 6px; font-size:1rem; }
+.confirm-modal .confirm-message { font-size:0.8rem; line-height:1.25rem; margin:0 0 14px; }
+.confirm-modal .confirm-actions { display:flex; gap:8px; justify-content:flex-end; }
+.confirm-modal button { cursor:pointer; }
+
+/* Acessibilidade: esconder input de file se substituído por label custom */
+.visually-hidden { position:absolute !important; left:-9999px !important; width:1px !important; height:1px !important; opacity:0 !important; }
+
+.member-modal-meta { display:flex; flex-direction:column; gap:2px; margin-bottom:12px; font-size:0.85rem; color:#475569; }
+.member-modal-meta strong { font-size:0.95rem; color:#0f172a; }
+
+.member-progress-loading,
+.member-progress-empty,
+.member-progress-error { font-size:0.85rem; text-align:center; margin:12px 0; }
+.member-progress-loading { color:#475569; }
+.member-progress-empty { color:#475569; }
+.member-progress-error { color:#b91c1c; }
+
+.member-progress-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.75rem; }
+.member-progress-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; background:#f8fafc; }
+.member-progress-item h4 { margin:0 0 6px; font-size:0.95rem; color:#0f172a; }
+.member-progress-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:0.75rem; color:#475569; margin-bottom:8px; }
+.member-progress-meta .bullet { color:#cbd5f5; }
+
+.member-progress-bar { height:6px; background:#e2e8f0; border-radius:999px; overflow:hidden; }
+.member-progress-bar span { display:block; height:100%; background:#0ea5e9; transition:width .3s ease; }
+.member-progress-label { margin-top:6px; font-size:0.75rem; font-weight:600; color:#0f172a; }
+
+.member-status-chip { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.4px; background:#e2e8f0; color:#475569; }
+.member-status-chip.active { background:#dbeafe; color:#1d4ed8; }
+.member-status-chip.completed { background:#dcfce7; color:#166534; }
+.member-status-chip.pending { background:#fef3c7; color:#b45309; }
+.member-status-chip.cancelled { background:#fee2e2; color:#b91c1c; }
+.member-status-chip.neutral { background:#e2e8f0; color:#475569; }
+
+.member-detail-grid { display:grid; gap:10px; margin:12px 0; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); }
+.member-detail-field { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
+.member-detail-label { display:block; font-size:0.68rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; margin-bottom:4px; }
+.member-detail-value { font-size:0.9rem; color:#0f172a; word-break:break-word; }
+
+.member-enrollment-table { width:100%; border-collapse:collapse; margin-top:12px; font-size:0.85rem; }
+.member-enrollment-table th,
+.member-enrollment-table td { border-bottom:1px solid #e2e8f0; padding:8px 10px; text-align:left; }
+.member-enrollment-table th { background:#f1f5f9; font-size:0.7rem; letter-spacing:.4px; text-transform:uppercase; color:#475569; }
+.member-enrollment-empty { font-size:0.85rem; color:#475569; text-align:center; margin:12px 0; }

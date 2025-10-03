@@ -1,0 +1,44 @@
+/**
+ * Carrega e injeta todos os componentes HTML parciais de forma assíncrona e em paralelo.
+ * Retorna uma Promise que resolve quando todos os componentes foram carregados.
+ */
+export async function loadAllComponents() {
+    const components = [
+    { id: "headerPageContainer", file: "src/legacy/pages/headerPage.html" },
+    { id: "ebooksPageContainer", file: "src/legacy/pages/ebooksPage.html" },
+    { id: "packagesPageContainer", file: "src/legacy/pages/packagesPage.html" },
+    { id: "aboutPageContainer", file: "src/legacy/pages/aboutPage.html" },
+    { id: "contactPageContainer", file: "src/legacy/pages/contactPage.html" },
+    { id: "accountPageContainer", file: "src/legacy/pages/accountPage.html" },
+    { id: "learningPageContainer", file: "src/legacy/pages/learningPage.html" },
+    { id: "faqPageContainer", file: "src/legacy/pages/faqPage.html" },
+    { id: "footerPageContainer", file: "src/legacy/pages/footerPage.html" },
+    { id: "productCategoriesContainer", file: "src/legacy/pages/productCategoriesPage.html" },
+    ];
+
+    try {
+        await Promise.all(
+            components.map(async (comp) => {
+                const url = comp.file.startsWith('/') ? comp.file : `/${comp.file}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status} for ${comp.file}`);
+                const html = await response.text();
+                const container = document.getElementById(comp.id);
+                if (container) {
+                    // Remover possível wrapper <div class="page" ...> para evitar duplicação de IDs/classes
+                    const temp = document.createElement('div');
+                    temp.innerHTML = html;
+                    const pageEl = temp.querySelector('.page');
+                    if (pageEl) {
+                        container.innerHTML = pageEl.innerHTML;
+                    } else {
+                        container.innerHTML = html;
+                    }
+                }
+            })
+        );
+        console.log("Todos os componentes foram carregados com sucesso.");
+    } catch (error) {
+        console.error("Erro ao carregar os componentes:", error);
+    }
+}

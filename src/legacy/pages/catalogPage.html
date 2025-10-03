@@ -1,0 +1,70 @@
+<!-- Catálogo Completo Page -->
+<div class="page" id="catalogPage">
+  <section class="page-header">
+    <div class="container">
+      <h1>Catálogo Completo</h1>
+      <p>Explore todos os formatos: E-books, Cursos Gravados e Treinamentos Ao Vivo.</p>
+    </div>
+  </section>
+  <section class="catalog-filters">
+    <div class="container">
+      <div class="catalog-sectors-wrapper">
+        <div class="sector-header">
+          <span class="sector-title">Setores</span>
+          <button type="button" class="sector-clear-btn" data-action="clearSector" aria-label="Limpar setor selecionado">Limpar</button>
+        </div>
+        <div class="catalog-quick-filters filter-controls" role="radiogroup" aria-label="Filtrar por setor">
+          <button class="filter-btn active" data-sector="" role="radio" aria-checked="true">Todos</button>
+          <button class="filter-btn" data-sector="alimentacao" role="radio" aria-checked="false">Alimentação</button>
+          <button class="filter-btn" data-sector="construcao-civil" role="radio" aria-checked="false">Construção Civil</button>
+          <button class="filter-btn" data-sector="educacao" role="radio" aria-checked="false">Educação</button>
+          <button class="filter-btn" data-sector="industria" role="radio" aria-checked="false">Indústria</button>
+          <button class="filter-btn" data-sector="saude" role="radio" aria-checked="false">Saúde</button>
+          <button class="filter-btn" data-sector="transporte-logistica" role="radio" aria-checked="false">Transporte e Logística</button>
+          <button class="filter-btn" data-sector="varejo-atacado" role="radio" aria-checked="false">Varejo e Atacado</button>
+          <button class="filter-btn" data-sector="global" role="radio" aria-checked="false">Global</button>
+        </div>
+      </div>
+      <div class="catalog-filter-bar">
+        <div class="catalog-search">
+          <input type="text" id="catalogSearch" placeholder="Pesquisar por título, código ou palavra-chave..." />
+          <i class="fas fa-search"></i>
+        </div>
+        <div class="catalog-selects">
+          <div class="catalog-format-toggle" role="group" aria-label="Formato">
+            <button class="format-btn active" data-format="">Todos</button>
+            <button class="format-btn" data-format="EBOOK">E-books</button>
+            <button class="format-btn" data-format="RECORDED_COURSE">Cursos Gravados</button>
+            <button class="format-btn" data-format="LIVE_TRAINING">Ao Vivo</button>
+          </div>
+          <label for="catalogFormatFilter" class="sr-only">Filtrar por Formato</label>
+          <select id="catalogFormatFilter" aria-label="Formato" class="visually-hidden-select" tabindex="-1">
+            <option value="">Formato: Todos</option>
+            <option value="EBOOK">E-books</option>
+            <option value="RECORDED_COURSE">Cursos Gravados</option>
+            <option value="LIVE_TRAINING">Treinamentos Ao Vivo</option>
+          </select>
+          <label for="catalogSectorFilter" class="sr-only">Filtrar por Setor</label>
+          <select id="catalogSectorFilter" aria-label="Setor" class="visually-hidden-select" tabindex="-1">
+            <option value="">Setor: Todos</option>
+            <option value="alimentacao">Alimentação</option>
+            <option value="construcao-civil">Construção Civil</option>
+            <option value="educacao">Educação</option>
+            <option value="industria">Indústria</option>
+            <option value="saude">Saúde</option>
+            <option value="transporte-logistica">Transporte & Logística</option>
+            <option value="varejo-atacado">Varejo & Atacado</option>
+            <option value="global">Global</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="catalog-results">
+    <div class="container">
+      <div id="catalogHighlights" class="catalog-highlights"></div>
+      <div id="catalogList" class="catalog-grid"></div>
+      <div id="catalogEmpty" class="catalog-empty hidden">Nenhum item encontrado para os filtros.</div>
+    </div>
+  </section>
+</div>

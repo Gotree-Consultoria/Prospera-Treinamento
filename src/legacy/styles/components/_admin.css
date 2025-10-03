@@ -1,0 +1,548 @@
+.inline-update-badge {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: #374151; /* gray-700 */
+  background: #e5e7eb; /* gray-200 */
+  border-radius: 12px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+/* Centralizar coluna "Ações" no Card 1 (Usuários) e Card 2 (Organizações) */
+#adminUsersTable thead th:last-child,
+#adminUsersTable tbody td:last-child {
+  text-align: center;
+}
+
+#adminOrgsContainer table thead th:last-child,
+#adminOrgsContainer table tbody td:last-child {
+  text-align: center;
+}
+/* Styles específicos para o painel de Admin (Gerenciamento de Usuários) */
+.adminUsersPage .container {
+  padding: 24px 16px;
+}
+
+.adminUsersPage h1 {
+  margin-bottom: 10px;
+  /* reduzido para um visual mais compacto */
+  font-size: 1.25rem;
+}
+
+/* títulos do painel agora não têm estilos dedicados; usamos tipografia global */
+/* Re-adicionando classe admin-panel-title para centralização consistente */
+.admin-panel-title {
+  text-align: center;
+  display: block;
+  width: 100%;
+  margin: 0.25rem 0 0.6rem 0;
+  /* mantém o tamanho padrão de h2 (deferido para styles.css) */
+  font-weight: 600;
+  color: var(--verde-escuro);
+}
+
+/* Alinhar conteúdo de cada card para uma grade consistente */
+.admin-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-card h3 {
+  margin: 0;
+  padding: 14px 18px; /* maior padding para não encostar nas bordas */
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.admin-card .card-body {
+  padding: 12px 16px;
+}
+
+.admin-card .muted {
+  padding: 0 16px 8px 16px;
+  color: #666;
+  font-size: 0.88rem;
+}
+
+/* Reduzir subtítulos H2 nas páginas de administração para visual mais compacto */
+/* Subtítulos de página agora usam h3 nas partials */
+.page.adminUsersPage h3,
+.page.adminOrgsPage h3,
+.page.adminContentPage h3,
+.page.adminAnalyticsPage h3,
+.page.adminUserDetailPage h3,
+.page.adminOrgDetailPage h3 {
+  font-size: 0.95rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+  color: #333; /* mantém contraste suficiente */
+}
+
+/* H2s dentro de seções do detalhe de usuário podem ficar ainda menores */
+.adminUserDetailPage section h3,
+.adminOrgDetailPage section h3 {
+  font-size: 0.9rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+
+/* Fallback com maior especificidade e !important para garantir aplicação
+   mesmo que o styles.css defina h2 maiores por padrão */
+.page.adminUsersPage h3, .page.adminOrgsPage h3, .page.adminContentPage h3,
+.page.adminAnalyticsPage h3, .page.adminUserDetailPage h3, .page.adminOrgDetailPage h3 {
+  font-size: 0.95rem !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.6rem !important;
+  font-weight: 600 !important;
+}
+
+.page.adminUserDetailPage section h3, .page.adminOrgDetailPage section h3 {
+  font-size: 0.9rem !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.45rem !important;
+  font-weight: 600 !important;
+}
+
+/* Page-level secondary title for admin pages */
+.adminUsersPage h3,
+.adminOrgsPage h3,
+.adminContentPage h3,
+.adminAnalyticsPage h3,
+.adminUserDetailPage h3,
+.adminOrgDetailPage h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.form-messages {
+  margin-bottom: 12px;
+  color: #b33;
+  background: rgba(220,20,60,0.04);
+  padding: 8px 10px;
+  border-radius: 4px;
+.org-status-filter {
+  padding: 6px 8px;
+}
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+.table th, .table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e6e6e6;
+  vertical-align: middle;
+}
+.table thead th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.btn-small {
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+.btn-small:hover { background: #f4f4f4; }
+
+/* Ações padronizadas (seguindo padrão de CRUD Conteúdo) */
+.btn-action-primary {
+  background: linear-gradient(135deg, var(--verde-claro, #3fc18d), var(--verde-escuro, #0d5a3b));
+  color:#fff;
+  border: 1px solid var(--verde-escuro, #0d5a3b);
+  font-weight:600;
+  letter-spacing:.25px;
+  border-radius: 22px;
+  padding:7px 18px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  transition: background .2s ease, box-shadow .2s ease, transform .18s ease;
+}
+.btn-action-primary:hover { box-shadow:0 4px 10px rgba(0,0,0,0.12); transform:translateY(-1px); }
+.btn-action-primary:active { transform:translateY(0); }
+
+.btn-action-secondary {
+  background: #fff;
+  color: var(--verde-escuro, #0d5a3b);
+
+/* ================= Botões CRUD Unificados ================= */
+.crud-btn {
+  pointer-events: inherit !important;
+  --verde-escuro: #005a32;
+  --verde-claro: #bed737;
+  --off-white: #f5f0eb;
+  --coral: #e65f3c;
+  --coral-dark: #d54a2a;
+  --white: #ffffff;
+  --gray-light: #d4d4d4;
+  --gray-lighter: #efefef;
+  --gray-medium: #6c757d;
+  --gray-dark: #343a40;
+  --verde-claro-dark: #9bb82b;
+  --btn-small-equal-width: 92px;
+  --btn-small-height: 34px;
+  --btn-small-height-mobile: 44px;
+  --font-family: 'Montserrat', sans-serif;
+  --font-size-base: 14px;
+  --line-height-base: 1.6;
+  --spacing-xxs: 0.25rem;
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+  --spacing-xxl: 4rem;
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  margin: 0;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .70rem;
+  letter-spacing: .25px;
+  font-weight: 600;
+  padding: 10px 18px 11px;
+  border-radius: 26px;
+  border: 1px solid #d5dcdf;
+  background: linear-gradient(135deg,#ffffff 0%, #f7faf9 100%);
+  color: #1b5632;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 14px -6px rgba(0,0,0,0.15);
+  transition: background .22s ease, box-shadow .22s ease, transform .18s ease, color .22s ease;
+  min-height: 36px;
+  text-decoration:none;
+}
+.crud-btn:hover { background: linear-gradient(135deg,#ffffff 0%, #eef6f3 100%); box-shadow:0 3px 10px -4px rgba(0,0,0,0.18); transform:translateY(-1px); }
+.crud-btn:active { transform:translateY(0); box-shadow:0 2px 6px -2px rgba(0,0,0,0.18); }
+.crud-btn:focus-visible { outline:2px solid var(--coral); outline-offset:2px; }
+.crud-btn:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Variante primária */
+.crud-btn.primary {
+  background: linear-gradient(135deg, var(--verde-claro) 0%, var(--verde-escuro) 100%);
+  color:#fff;
+  border-color: var(--verde-escuro);
+}
+.crud-btn.primary:hover { background: linear-gradient(135deg, var(--verde-claro-dark) 0%, var(--verde-escuro) 100%); }
+.crud-btn.primary:active { filter:brightness(.92); }
+
+/* Variante secundária */
+.crud-btn.secondary { /* mantém estilo base; apenas reforça semântica */ box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 14px -6px rgba(0,0,0,0.12); }
+
+/* Ícones inline opcionais */
+.crud-btn .icon { font-size: 0.85rem; line-height:1; display:inline-flex; }
+
+@media (max-width:640px) {
+  .crud-btn { width:100%; justify-content:center; }
+}
+  border:1px solid var(--verde-claro, #3fc18d);
+  font-weight:600;
+  letter-spacing:.25px;
+  border-radius:22px;
+  padding:7px 16px;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.btn-action-secondary:hover { background: rgba(63,193,141,0.10); }
+.btn-action-secondary:active { transform:translateY(1px); }
+.btn-action-secondary:focus-visible, .btn-action-primary:focus-visible { outline:2px solid var(--coral, #ff8055); outline-offset:2px; }
+
+/* Ajustar tamanho quando combinado com .btn-small */
+.btn-small.btn-action-primary, .btn-small.btn-action-secondary { font-size:0.78rem; }
+
+/* Variantes sem poluir estilos globais */
+.btn-small-change { border-color: var(--verde-escuro); color: var(--verde-escuro); background:#fff; }
+.btn-small-change:hover { background: var(--verde-escuro); color:#fff; }
+.btn-small-remove { border-color: #d04a4a; color:#b82121; background:#fff; }
+.btn-small-remove:hover { background:#d04a4a; color:#fff; }
+.btn-xsm { font-size:0.7rem; padding:4px 8px; line-height:1.15; }
+
+/* Harmonizar bordas mais arredondadas para ações destrutivas em tabelas de detalhe */
+table .btn-small-remove,
+.td-assignment-table .btn-small-remove {
+  border-radius: 18px;
+  padding: 5px 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: .25px;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+table .btn-small-remove:hover:not(:disabled) { box-shadow:0 2px 6px rgba(208,74,74,0.35); }
+table .btn-small-remove:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ================= Gerenciar Setores: Botão Editar com estilo suavizado ================= */
+#platformSectorsTable .btn-small-change {
+  border-radius: 18px;
+  padding: 5px 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: .25px;
+  /* Cor mais suave: usar verde-claro translúcido como fundo inicial */
+  background: linear-gradient(135deg, rgba(0,150,110,0.06), rgba(0,150,110,0.12));
+  border-color: var(--verde-claro, #44b98a);
+  color: var(--verde-escuro, #0e5b3e);
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+#platformSectorsTable .btn-small-change:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--verde-claro, #44b98a), var(--verde-escuro, #0e5b3e));
+  color:#fff;
+  box-shadow:0 2px 6px rgba(0,120,80,0.35);
+}
+#platformSectorsTable .btn-small-change:active:not(:disabled) {
+  transform:translateY(1px);
+}
+#platformSectorsTable .btn-small-change:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Botão "Remover" em vínculos de setor – mais compacto e consistente */
+/* Removidos estilos específicos de .remove-sector-link para unificar com .btn-small-remove */
+
+/* Responsive: transformar tabela em cards simples em telas pequenas */
+@media (max-width: 720px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { margin-bottom: 12px; border: 1px solid #eee; padding: 8px; border-radius: 6px; }
+  .table td { padding: 8px 10px; border: none; position: relative; }
+  .table td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #666;
+  }
+  .table td:last-child { text-align: right; }
+}
+
+/* Small improvements for empty state */
+.adminUsersPage .empty-state { padding: 18px; color: #666; text-align: center; }
+
+/* Make sure page isn't cramped */
+.adminUsersPage .container { max-width: 1100px; margin: 0 auto; }
+
+/* Grid de cards do painel */
+.admin-cards-grid {
+  display: block; /* um abaixo do outro */
+  gap: 12px;
+  margin-top: 12px;
+}
+.admin-card {
+  border: 1px solid rgba(30,30,30,0.06);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #fbfbfb);
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(20,20,30,0.03);
+  margin-bottom: 12px;
+}
+.admin-card h3 {
+  margin: 0;
+  padding: 8px 14px;
+  /* subtítulos dos cards ligeiramente menores */
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-card .muted { padding: 0 16px 8px 16px; color: #666; font-size: 0.85rem; }
+.admin-card .card-body { padding: 10px 14px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 280ms ease, opacity 260ms ease, padding 200ms ease; }
+.admin-card.expanded .card-body { max-height: 600px; opacity: 1; }
+.admin-card .card-toggle {
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* círculo */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+.admin-card .card-toggle:hover {
+  background: #f7f7f7;
+  transform: translateY(-1px);
+}
+.admin-card .card-toggle::after {
+  content: '\25BE'; /* triângulo para baixo */
+  display: inline-block;
+  transition: transform 260ms ease, color 180ms ease;
+  color: #666;
+  font-size: 22px; /* aumentado para melhor visualização */
+  line-height: 1;
+}
+.admin-card.expanded .card-toggle::after {
+  transform: rotate(180deg);
+  color: #333;
+}
+
+/* ===================== Plataforma: Subcards e Tabs ===================== */
+.platform-subcards { display:flex; flex-wrap:nowrap; overflow-x:auto; gap:18px; padding:4px 4px 6px; justify-content:center; align-items:stretch; scroll-behavior:smooth; }
+.platform-subcards .admin-subcard { flex:0 0 280px; width:280px; }
+.platform-subcards::-webkit-scrollbar { height:8px; }
+.platform-subcards::-webkit-scrollbar-track { background:#f1f1f1; border-radius:4px; }
+.platform-subcards::-webkit-scrollbar-thumb { background:#c4c4c4; border-radius:4px; }
+.platform-subcards::-webkit-scrollbar-thumb:hover { background:#a8a8a8; }
+.admin-subcard { border:1px solid rgba(0,0,0,0.06); border-radius:10px; background:#fff; padding:14px 16px 18px; box-shadow:0 2px 6px rgba(0,0,0,0.04); }
+.admin-subcard-header { margin-bottom:12px; }
+.admin-subcard-header h4 { margin:0 0 4px 0; font-size:0.95rem; font-weight:600; color:#222; }
+.admin-subcard-header .subtitle { margin:0; font-size:0.68rem; text-transform:uppercase; letter-spacing:.45px; color:#666; }
+
+/* Tabs */
+.platform-tabs { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 10px 0; border-bottom:1px solid #e5e5e5; padding-bottom:4px; }
+.platform-tab { border:0; background:#f5f5f5; padding:6px 12px; font-size:0.78rem; border-radius:6px; cursor:pointer; color:#444; position:relative; text-decoration:none; }
+.platform-tab:hover { text-decoration:none; }
+.platform-tab:visited { color:#444; }
+.platform-tab:hover { background:#eee; }
+.platform-tab.active { background:var(--verde-escuro); color:#fff; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.08); }
+.platform-tab:focus-visible { outline:2px solid var(--coral); outline-offset:2px; }
+
+/* Versão navegação vertical (tabs empilhadas) */
+.platform-tabs.nav-mode { flex-direction: column; align-items: stretch; border-bottom:0; padding-bottom:0; gap:6px; }
+.platform-tabs.nav-mode .platform-tab { display:block; width:100%; text-align:left; border-radius:6px; font-weight:500; }
+.platform-tabs.nav-mode .platform-tab:not(.active) { box-shadow:0 0 0 1px #e2e2e2 inset; }
+.platform-tabs.nav-mode .platform-tab.active { box-shadow:0 0 0 1px var(--verde-escuro) inset; }
+
+.platform-tab-panels { position:relative; }
+.platform-tab-panel { display:none; animation: fadeInPlatform 260ms ease; }
+.platform-tab-panel.active { display:block; }
+@keyframes fadeInPlatform { from { opacity:0; transform:translateY(4px);} to { opacity:1; transform:translateY(0);} }
+
+.inline-actions { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 10px 0; }
+
+.small-table table.table th, .small-table table.table td { padding:6px 8px; font-size:0.72rem; }
+.small-table table.table thead th { background:#fafafa; }
+
+/* Empty state reutilização */
+.empty-state { padding:14px; background:#fafafa; border:1px dashed #ddd; border-radius:6px; font-size:0.78rem; color:#555; }
+
+/* Mensagens ocultáveis reutilizando classe */
+.is-hidden-msg { display:none; }
+.mt-10 { margin-top:10px; }
+
+/* Responsividade para subcards */
+@media (max-width:760px) {
+  .platform-subcards { gap:14px; }
+  .platform-subcards .admin-subcard { flex:0 0 240px; width:240px; }
+  .admin-subcard { padding:12px 12px 16px; }
+  .platform-tab { font-size:0.72rem; padding:6px 10px; }
+  .small-table table.table th, .small-table table.table td { font-size:0.68rem; }
+}
+
+/* Filters UI for admin users */
+.admin-users-filters { margin-bottom: 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.admin-users-input { padding:8px; border:1px solid #ccc; border-radius:4px; min-width:220px; }
+.admin-users-select { padding:8px; border:1px solid #ccc; border-radius:4px; background:#fff; }
+
+@media (max-width: 900px) {
+  .admin-cards-grid { grid-template-columns: 1fr; }
+}
+
+/* Controls for admin organizations page */
+.admin-orgs-controls {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.admin-orgs-controls .org-search-input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.admin-orgs-controls .org-status-filter {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+/* Toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.switch input { display:none; }
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #d3d3d3; /* neutral background (lighter) */
+  transition: .2s;
+  border-radius: 24px;
+}
+.switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--coral); /* knob color when OFF */
+  transition: .2s;
+  border-radius: 50%;
+  z-index: 2;
+}
+.switch input:checked + .slider {
+  /* keep background neutral when ON */
+  background-color: #d3d3d3;
+}
+.switch input:checked + .slider:before { transform: translateX(20px); background-color: var(--verde-escuro); }
+
+/* Limitar a visualização do card de usuários a ~10 registros e habilitar scroll
+   Mantemos os filtros fora da área rolável (eles ficam acima da tabela). */
+#adminUsersCard .card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+#adminUsersCard .card-body .table-responsive {
+  /* Aproximação: 10 linhas * ~42px por linha = 420px (ajuste fino se necessário) */
+  max-height: 420px;
+  overflow: auto;
+  /* Mantém o layout compacto removendo margin inferior desnecessária */
+  margin-bottom: 0;
+}
+
+/* Deixa o cabeçalho da tabela fixo dentro da área rolável para melhor usabilidade */
+#adminUsersCard .table-responsive thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fafafa; /* mesmo fundo já usado para cabeçalho */
+}
