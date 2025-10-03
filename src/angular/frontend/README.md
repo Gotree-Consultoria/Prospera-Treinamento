@@ -1,59 +1,59 @@
-# Frontend
+# Frontend — Refatoração para Angular
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.3.
+Este diretório contém a versão refatorada do frontend da Prospera, migrado do antigo SPA baseado em HTML parciais e scripts para um aplicativo moderno em Angular (Angular CLI).
 
-## Development server
+O objetivo da refatoração foi organizar o código em componentes e serviços, melhorar a manutenção, habilitar ferramentas de desenvolvimento (lint, testes, build) e facilitar deploys automatizados.
 
-To start a local development server, run:
+## O que mudou
 
-```bash
-ng serve
+- Migração do SPA estático (partials + scripts) para um projeto Angular estruturado em `src/angular/frontend/`.
+- Separação clara entre apresentação (componentes), lógica (serviços) e rotas (módulos lazy-loaded quando aplicável).
+- Artefatos e dependências (ex.: `node_modules/`, `dist/`, `.angular/`) são ignorados no Git. As regras de ignore estão em `src/angular/frontend/.gitignore`.
+
+## Executando localmente (desenvolvimento)
+
+Abra um PowerShell na pasta do frontend e execute:
+
+```powershell
+cd src\angular\frontend
+npm ci
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Em seguida, abra `http://localhost:4200/` no navegador. O servidor de desenvolvimento do Angular fará hot-reload ao salvar alterações.
 
-## Code scaffolding
+Se preferir usar o Angular CLI diretamente:
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```powershell
+npx ng serve
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### Gerar artefatos de produção
 
-```bash
-ng generate --help
+```powershell
+npm run build -- --configuration production
 ```
 
-## Building
+Os arquivos otimizados ficarão em `src/angular/frontend/dist/`.
 
-To build the project run:
+## Testes
 
-```bash
-ng build
-```
+- Unitários: `npm test` (Karma/Jasmine ou equivalente, conforme configuração do projeto).
+- E2E: `npm run e2e` (se houver configuração de teste E2E).
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Boas práticas e recomendações
 
-## Running unit tests
+- Use componentes e serviços para separar responsabilidades.
+- Prefira lazy-loading de módulos para rotas volumosas.
+- Mantenha as regras de lint e formatação (ESLint / Prettier) ativas no CI.
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Acesso ao Projeto Online
 
-```bash
-ng test
-```
+Você pode visualizar o projeto em tempo real através do link abaixo.
+Todas as atualizações feitas no repositório são refletidas automaticamente no deploy:
 
-## Running end-to-end tests
+🔗 prospera-treinamento.vercel.app
 
-For end-to-end (e2e) testing, run:
+---
 
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Desenvolvedor: Brehcore
