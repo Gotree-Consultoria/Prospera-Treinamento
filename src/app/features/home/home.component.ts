@@ -19,7 +19,7 @@ interface HeroContent {
   title: string;
   description: string;
   primaryCta: HeroCTA;
-  secondaryCta: HeroCTA;
+  secondaryCta?: HeroCTA;
 }
 
 
@@ -76,13 +76,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     description:
       'E-books e conteúdos aplicáveis em minutos, criados para donos de pequenas e médias empresas que não têm tempo a perder.',
     primaryCta: {
-      label: 'Explorar E-books',
-      link: '/ebooks'
-    },
-    secondaryCta: {
-      label: 'Ver Treinamentos',
+      label: 'Explorar Catálogo',
       link: '/catalog'
-    }
+    },
+    // secondaryCta removed intentionally to show a single CTA
   };
 
   readonly trainingsHighlight: TrainingsHighlight = {
