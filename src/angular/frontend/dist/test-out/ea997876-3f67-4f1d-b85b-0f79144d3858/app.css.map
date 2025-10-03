@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/app.scss"],
+  "sourcesContent": [".app-shell {\r\n  display: flex;\r\n  flex-direction: column;\r\n  min-height: 100vh;\r\n  background: var(--off-white);\r\n}\r\n\r\n.app-content {\r\n  flex: 1;\r\n  display: block;\r\n}\r\n\r\n.app-content > * {\r\n  display: block;\r\n}\r\n"],
+  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,kBAAA;AACA,cAAA;AACA,cAAA,IAAA;;AAGF,CAAA;AACE,QAAA;AACA,WAAA;;AAGF,CALA,YAKA,EAAA;AACE,WAAA;;",
+  "names": []
+}
