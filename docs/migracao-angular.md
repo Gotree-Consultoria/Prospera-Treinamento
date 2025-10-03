@@ -1,90 +1,54 @@
-# Plano de migração completa para Angular
+# Frontend — Refatoração para Angular
 
-Este plano permite iniciar um novo frontend Angular do zero **sem perder o código legado** atualmente em funcionamento. A estratégia é trabalhar em paralelo, preservando a versão estática até que a nova aplicação esteja pronta para assumir todas as rotas.
+Este diretório contém a versão refatorada do frontend da Prospera, migrado do antigo SPA baseado em HTML parciais e scripts para um aplicativo moderno em Angular (Angular CLI).
 
-## 1. Preparação e versionamento
+O objetivo da refatoração foi organizar o código em componentes e serviços, melhorar a manutenção, habilitar ferramentas de desenvolvimento (lint, testes, build) e facilitar deploys automatizados.
 
-1. Crie uma branch de migração, por exemplo `feat/angular-migration`.
-2. Congele o estado atual em produção/local (tag `legacy-v1`) para referência futura.
-3. Documente no `README` o fluxo atual de execução (Express + páginas estáticas) para facilitar suporte durante a transição.
+## O que mudou
 
-## 2. Estrutura de diretórios
+- Migração do SPA estático (partials + scripts) para um projeto Angular estruturado em `src/angular/frontend/`.
+- Separação clara entre apresentação (componentes), lógica (serviços) e rotas (módulos lazy-loaded quando aplicável).
+- Artefatos e dependências (ex.: `node_modules/`, `dist/`, `.angular/`) são ignorados no Git. As regras de ignore estão em `src/angular/frontend/.gitignore`.
 
-```
-src/
-  legacy/                # mover todo o site atual para cá
-    assets/
-    pages/
-    scripts/
-    styles/
-  angular/
-    frontend/            # novo workspace Angular criado com CLI
-      ...
+## Executando localmente (desenvolvimento)
+
+Abra um PowerShell na pasta do frontend e execute:
+
+```powershell
+cd src\angular\frontend
+npm ci
+npm start
 ```
 
-- Atualize `dev-server.js` para servir `src/legacy` como fallback (`/legacy/...`).
-- Preserve os caminhos originais movendo os diretórios atuais para `src/legacy`.
+Em seguida, abra `http://localhost:4200/` no navegador. O servidor de desenvolvimento do Angular fará hot-reload ao salvar alterações.
 
-## 3. Inicialização do Angular
+Se preferir usar o Angular CLI diretamente:
 
-1. No diretório `src/angular`, gere o workspace:
-   ```
-   npx @angular/cli@latest new frontend --standalone --routing --style=scss
-   ```
-2. Ajuste `angular.json` para que o output (`outputPath`) seja `../../dist/angular/frontend`.
-3. Crie scripts no `package.json` raiz:
-   ```json
-   "start:ng": "cd src/angular/frontend && ng serve",
-   "build:ng": "cd src/angular/frontend && ng build",
-   "test:ng": "cd src/angular/frontend && ng test"
-   ```
+```powershell
+npx ng serve
+```
 
-## 4. Integração com Express
+### Gerar artefatos de produção
 
-- No `dev-server.js`, adicione uma rota para servir o bundle Angular:
-  ```js
-  app.use('/app', express.static(path.join(__dirname, 'dist/angular/frontend/browser')));
-  app.get('/app/*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist/angular/frontend/browser/index.html'));
-  });
-  ```
-- Mantenha as rotas legadas respondendo normalmente (`/`, `/catalogo`, etc.) até que cada uma seja portada.
+```powershell
+npm run build -- --configuration production
+```
 
-## 5. Migração incremental por domínio
+Os arquivos otimizados ficarão em `src/angular/frontend/dist/`.
 
-1. **Design System**: implemente `Header`, `Footer`, `Button`, `Card` em `app/shared/components`.
-2. **Serviços**: converta os módulos de `src/legacy/scripts/modules/shared` em `app/core/services` tipados (HTTP interceptors para auth/cache).
-3. **Features prioritárias**: escolha um domínio (ex.: catálogo) e recrie em `app/features/catalog` com rotas lazy e resolvers.
-4. **Dados compartilhados**: use `inject()` e `signal`/`computed` para stores simples; avalie NgRx apenas se necessário.
-5. **A/B (convivência)**: enquanto a nova rota não estiver concluída, continue servindo a página legada correspondente.
+## Testes
 
-## 6. Portabilidade de conteúdo
+- Unitários: `npm test` (Karma/Jasmine ou equivalente, conforme configuração do projeto).
+- E2E: `npm run e2e` (se houver configuração de teste E2E).
 
-- Imagens e PDFs: mova-os para `src/angular/frontend/src/assets` e atualize referências.
-- Traduções: crie estrutura `assets/i18n` para Angular; mantenha arquivos originais em `legacy` até migração completa.
-- Estilos globais: converta tokens atuais para SCSS (ex.: `_utilities.css` → `src/legacy/styles/_tokens.scss`).
+## Boas práticas e recomendações
 
-## 7. Testes e qualidade
+- Use componentes e serviços para separar responsabilidades.
+- Prefira lazy-loading de módulos para rotas volumosas.
+- Mantenha as regras de lint e formatação (ESLint / Prettier) ativas no CI.
 
-- Configure lint (`ng lint`), unit tests (`ng test`) e E2E (Cypress/Playwright).
-- Para o legado, mantenha smoke tests mínimos garantindo que o servidor continua servindo as páginas não migradas.
-- Adote CI com jobs separados `legacy` e `angular` enquanto ambos coexistirem.
 
-## 8. Cutover final
 
-1. Após migrar todas as páginas, atualize o Express para redirecionar `/` para `/app` e remova as rotas legadas.
-2. Arquive o diretório `src/legacy` (ou mantenha como referência histórica).
-3. Atualize documentação (README, diagramas, onboarding) apontando apenas para o novo fluxo Angular.
+---
 
-## 9. Checklist rápido
-
-- [ ] Branch e tag criadas (`legacy-v1`)
-- [ ] Código legado movido para `src/legacy`
-- [ ] Workspace Angular inicializado e rodando (`ng serve`)
-- [ ] Design system (header/footer/botões) portado
-- [ ] Integração Express configurada (`/app`)
-- [ ] Primeira feature migrada e validada
-- [ ] Pipelines (lint/test/build) configuradas
-- [ ] Cutover final executado e documentado
-
-Seguindo estes passos você consegue reconstruir o frontend do zero com Angular, mantendo o site atual rodando localmente e em produção até que a nova versão esteja madura para assumir todas as responsabilidades.
+Desenvolvedor: Brehcore
