@@ -6,7 +6,8 @@
     "outDir": "./out-tsc/spec",
     "types": [
       "jasmine"
-    ]
+    ],
+    "module": "commonjs"
   },
   "include": [
     "src/**/*.ts"

@@ -14,8 +14,7 @@ O objetivo da refatoração foi organizar o código em componentes e serviços, 
 
 Abra um PowerShell na pasta do frontend e execute:
 
-```powershell
-cd src\angular\frontend
+```
 npm ci
 npm start
 ```
@@ -34,8 +33,6 @@ npx ng serve
 npm run build -- --configuration production
 ```
 
-Os arquivos otimizados ficarão em `src/angular/frontend/dist/`.
-
 ## Testes
 
 - Unitários: `npm test` (Karma/Jasmine ou equivalente, conforme configuração do projeto).
@@ -47,16 +44,13 @@ Os arquivos otimizados ficarão em `src/angular/frontend/dist/`.
 - Prefira lazy-loading de módulos para rotas volumosas.
 - Mantenha as regras de lint e formatação (ESLint / Prettier) ativas no CI.
 
-
-
----
-
-Desenvolvedor: Brehcore
-
-
 ## Acesso ao Projeto Online
 
 Você pode visualizar o projeto em tempo real através do link abaixo.
 Todas as atualizações feitas no repositório são refletidas automaticamente no deploy:
 
 🔗 prospera-treinamento.vercel.app
+
+---
+
+Desenvolvido por: Brena Soares
