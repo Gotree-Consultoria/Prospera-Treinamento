@@ -1,5 +1,5 @@
 {
-  "name": "Prospera-Treinamento",
+  "name": "prospera-treinamento",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -21,6 +21,9 @@
     ]
   },
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@angular/common": "^20.3.0",
     "@angular/compiler": "^20.3.0",
