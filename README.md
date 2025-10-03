@@ -1,29 +1,38 @@
-## �️ Estrutura reorganizada (set/2025)
+## 🏗️ Estrutura atual (set/2025)
 
 ```
 src/
-   assets/              # PDFs, imagens e demais mídias
-   pages/               # Partials HTML existentes (aboutPage.html, catalogPage.html ...)
-   scripts/
-      index.js           # Bootstrap principal do front
-      loadComponents.js  # Carrega os partials em runtime
-      modules/
-         shared/          # API, navegação, eventos, utilitários globais
-         features/
-            admin/
-            account/
-            catalog/
-            ebooks/
-            trainings/
-            documents/
-   styles/
-      styles.css         # Estilos base + tokens
-      components/        # CSS específico por página/componente
+   legacy/
+      assets/              # PDFs, imagens e mídias do front legado
+      pages/               # Partials HTML (aboutPage.html, catalogPage.html ...)
+      scripts/
+         index.js           # Bootstrap principal do front legado
+         loadComponents.js  # Carrega os partials em runtime
+         modules/
+            shared/          # API, navegação, eventos, utilitários globais
+            features/
+               admin/
+               account/
+               catalog/
+               ebooks/
+               trainings/
+               documents/
+      styles/
+         styles.css         # Estilos base + tokens
+         components/        # CSS específico por página/componente
+   angular/
+      frontend/            # Novo workspace Angular (ng new --standalone)
+         src/app/           # App standalone, shared e features Angular
+         src/assets/        # Assets reutilizados gradualmente
+dist/
+   angular/frontend/      # Resultado do `npm run build:ng`
 ```
 
-> A estrutura antiga (`src/js`, `src/css`, `src/partials`) foi migrada para os blocos acima sem alterar o conteúdo das páginas. Os imports já apontam para os novos caminhos.
+- O site legado continua acessível carregando arquivos a partir de `src/legacy`.
+- A SPA Angular é servida em `/app` após rodar `npm run build:ng`.
+- Consulte `docs/migracao-angular.md` para o roteiro completo de migração.
 
-## �📝 Changelog
+## 📝 Changelog
 
 ### 📅 30/06/2025
 - ✅ Corrigida a formatação monetária da API: alterado de Euro (€) para Real (R$).  

@@ -1,0 +1,15 @@
+<section class="page-header policies-hero">
+  <div class="container">
+    <h1>Políticas e LGPD</h1>
+    <p>Transparência no uso de dados e compromisso com a segurança da informação.</p>
+  </div>
+</section>
+
+<section class="policies-content">
+  <div class="container">
+    <article *ngFor="let section of sections" class="policy-card">
+      <h2>{{ section.title }}</h2>
+      <p *ngFor="let paragraph of section.paragraphs">{{ paragraph }}</p>
+    </article>
+  </div>
+</section>

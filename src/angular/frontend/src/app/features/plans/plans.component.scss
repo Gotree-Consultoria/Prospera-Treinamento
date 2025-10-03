@@ -1,0 +1,126 @@
+
+.plans-grid {
+  padding: 3rem 0;
+
+  .loading,
+  .error {
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  .spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    border: 3px solid rgba(91, 95, 99, 0.2);
+    border-top-color: var(--color-primary-500, #6a5acd);
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+
+  .grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .plan-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 12px 32px rgba(31, 36, 43, 0.08);
+    border: 1px solid rgba(106, 90, 205, 0.08);
+
+    h2 {
+      font-size: 1.5rem;
+      margin-block: 0.75rem;
+    }
+
+    p {
+      color: var(--color-text-muted, #5b5f63);
+    }
+
+    .badge {
+      display: inline-flex;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(106, 90, 205, 0.12);
+      color: var(--color-primary-600, #5a4bcf);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+    }
+
+    .plan-sectors {
+      margin-top: 1.5rem;
+
+      ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      li {
+        padding: 0.35rem 0.75rem;
+        background: rgba(91, 95, 99, 0.08);
+        border-radius: 999px;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+      }
+    }
+
+    .plan-actions {
+      margin-top: auto;
+
+      .btn {
+        width: 100%;
+        text-align: center;
+        margin-top: 1.5rem;
+      }
+    }
+  }
+}
+
+.plans-cta {
+  padding: 5rem 0 6rem;
+
+  .cta-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: flex-start;
+    background: linear-gradient(135deg, rgba(106, 90, 205, 0.12), rgba(106, 90, 205, 0.32));
+    border-radius: 18px;
+    padding: 3rem;
+  }
+
+  @media (min-width: 768px) {
+    .cta-card {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Reintrodução leve do header (sem eyebrow) */
+.plans-header {
+  text-align: center;
+  padding: 3rem 0 2rem;
+  h1 { margin: 0 0 1rem; font-size: clamp(1.9rem,4.5vw,2.6rem); }
+  .subtitle { max-width: 760px; margin: 0 auto 1.75rem; color: var(--color-text-muted,#5b5f63); }
+  .btn { margin-top: .5rem; }
+}

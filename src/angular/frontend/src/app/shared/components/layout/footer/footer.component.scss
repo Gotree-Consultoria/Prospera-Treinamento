@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+.footer {
+  background-color: var(--verde-escuro);
+  color: var(--white);
+  padding: var(--spacing-xxl) 0 var(--spacing-lg);
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.footer-section h3,
+.footer-section h4 {
+  color: var(--white);
+  margin-bottom: var(--spacing-md);
+}
+
+.footer-section p {
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: var(--spacing-md);
+}
+
+.footer-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: var(--spacing-xs);
+}
+
+.footer-section ul li a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footer-section ul li a:hover {
+  color: var(--verde-claro);
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: var(--spacing-lg);
+  text-align: center;
+}
+
+.footer-bottom p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.social-links {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.social-links a {
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: background var(--transition-fast), border var(--transition-fast);
+}
+
+.social-links a .icon-svg { display:inline-flex; width:18px; height:18px; line-height:0; }
+.social-links a .icon-svg svg { width:18px; height:18px; fill: #ffffff !important; stroke: #ffffff !important; color:#ffffff !important; }
+.social-links a .icon-svg svg [fill]:not([fill="none"]) { fill: #ffffff !important; }
+/* Aumenta especificidade para qualquer path/circle/rect sem fill explícito */
+.social-links a .icon-svg svg path:not([fill]),
+.social-links a .icon-svg svg circle:not([fill]),
+.social-links a .icon-svg svg rect:not([fill]),
+.social-links a .icon-svg svg polygon:not([fill]) { fill:#ffffff !important; stroke:#ffffff !important; }
+
+.social-links a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}

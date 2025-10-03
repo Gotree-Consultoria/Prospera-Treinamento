@@ -1,0 +1,343 @@
+<section class="account-page" *ngIf="!isLoading; else loading">
+  <div class="container">
+    <aside class="account-sidebar" *ngIf="user">
+      <div class="user-summary">
+        <div class="avatar" aria-hidden="true">{{ displayName.charAt(0) }}</div>
+        <div>
+          <p class="user-name">{{ displayName }}</p>
+          <p class="user-email">{{ displayEmail }}</p>
+        </div>
+      </div>
+
+      <div class="user-status">
+        <span class="badge" [class.badge-warning]="!isProfileComplete">
+          {{ isProfileComplete ? 'Perfil completo' : 'Complete seu perfil' }}
+        </span>
+  <p *ngIf="user.role" class="user-role">Perfil: {{ user.role }}</p>
+      </div>
+
+      <nav class="account-menu" aria-label="Seções da conta">
+        <button
+          type="button"
+          *ngFor="let item of menuItems"
+          (click)="selectSection(item.id)"
+          [class.active]="activeSection === item.id"
+        >
+          <i [class]="item.icon" aria-hidden="true"></i>
+          {{ item.label }}
+        </button>
+      </nav>
+
+      <button type="button" class="btn btn-secondary logout" (click)="logout()">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+        Sair da conta
+      </button>
+    </aside>
+
+    <main class="account-content" *ngIf="user">
+      <ng-container [ngSwitch]="activeSection">
+        <section *ngSwitchCase="'profile'" class="profile-section">
+          <header class="section-header">
+            <h1>Minha conta</h1>
+            <p>Atualize seus dados, acompanhe o status de pagamento e administre a empresa.</p>
+          </header>
+
+          <div class="profile-tabs" role="tablist">
+            <button
+              type="button"
+              *ngFor="let section of availableProfileSections"
+              role="tab"
+              [attr.aria-selected]="activeProfileTab === section.id"
+              [class.active]="activeProfileTab === section.id"
+              (click)="selectProfileTab(section.id)"
+            >
+              {{ section.label }}
+            </button>
+          </div>
+
+          <div class="profile-panel" [ngSwitch]="activeProfileTab">
+            <div *ngSwitchCase="'dados'" class="grid">
+              <article class="card primary">
+                <header>
+                  <h2>Dados principais</h2>
+                  <span class="status" [class.status-warning]="!isProfileComplete">
+                    {{ isProfileComplete ? 'Completo' : 'Incompleto' }}
+                  </span>
+                </header>
+                <dl>
+                  <div>
+                    <dt>Nome completo</dt>
+                    <dd>{{ displayName }}</dd>
+                  </div>
+                  <div>
+                    <dt>E-mail</dt>
+                    <dd>{{ displayEmail }}</dd>
+                  </div>
+                  <div>
+                    <dt>CPF</dt>
+                    <dd>{{ displayCPF }}</dd>
+                  </div>
+                  <div>
+                    <dt>Data de nascimento</dt>
+                    <dd>{{ displayBirth }}</dd>
+                  </div>
+                  <div>
+                    <dt>Telefone</dt>
+                    <dd>{{ displayPhone }}</dd>
+                  </div>
+                </dl>
+                <footer>
+                  <button type="button" class="btn btn-link" (click)="toggleProfileEdit()">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
+                    {{ isEditingProfile ? 'Cancelar edição' : 'Editar dados' }}
+                  </button>
+                </footer>
+              </article>
+
+              <article class="card" *ngIf="isEditingProfile">
+                <header>
+                  <h2>Atualizar dados pessoais</h2>
+                </header>
+                <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="form-grid">
+                  <label>
+                    <span>Nome completo</span>
+                    <input type="text" formControlName="name" placeholder="Como devemos chamar você?" />
+                    <small class="field-error" *ngIf="profileForm.get('name')?.invalid && profileForm.get('name')?.touched">
+                      Informe um nome com pelo menos 3 caracteres.
+                    </small>
+                  </label>
+                  <label>
+                    <span>CPF</span>
+                    <input type="text" formControlName="cpf" placeholder="000.000.000-00" />
+                    <small class="field-error" *ngIf="profileForm.get('cpf')?.invalid && profileForm.get('cpf')?.touched">
+                      Informe um CPF válido.
+                    </small>
+                  </label>
+                  <label>
+                    <span>Telefone</span>
+                    <input type="tel" formControlName="phone" placeholder="(00) 00000-0000" />
+                  </label>
+                  <label>
+                    <span>Data de nascimento</span>
+                    <input type="date" formControlName="birth" />
+                  </label>
+                  <div class="form-actions">
+                    <button class="btn btn-primary" type="submit" [disabled]="isSaving">
+                      {{ isSaving ? 'Salvando…' : 'Salvar alterações' }}
+                    </button>
+                  </div>
+                  <div class="form-messages">
+                    <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
+                    <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+                  </div>
+                </form>
+              </article>
+            </div>
+
+            <article *ngSwitchCase="'payments'" class="card stretch">
+              <header>
+                <h2>Status da assinatura</h2>
+                <span class="tag">{{ companyPlan }}</span>
+              </header>
+              <div class="subscription">
+                <p><strong>Situação:</strong> Ativa</p>
+                <p><strong>Próxima renovação:</strong> 12/12/2024</p>
+                <p><strong>Forma de pagamento:</strong> Cartão de crédito final **42</p>
+              </div>
+
+              <section class="invoices">
+                <h3>Faturas anteriores</h3>
+                <ul>
+                  <li>
+                    <span>Novembro/2024</span>
+                    <span>Pago</span>
+                    <a href="#" (click)="$event.preventDefault()">Baixar recibo</a>
+                  </li>
+                  <li>
+                    <span>Outubro/2024</span>
+                    <span>Pago</span>
+                    <a href="#" (click)="$event.preventDefault()">Baixar recibo</a>
+                  </li>
+                </ul>
+              </section>
+            </article>
+
+            <article *ngSwitchCase="'password'" class="card stretch">
+              <header>
+                <h2>Trocar senha</h2>
+                <p>Garanta que sua senha seja forte e atualizada regularmente.</p>
+              </header>
+              <form [formGroup]="passwordForm" (ngSubmit)="savePassword()" class="form-grid">
+                <label>
+                  <span>Senha atual</span>
+                  <input type="password" formControlName="currentPassword" placeholder="Digite sua senha atual" />
+                </label>
+                <label>
+                  <span>Nova senha</span>
+                  <input type="password" formControlName="newPassword" placeholder="Nova senha (mínimo de 6 caracteres)" />
+                  <small class="field-error" *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
+                    Informe uma senha com pelo menos 6 caracteres.
+                  </small>
+                </label>
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit">Atualizar senha</button>
+                </div>
+                <div class="form-messages">
+                  <p class="success" *ngIf="passwordSuccessMessage">{{ passwordSuccessMessage }}</p>
+                  <p class="error" *ngIf="passwordErrorMessage">{{ passwordErrorMessage }}</p>
+                </div>
+              </form>
+            </article>
+
+            <ng-container *ngSwitchCase="'company'">
+              <ng-container *ngTemplateOutlet="companyManagement"></ng-container>
+            </ng-container>
+          </div>
+        </section>
+
+        <section *ngSwitchCase="'plans'" class="card stretch">
+          <header>
+            <h1>Planos & Assinatura</h1>
+            <p>Conheça os benefícios do seu plano atual e personalize conforme a necessidade da empresa.</p>
+          </header>
+          <div class="plan-highlight">
+            <h2>{{ companyPlan }}</h2>
+            <ul>
+              <li><i class="fas fa-check" aria-hidden="true"></i> Acesso ilimitado à biblioteca de treinamentos</li>
+              <li><i class="fas fa-check" aria-hidden="true"></i> Relatórios de engajamento e progresso</li>
+              <li><i class="fas fa-check" aria-hidden="true"></i> Suporte dedicado por e-mail</li>
+            </ul>
+            <button type="button" class="btn btn-primary">Falar com o time comercial</button>
+          </div>
+          <div class="plan-history">
+            <h3>Histórico de alterações</h3>
+            <ul>
+              <li>
+                <span>Upgrade para {{ companyPlan }}</span>
+                <span>15/08/2024</span>
+              </li>
+              <li>
+                <span>Assinatura inicial</span>
+                <span>03/01/2024</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <ng-container *ngSwitchCase="'manageCompanies'">
+          <ng-container *ngTemplateOutlet="companyManagement"></ng-container>
+        </ng-container>
+
+        <section *ngSwitchCase="'learning'" class="card stretch">
+          <header>
+            <h1>Cursos & Treinamentos</h1>
+            <p>Centralize o acompanhamento da jornada de aprendizagem da sua empresa.</p>
+          </header>
+          <div class="learning-body">
+            <article class="learning-card">
+              <h2>Biblioteca Prospera</h2>
+              <p>Acesse todos os cursos disponíveis para o seu plano, organize trilhas e acompanhe certificados.</p>
+              <button type="button" class="btn btn-primary" (click)="openLearningCatalog()">Ir para a biblioteca</button>
+            </article>
+            <article class="learning-card">
+              <h2>Organizações vinculadas</h2>
+              <ul>
+                <li *ngFor="let org of user?.organizations || []">{{ org['organizationName'] || org['name'] }} — {{ org['position'] || 'Membro' }}</li>
+              </ul>
+              <p *ngIf="!(user?.organizations?.length)">Você ainda não está vinculado a nenhuma organização. Entre em contato com um administrador.</p>
+            </article>
+          </div>
+        </section>
+      </ng-container>
+    </main>
+  </div>
+</section>
+
+<ng-template #companyManagement>
+  <article class="card stretch">
+    <header>
+      <div>
+        <h2>Gestão da empresa</h2>
+        <p>Convide colaboradores, controle acessos e acompanhe a evolução dos times.</p>
+      </div>
+      <div class="company-meta">
+        <p><strong>Empresa:</strong> {{ companyName }}</p>
+        <p><strong>CNPJ:</strong> {{ companyCnpj }}</p>
+      </div>
+    </header>
+
+    <nav class="company-tabs" aria-label="Ferramentas da empresa">
+      <button type="button" [class.active]="companyTab === 'users'" (click)="selectCompanyTab('users')">Usuários</button>
+      <button type="button" [class.active]="companyTab === 'import'" (click)="selectCompanyTab('import')">Importar CSV</button>
+      <button type="button" [class.active]="companyTab === 'reports'" (click)="selectCompanyTab('reports')">Relatórios</button>
+    </nav>
+
+    <div class="company-panel" [ngSwitch]="companyTab">
+      <div *ngSwitchCase="'users'" class="company-users">
+        <h3>Colaboradores com acesso</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>CPF</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let member of companySubusers">
+              <td>{{ member.name }}</td>
+              <td>{{ member.email }}</td>
+              <td>{{ member.cpf || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <form class="invite-form" [formGroup]="inviteForm" (ngSubmit)="inviteSubuser()">
+          <label>
+            <span>Enviar convite por e-mail</span>
+            <input type="email" formControlName="email" placeholder="colaborador@empresa.com" />
+          </label>
+          <button type="submit" class="btn btn-primary">Enviar convite</button>
+        </form>
+        <p class="success" *ngIf="inviteSuccessMessage">{{ inviteSuccessMessage }}</p>
+        <p class="error" *ngIf="inviteErrorMessage">{{ inviteErrorMessage }}</p>
+      </div>
+
+      <div *ngSwitchCase="'import'" class="company-import">
+        <h3>Importar colaboradores via CSV</h3>
+        <p>Faça download do modelo, preencha com os dados dos colaboradores e envie o arquivo.</p>
+        <div class="import-actions">
+          <a href="assets/docs/modelo-importacao.csv" download class="btn btn-link">Baixar modelo</a>
+          <label class="btn btn-secondary">
+            <input type="file" accept=".csv" (change)="onImportCsv($event)" hidden />
+            Selecionar arquivo
+          </label>
+        </div>
+        <p class="file-name" *ngIf="importFileName">Arquivo: {{ importFileName }}</p>
+        <p class="error" *ngIf="importErrorMessage">{{ importErrorMessage }}</p>
+        <div class="preview" *ngIf="importPreview.length">
+          <h4>Pré-visualização</h4>
+          <pre *ngFor="let row of importPreview">{{ row }}</pre>
+        </div>
+        <p class="info" *ngIf="reportMessage">{{ reportMessage }}</p>
+      </div>
+
+      <div *ngSwitchCase="'reports'" class="company-reports">
+        <h3>Relatórios de acompanhamento</h3>
+        <p>Exporte dados consolidados para apresentar resultados e evolução dos times.</p>
+        <div class="report-actions">
+          <button type="button" class="btn btn-primary" (click)="exportReport('progress')">Relatório de progresso</button>
+          <button type="button" class="btn btn-secondary" (click)="exportReport('employees')">Lista de colaboradores</button>
+        </div>
+        <p class="info" *ngIf="reportMessage">{{ reportMessage }}</p>
+      </div>
+    </div>
+  </article>
+</ng-template>
+
+<ng-template #loading>
+  <div class="loading-state">
+    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+    <p>Carregando seus dados…</p>
+  </div>
+</ng-template>

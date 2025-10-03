@@ -1,0 +1,170 @@
+import { Injectable } from '@angular/core';
+import { catchError, defaultIfEmpty, filter, forkJoin, from, map, of, switchMap, take } from 'rxjs';
+
+import { ApiService } from './api.service';
+
+export type CatalogFormat = 'EBOOK' | 'RECORDED_COURSE' | 'LIVE_TRAINING' | 'PACKAGE';
+
+export interface CatalogItem {
+  id: string;
+  title: string;
+  description: string;
+  format: CatalogFormat;
+  sectors: string[];
+  coverImageUrl?: string | null;
+  data?: unknown;
+}
+
+export interface CatalogSector {
+  id: string;
+  name: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class CatalogService {
+  constructor(private readonly api: ApiService) {}
+
+  /**
+   * Lista todo o catálogo público usando o endpoint único /public/catalog (resumido).
+   * Fallback: se falhar, recorre ao modelo antigo (products + packages + ebooks).
+   */
+  loadCatalog() {
+    const fallback$ = of([] as CatalogItem[]); // métodos legados removidos
+
+    return this.fetchPublicCatalogAll().pipe(
+      map(items => this.mergeDistinct(items)),
+      catchError(err => {
+        console.warn('[CatalogService] falha em /public/catalog, aplicando fallback composto.', err);
+        return fallback$;
+      })
+    );
+  }
+
+  // Métodos legados de pacotes/planos foram removidos após adoção de /public/catalog.
+
+  // loadEbooks() removido (catálogo consolidado). Manter fallback se necessário em outro serviço especializado.
+
+  loadSectors() {
+    const endpoints = ['/api/public/catalog/sectors', '/public/catalog/sectors'];
+    return from(endpoints).pipe(
+      switchMap(endpoint =>
+        this.api.get<any>(endpoint).pipe(
+          map(response => {
+            const list = Array.isArray(response)
+              ? response
+              : Array.isArray(response?.items)
+              ? response.items
+              : Array.isArray(response?.data)
+              ? response.data
+              : [];
+            return list.filter(Boolean).map((item: CatalogSector | any) => this.normalizeSector(item));
+          }),
+          catchError(() => of([] as CatalogSector[]))
+        )
+      ),
+      filter(sectors => sectors.length > 0),
+      take(1),
+      defaultIfEmpty([] as CatalogSector[])
+    );
+  }
+
+  // fetchProducts / fetchPackages removidos (consolidados em catálogo público).
+
+  /**
+   * Tenta buscar planos em endpoints públicos, retornando assim que um deles responder com dados.
+   */
+  // fetchPlans removido – planos agora fazem parte do catálogo público.
+
+  // fetchPublicCatalog por tipo removido – endpoint único cobre todos os formatos.
+
+  /**
+   * Busca catálogo completo resumido (todos os formatos) sem filtro de tipo.
+   */
+  private fetchPublicCatalogAll() {
+    return this.api.get<any>('/public/catalog').pipe(
+      map(data => {
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+        return list.map((item: any) =>
+          this.toCatalogItem(
+            item,
+            this.normalizeFormat(item?.format ?? item?.type ?? item?.trainingType) ?? 'EBOOK',
+            item.coverImageUrl ?? item.imageUrl ?? null
+          )
+        );
+      })
+    );
+  }
+
+  /**
+   * Faz merge garantindo unicidade por (format::id) e mantém descrição mais longa.
+   */
+  private mergeDistinct(items: CatalogItem[]): CatalogItem[] {
+    const mapById = new Map<string, CatalogItem>();
+    for (const item of items) {
+      const key = `${item.format}::${item.id}`;
+      if (!mapById.has(key)) {
+        mapById.set(key, item);
+      } else {
+        const existing = mapById.get(key)!;
+        if ((item.description?.length ?? 0) > (existing.description?.length ?? 0)) {
+          mapById.set(key, item);
+        }
+      }
+    }
+    return Array.from(mapById.values());
+  }
+
+  private toCatalogItem(raw: any, fallbackFormat: CatalogFormat, cover: string | null): CatalogItem {
+    const sectors = Array.isArray(raw?.sectors)
+      ? raw.sectors
+      : Array.isArray(raw?.assignedSectors)
+      ? raw.assignedSectors
+      : ['global'];
+    return {
+  id: String(raw?.id ?? raw?.uuid ?? raw?.code ?? `item-${Math.random().toString(36).slice(2, 9)}`),
+      title: raw?.title ?? raw?.name ?? 'Item',
+      description: raw?.description ?? raw?.shortDescription ?? '',
+      format: this.normalizeFormat(raw?.format ?? raw?.type ?? raw?.trainingType) ?? fallbackFormat,
+      sectors: sectors.map((sector: any) =>
+        typeof sector === 'string' ? sector : sector?.id ?? sector?.code ?? 'global'
+      ),
+      coverImageUrl: cover || undefined,
+      data: raw
+    };
+  }
+
+  private normalizeFormat(value: string | undefined): CatalogFormat | null {
+    if (!value) {
+      return null;
+    }
+    const normalized = value.toUpperCase();
+    if (normalized.includes('EBOOK')) {
+      return 'EBOOK';
+    }
+    if (normalized.includes('RECORDED') || normalized.includes('GRAV')) {
+      return 'RECORDED_COURSE';
+    }
+    if (normalized.includes('LIVE') || normalized.includes('AO_VIVO')) {
+      return 'LIVE_TRAINING';
+    }
+    if (normalized.includes('PACKAGE')) {
+      return 'PACKAGE';
+    }
+    return null;
+  }
+
+  private normalizeSector(sector: CatalogSector | any): CatalogSector {
+    return {
+      id: String(sector?.id ?? sector?.uuid ?? sector?.code ?? sector?.slug ?? 'global'),
+      name: sector?.name ?? sector?.title ?? sector?.label ?? 'Setor'
+    };
+  }
+
+  // Fallbacks específicos removidos. Caso necessário, extrair para um seed estático em outro módulo.
+}

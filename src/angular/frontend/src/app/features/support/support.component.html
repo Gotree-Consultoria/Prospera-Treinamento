@@ -1,0 +1,72 @@
+<section class="page-header support-hero">
+  <div class="container">
+    <h1>Central de Suporte</h1>
+    <p>Conte com especialistas para manter a operação rodando sem interrupções.</p>
+  </div>
+</section>
+
+<section class="support-content">
+  <div class="container">
+    <div class="support-grid">
+      <div class="support-knowledge">
+        <h2>Base de conhecimento</h2>
+        <ul>
+          <li>
+            <h3>Primeiros passos</h3>
+            <p>Aprenda a configurar a conta da empresa, convidar membros e publicar trilhas em minutos.</p>
+          </li>
+          <li>
+            <h3>Catálogo inteligente</h3>
+            <p>Descubra como selecionar conteúdos por setor, acompanhar consumo e emitir certificados.</p>
+          </li>
+          <li>
+            <h3>Monitoramento e indicadores</h3>
+            <p>Defina metas, acompanhe engajamento e gere relatórios executivos automáticos.</p>
+          </li>
+        </ul>
+        <a class="btn btn-link" routerLink="/faq">Ver perguntas frequentes</a>
+      </div>
+
+      <form class="support-form" [formGroup]="supportForm" (ngSubmit)="submit()" novalidate>
+        <h2>Abra um chamado</h2>
+        <div class="form-field">
+          <label for="supportName">Nome</label>
+          <input id="supportName" type="text" formControlName="name" placeholder="Como devemos te chamar?" />
+          <small class="error" *ngIf="supportForm.get('name')?.invalid && supportForm.get('name')?.touched">
+            Informe um nome com pelo menos 3 caracteres.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="supportEmail">E-mail</label>
+          <input id="supportEmail" type="email" formControlName="email" placeholder="seu.email@empresa.com" />
+          <small class="error" *ngIf="supportForm.get('email')?.invalid && supportForm.get('email')?.touched">
+            Informe um e-mail válido.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="supportTopic">Categoria</label>
+          <select id="supportTopic" formControlName="topic">
+            <option *ngFor="let topic of topics$ | async" [ngValue]="topic.id">{{ topic.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="supportDescription">Descreva o que está acontecendo</label>
+          <textarea id="supportDescription" rows="5" formControlName="description" placeholder="Compartilhe detalhes e anexos relevantes"></textarea>
+          <small class="error" *ngIf="supportForm.get('description')?.invalid && supportForm.get('description')?.touched">
+            Informe uma descrição com pelo menos 10 caracteres.
+          </small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Enviando…' : 'Registrar chamado' }}
+        </button>
+
+        <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
+        <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+      </form>
+    </div>
+  </div>
+</section>

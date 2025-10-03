@@ -3,7 +3,10 @@
   "version": "0.0.0-dev",
   "private": true,
   "scripts": {
-    "start-dev": "node dev-server.js"
+    "start-dev": "node dev-server.js",
+    "start:ng": "cd src/angular/frontend && npm install && npx ng serve",
+    "build:ng": "cd src/angular/frontend && npm install && npx ng build",
+    "test:ng": "cd src/angular/frontend && npm install && npx ng test"
   },
   "dependencies": {
     "express": "^4.18.2"

@@ -1,0 +1,10 @@
+.auth-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);z-index:1000;animation:fadeIn .25s ease;}
+.auth-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:18px 22px 26px;box-shadow:0 20px 40px -10px rgba(0,0,0,.35);z-index:1001;animation:scaleIn .28s ease;}
+.auth-modal-close{position:absolute;top:6px;right:8px;background:transparent;border:0;font-size:1.75rem;line-height:1;color:#0b5440;cursor:pointer;padding:4px 10px;border-radius:8px;transition:.2s;}
+.auth-modal-close:hover{background:rgba(0,0,0,.06);} 
+.auth-modal-close:focus-visible{outline:3px solid #0b7a47;outline-offset:2px;}
+.auth-modal pros-auth-login .auth-page{padding:0;background:transparent;}
+.auth-modal pros-auth-login .auth-container{padding:0;}
+.auth-modal pros-auth-login .auth-card{box-shadow:none;padding:0;background:transparent;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.9)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}

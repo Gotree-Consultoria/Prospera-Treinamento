@@ -1,0 +1,25 @@
+<div class="app-shell">
+  <pros-layout-header
+  [navItems]="(navItems$ | async) ?? []"
+    [isAuthenticated]="(isAuthenticated$ | async) ?? false"
+    [userLabel]="(accountLabel$ | async) ?? 'Minha conta'"
+    (accountClick)="onAccountClick()"
+    (logout)="onLogout()"
+  ></pros-layout-header>
+
+  <main class="app-content">
+    <router-outlet />
+  </main>
+
+  @if (showAuthModal) {
+    <pros-auth-modal (closed)="onCloseAuthModal()"></pros-auth-modal>
+  }
+
+  <pros-layout-footer
+    brand="Prospera"
+    [description]="footerDescription"
+    [columns]="footerColumns"
+    [socialLinks]="socialLinks"
+    [copyright]="'© ' + currentYear + ' Prospera Treinamentos. Todos os direitos reservados.'"
+  ></pros-layout-footer>
+</div>

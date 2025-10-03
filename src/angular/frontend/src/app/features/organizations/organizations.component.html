@@ -1,0 +1,65 @@
+<section class="page-header organizations-hero">
+  <div class="container">
+    <p class="eyebrow">Organizações</p>
+    <h1>Uma plataforma pronta para acelerar culturas de segurança</h1>
+    <p class="subtitle">
+      Consolide indicadores, distribua conteúdos estratégicos e acompanhe resultados em tempo real com uma experiência pensada para gestores de SST e desenvolvimento humano.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" routerLink="/planos">Conhecer planos corporativos</a>
+      <a class="btn btn-secondary" routerLink="/contato">Falar com o time</a>
+    </div>
+  </div>
+</section>
+
+<section class="organizations-benefits">
+  <div class="container">
+    <div class="grid">
+      <article class="benefit" *ngFor="let benefit of benefits">
+        <i class="fas" [ngClass]="benefit.icon" aria-hidden="true"></i>
+        <h2>{{ benefit.title }}</h2>
+        <p>{{ benefit.description }}</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="organizations-metrics" aria-label="Resultados obtidos pelos clientes">
+  <div class="container metrics-grid">
+    <div class="metric-card" *ngFor="let metric of metrics">
+      <span class="metric-value">{{ metric.value }}</span>
+      <h3>{{ metric.label }}</h3>
+      <p>{{ metric.description }}</p>
+    </div>
+  </div>
+</section>
+
+<section class="organizations-journey">
+  <div class="container">
+    <header>
+      <h2>Como conduzimos a transformação</h2>
+      <p>Do diagnóstico à mensuração de resultados, acompanhamos cada etapa para garantir aderência e impacto.</p>
+    </header>
+    <ol class="steps">
+      <li *ngFor="let step of steps; index as index">
+        <span class="index">0{{ index + 1 }}</span>
+        <div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.detail }}</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="organizations-cta">
+  <div class="container">
+    <div class="cta-card">
+      <div>
+        <h2>Pronto para criar uma cultura de segurança contínua?</h2>
+        <p>Nosso time prepara um diagnóstico gratuito com recomendações rápidas para o seu cenário.</p>
+      </div>
+      <a class="btn btn-primary" routerLink="/suporte">Solicitar diagnóstico</a>
+    </div>
+  </div>
+</section>
