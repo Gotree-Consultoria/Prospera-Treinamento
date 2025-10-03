@@ -1,2 +1,9 @@
 /.metadata/
-docs/migracao-angular.md
+/node_modules/
+/src/angular/frontend/node_modules/
+/src/angular/frontend/.angular/
+/src/angular/frontend/tmp/
+/src/dist/
+
+# Ignorar a pasta de documentação (markdown)
+docs/
