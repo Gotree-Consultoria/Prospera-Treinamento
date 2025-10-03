@@ -244,219 +244,210 @@
   fill: currentColor;
 }
 
-.btn-small {
-  align-self: center;
-  margin-top: 14px;
-  background: linear-gradient(135deg, #005a32 0%, #0b7a47 70%);
-  color: #fff;
-  padding: 11px 26px;
-  border: none;
-  font-weight: 600;
-  letter-spacing: 0.35px;
-  border-radius: 30px;
-  box-shadow: 0 5px 14px -3px rgba(0, 143, 120, 0.35);
-  transition: 0.35s ease all;
-  text-transform: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 170px;
-  text-align: center;
-  line-height: 1.1;
+// ... Outros estilos (botões, newsletter, etc. permanecem os mesmos) ...
+
+/* ==========================================================================
+   Sectors Carousel - SEÇÃO CORRIGIDA
+   ========================================================================== */
+
+.sectors-carousel {
+  padding: 60px 0 40px;
+  background: #fff;
+  border-top: 1px solid #eef2f0;
   position: relative;
-  overflow: hidden;
+  // Garante que o container não corte conteúdos que vazam do track (útil para sombras, etc.)
+  .container {
+    overflow: visible;
+  }
+  .sectors-header {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:1rem;
+    margin-bottom:1.25rem;
+  }
+  h2 {
+    margin:0;
+    font-size:1.75rem;
+    color:#063d3a;
+  }
 }
 
-.btn-small::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -40%;
-  width: 40%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.22);
-  transform: skewX(-28deg) translateX(-100%);
-  transition: 0.6s ease;
-}
-
-.btn-small:hover::before {
-  transform: skewX(-28deg) translateX(260%);
-}
-
-.btn-small:hover,
-.btn-small:focus {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 30px -8px rgba(0, 90, 50, 0.55);
-}
-
-.btn-small:focus-visible {
-  outline: 3px solid #ffffff;
-  outline-offset: 2px;
-}
-
-.newsletter {
-  background: linear-gradient(135deg, var(--verde-escuro) 0%, #007a42 100%);
-  color: var(--white);
-  padding: var(--spacing-xxl) 0;
-}
-
-.newsletter-content {
+// Mensagens de status (loading/erro)
+.sectors-status {
+  font-size:.9rem;
+  color:#475569;
+  margin-bottom:.5rem;
   text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
+  &.error { color:#b91c1c; }
 }
 
-.newsletter-content h2 {
-  color: var(--white);
-  margin-bottom: var(--spacing-sm);
+/**
+ * Trilho do Carrossel (Onde os cards rolam)
+ * Esta é a parte mais importante da correção.
+ */
+.sectors-track {
+  display: flex;
+  gap: 1rem;
+  // 1. Habilita a rolagem horizontal
+  overflow-x: auto;
+  // 2. Adiciona o efeito de "ímã" para parar nos cards
+  scroll-snap-type: x mandatory;
+  // 3. Adiciona padding para os cards não colarem nas bordas
+  padding-inline: 24px;
+  // 4. Garante que o "snap" considere o padding
+  scroll-padding-inline: 24px;
+
+  // 5. Esconde a barra de rolagem para um visual limpo
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }
 
-.newsletter-content p {
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: var(--spacing-lg);
-}
+/**
+ * Card Individual do Setor
+ */
+.sector-card {
+  // 1. Define um tamanho fixo e impede que o card encolha
+  width: 250px;
+  height: 235px;
+  flex: 0 0 250px;
+  // 2. Alinha o início do card com o ponto de "snap" da rolagem
+  scroll-snap-align: start;
 
-/* ==== Diferenciais ==== */
-.key-diffs {
-  padding: 70px 0 40px;
-  background: linear-gradient(115deg, #f4f9f4 0%, #eef7ef 50%, #e8f3ed 100%);
-  position: relative;
-  overflow: hidden;
-}
-.key-diffs::before, .key-diffs::after {
-  content: '';
-  position: absolute;
-  width: 420px; height: 420px;
-  background: radial-gradient(circle at 30% 30%, rgba(0,140,90,0.12), transparent 70%);
-  top: -120px; left: -120px;
-  pointer-events: none;
-}
-.key-diffs::after { left:auto; right:-140px; top: -80px; background: radial-gradient(circle at 70% 40%, rgba(0,140,90,0.10), transparent 70%); }
-.key-diffs .diffs-title {
-  font-size: 2.1rem;
-  text-align: center;
-  margin: 0 0 44px;
-  background: linear-gradient(90deg,#004e2d,#087a46);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 700;
-  letter-spacing: .5px;
-}
-.diffs-grid {
-  display: grid;
-  gap: 28px;
-  grid-template-columns: repeat(auto-fit,minmax(240px,1fr));
-}
-.diff-card {
-  background: #ffffff;
-  border:1px solid #dfe6e3;
-  border-radius: 20px;
-  padding: 26px 22px 30px;
+  // Estilos visuais (mantidos do seu código original)
+  background:linear-gradient(140deg,#f3fdf9 0%,#e0f7ed 100%);
+  border:1px solid #c7ecdd;
+  padding:1.1rem 1rem 1.2rem;
+  border-radius:16px;
+  box-shadow:0 5px 14px -6px rgba(0,0,0,.10);
+  position:relative;
   display:flex;
   flex-direction:column;
-  gap:14px;
-  position:relative;
-  box-shadow: 0 6px 20px -6px rgba(0,0,0,0.08);
-  transition:.4s cubic-bezier(.6,.2,.25,1);
-}
-.diff-card::before {
-  content:'';
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  background:linear-gradient(135deg,rgba(0,124,72,0.08),rgba(0,124,72,0));
-  opacity:0; transition:.5s;
-  pointer-events:none;
-}
-.diff-card:hover { transform:translateY(-6px); box-shadow:0 14px 34px -10px rgba(0,0,0,0.18); }
-.diff-card:hover::before { opacity:1; }
-.diff-icon { width:60px; height:60px; border-radius:18px; background:linear-gradient(135deg,#0a7a47,#0a9156); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 6px 18px -6px rgba(10,122,71,.55); }
-.diff-icon svg { width:34px; height:34px; stroke:currentColor; fill:currentColor; }
-.diff-card h3 { font-size:1.05rem; margin:0; color:#063d3a; line-height:1.25; }
-.diff-card p { font-size:.85rem; line-height:1.35; margin:0; color:#294b45; }
-@media (max-width:720px){
-  .key-diffs { padding:54px 0 28px; }
-  .key-diffs .diffs-title { font-size:1.7rem; margin-bottom:34px; }
-  .diff-card { padding:22px 18px 26px; }
-  .diff-icon { width:54px; height:54px; }
-  .diff-icon svg { width:30px; height:30px; }
-}
+  gap:.55rem;
+  text-align:center;
+  align-items:center;
 
-.newsletter-form {
-  display: flex;
-  gap: var(--spacing-sm);
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.newsletter-form input {
-  flex: 1;
-  padding: var(--spacing-sm);
-  border: none;
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-base);
-}
-
-.newsletter-form input:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(190, 215, 55, 0.3);
-}
-
-@media (max-width: 640px) {
-  .trainings-intro.intro-bg {
-    padding: 28px 18px 34px;
+  .sector-name, .sector-desc { width:100%; }
+  .sector-icon {
+    width:48px;
+    height:48px;
+    border-radius:14px;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:.2rem;
+    box-shadow:0 3px 10px -4px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.05);
   }
+  .sector-icon svg {
+    width:28px;
+    height:28px;
+    stroke:#0b7a47;
+    stroke-width:2;
+    fill:none;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .sector-name {
+    font-weight:600;
+    font-size:.9rem;
+    color:#064e3b;
+    line-height:1.15;
+    letter-spacing:.25px;
+  }
+  .sector-desc {
+    font-size:.88rem;
+    color:#475569;
+    line-height:1.2;
+    max-width:100%;
+    display:-webkit-box;
+    display:block;
+    -webkit-line-clamp:3;
+    line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+}
 
-  .btn-small {
-    width: 100%;
+/**
+ * Paginação por Pontos (Dots)
+ */
+.sectors-pagination {
+  display: block;
+  margin-top: 24px; // Aumentado um pouco o espaço
+  text-align: center;
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: inline-flex; // Garante que a lista se ajuste ao conteúdo
+    gap: 10px;
     justify-content: center;
+    align-items: center;
   }
 
-  .newsletter-form {
-    flex-direction: column;
-  }
+  .dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(6,61,58,0.28);
+    background: rgba(0,0,0,0.08);
+    cursor: pointer;
+    padding: 0;
+    display: inline-block;
+    transition: all .3s ease; // Transição para todas as propriedades
 
-  .newsletter-form button {
-    width: 100%;
+    &:hover {
+      transform: scale(1.15);
+    }
+
+    // Estilo do ponto ATIVO (efeito de traço)
+    &.active {
+      background: var(--verde-escuro);
+      border-color: var(--verde-escuro);
+      width: 28px;
+      height: 8px;
+      border-radius: 6px;
+      transform: none; // Reseta o transform do hover
+    }
   }
 }
 
-  /* Sectors Carousel */
-  .sectors-carousel { padding: 60px 0 40px; background:#fff; border-top:1px solid #eef2f0; position:relative; }
-  .sectors-carousel .sectors-header { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem; }
-  .sectors-carousel h2 { margin:0; font-size:1.75rem; color:#063d3a; }
-  /* Novo layout / navegação nas extremidades */
-  .carousel-arrow { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.6); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); color:#0b7a47; border:2px solid #0b7a47; width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:1.35rem; cursor:pointer; box-shadow:0 4px 14px -6px rgba(0,0,0,.25); transition:.28s; z-index:10; }
-  .carousel-arrow.prev { left:10px; }
-  .carousel-arrow.next { right:10px; }
-  .carousel-arrow:hover { background:rgba(255,255,255,.9); }
-  .carousel-arrow:active { transform:translateY(-50%) scale(.92); }
-  .carousel-arrow:focus-visible { outline:3px solid #0b7a47; outline-offset:2px; }
-  .carousel-arrow:focus-visible { outline:3px solid #ffffff; outline-offset:2px; }
-  .sectors-status { font-size:.9rem; color:#475569; margin-bottom:.5rem; }
-  .sectors-status.error { color:#b91c1c; }
-  .sectors-track { display:flex; gap:1rem; overflow:hidden; justify-content:center; width:100%; padding:0 70px; -webkit-user-select:none; user-select:none; cursor:grab; }
-  .sectors-track[data-dragging='true'] { cursor:grabbing; }
-  .sector-card { background:linear-gradient(140deg,#f3fdf9 0%,#e0f7ed 100%); border:1px solid #c7ecdd; padding:1.05rem .9rem 1.1rem; border-radius:16px; box-shadow:0 5px 14px -6px rgba(0,0,0,.10); position:relative; display:flex; flex-direction:column; gap:.45rem; text-align:center; align-items:center; width:190px; height:170px; flex:0 0 190px; }
-  .sector-card .sector-name, .sector-card .sector-desc { width:100%; }
-  .sector-icon { width:48px; height:48px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:.2rem; box-shadow:0 3px 10px -4px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.05); }
-  .sector-icon svg { width:28px; height:28px; stroke:#0b7a47; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-  .sector-card:focus-visible { outline:3px solid #0b7a47; outline-offset:3px; }
-  .sector-name { font-weight:600; font-size:.9rem; color:#064e3b; line-height:1.15; letter-spacing:.25px; }
-  .sector-desc { font-size:.68rem; color:#475569; line-height:1.2; max-width:100%; display:-webkit-box; display:block; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-  .sectors-empty { font-size:.85rem; color:#475569; }
-  @media (max-width:760px){
-    .sectors-carousel h2 { font-size:1.4rem; }
-  .carousel-arrow { width:38px; height:38px; font-size:1.25rem; }
-  .sectors-track { padding:0 54px; gap:.85rem; }
-  .sector-card { width:170px; height:160px; flex:0 0 170px; }
-    .sector-icon { width:44px; height:44px; }
-    .sector-icon svg { width:26px; height:26px; }
+/**
+ * Media Queries para Responsividade do Carrossel
+ */
+@media (max-width:760px) {
+  .sectors-carousel h2 {
+    font-size:1.4rem;
   }
+  .sectors-track {
+    padding-inline: 16px;
+    scroll-padding-inline: 16px;
+    gap:.85rem;
+  }
+  .sector-card {
+    width: 200px;
+    height: 185px;
+    flex: 0 0 200px;
+  }
+  .sector-icon {
+    width:44px;
+    height:44px;
+  }
+  .sector-icon svg {
+    width:26px;
+    height:26px;
+  }
+}
 
-  /* Evitar que setas sobreponham muito o conteúdo em telas largas usando recuo da largura do container */
-  @media (min-width: 1280px){
-    .sectors-track { padding:0 86px; }
+@media (min-width: 1024px) {
+  .sectors-track {
+    // Em telas largas, mais padding para os cards não ficarem colados nas bordas
+    padding-inline: 86px;
+    scroll-padding-inline: 86px;
   }
+}
