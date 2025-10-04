@@ -7,6 +7,11 @@
 }
 
 :root {
+
+	/* alturas padrão usadas para header/footer fixos quando necessário */
+	--header-height: 64px;
+	--footer-height: 96px;
+
 	--verde-escuro: #005a32;
 	--verde-claro: #bed737;
 	--off-white: #f5f0eb;

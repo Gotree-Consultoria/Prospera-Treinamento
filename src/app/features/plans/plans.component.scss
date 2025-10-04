@@ -87,29 +87,6 @@
     }
   }
 }
-
-.plans-cta {
-  padding: 5rem 0 6rem;
-
-  .cta-card {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    align-items: flex-start;
-    background: linear-gradient(135deg, rgba(106, 90, 205, 0.12), rgba(106, 90, 205, 0.32));
-    border-radius: 18px;
-    padding: 3rem;
-  }
-
-  @media (min-width: 768px) {
-    .cta-card {
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-    }
-  }
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);

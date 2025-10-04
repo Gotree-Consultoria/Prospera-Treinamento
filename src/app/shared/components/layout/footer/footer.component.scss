@@ -6,6 +6,8 @@
   background-color: var(--verde-escuro);
   color: var(--white);
   padding: var(--spacing-xxl) 0 var(--spacing-lg);
+  /* permite que sombras e elementos internos não sejam cortados pelo container global */
+  .container { overflow: visible; }
 }
 
 .footer-content {
