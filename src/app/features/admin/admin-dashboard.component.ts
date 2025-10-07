@@ -114,8 +114,28 @@ export class AdminDashboardComponent {
   creatingSubscription = signal<boolean>(false);
   monetizationMessage = signal<string | null>(null);
   monetizationError = signal<string | null>(null);
+  // dropdown helper signals
+  loadingSubscriptionDropdowns = signal<boolean>(false);
+  // Subscriptions listing (admin)
+  subscriptions = signal<any[]>([]);
+  subscriptionFilterOrigin = signal<string>(''); // '' | 'MANUAL' | other
+  subscriptionFilterStatus = signal<string>(''); // '' | 'ACTIVE' | 'EXPIRED' | other
+  loadingSubscriptions = signal<boolean>(false);
+  subscriptionsError = signal<string | null>(null);
+  // edit flow signals
+  editingPlanId = signal<string | null>(null);
+  showEditPlan = signal<boolean>(false);
+  editingPlanForm = signal<{name:string; description:string; originalPrice:string; currentPrice:string; durationInDays:number; isActive?:boolean}>({ name:'', description:'', originalPrice:'', currentPrice:'', durationInDays:30, isActive: true });
   // simples memória local de planos criados nesta sessão (até termos GET /admin/plans)
   createdPlans = signal<any[]>([]);
+  // aba selecionada na listagem de planos criados
+  selectedCreatedPlanIndex = signal<number>(0);
+  // planos disponíveis vindos do endpoint (GET /subscription/plans)
+  subscriptionPlans = signal<any[]>([]);
+  // modal control para criação de planos
+  showCreatePlan = signal<boolean>(false);
+  // modal control for creating manual subscription
+  showCreateSubscription = signal<boolean>(false);
 
   updatePlanField<K extends keyof ReturnType<typeof this.monetizationPlanForm>>(key: K, value: any) {
     this.monetizationPlanForm.update(f => ({ ...f, [key]: key==='durationInDays' ? Number(value)||0 : value }));
@@ -138,6 +158,8 @@ export class AdminDashboardComponent {
       next: created => {
         this.monetizationMessage.set('Plano criado com sucesso.');
         this.createdPlans.update(list => [created, ...list]);
+        // seleciona o plano recém-criado (o primeiro da lista)
+        this.selectedCreatedPlanIndex.set(0);
         // mantém valores de preço para facilitar criação em série, limpa nome/desc
         this.monetizationPlanForm.update(f => ({ ...f, name:'', description:'' }));
       },
@@ -153,9 +175,128 @@ export class AdminDashboardComponent {
       next: created => {
         this.monetizationMessage.set('Assinatura criada manualmente.');
         this.monetizationSubscriptionForm.set({ userId:'', planId:'' });
+        // fechar modal ao criar com sucesso
+        this.showCreateSubscription.set(false);
       },
-      error: err => this.monetizationError.set(err?.message || 'Falha ao criar assinatura'),
+      error: err => {
+        // tenta extrair mensagem mais detalhada do payload do servidor
+        const serverMsg = err?.error?.message || err?.error || err?.message || '';
+        const text = String(serverMsg || '').trim();
+        const lower = text.toLowerCase();
+
+        // Mensagens específicas de negócio (mapeadas pelo backend)
+        if (text && (text.includes('não está mais ativo') || lower.includes('não está mais ativo') || lower.includes('not active'))) {
+          // Ex: "O plano X não está mais ativo."
+          this.monetizationError.set(text);
+          this.creatingSubscription.set(false);
+          return;
+        }
+
+        if (text && (text.includes('Membros de uma organização ativa') || lower.includes('membros de uma organização ativa') || lower.includes('members of an active organization'))) {
+          this.monetizationError.set(text);
+          this.creatingSubscription.set(false);
+          return;
+        }
+
+        if (text && (text.includes('já possui uma assinatura ativa') || lower.includes('já possui uma assinatura ativa') || lower.includes('already has an active subscription') || lower.includes('already has a subscription'))) {
+          this.monetizationError.set(text);
+          this.creatingSubscription.set(false);
+          return;
+        }
+
+        // Fallbacks por status HTTP (quando o backend não envia mensagem textual)
+        if (err && err.status === 409) {
+          this.monetizationError.set('O usuário já possui uma assinatura ativa.');
+          this.creatingSubscription.set(false);
+          return;
+        }
+
+        // mensagem genérica final
+        this.monetizationError.set(text || 'Falha ao criar assinatura');
+        this.creatingSubscription.set(false);
+      },
       complete: () => this.creatingSubscription.set(false)
+    });
+  }
+
+  openCreateSubscription() {
+    this.monetizationSubscriptionForm.set({ userId: '', planId: '' });
+    this.monetizationError.set(null);
+    // ensure we have users and plans for the selects
+    if (this.users().length === 0 || this.subscriptionPlans().length === 0) {
+      this.loadingSubscriptionDropdowns.set(true);
+      const calls: Array<import('rxjs').Observable<any>> = [];
+      if (this.users().length === 0) calls.push(this.admin.getUsers());
+      if (this.subscriptionPlans().length === 0) calls.push(this.admin.getSubscriptionPlans());
+      // perform requests sequentially to keep logic simple
+      const sub = calls.length ? calls[0].subscribe({ next: r0 => {
+          if (Array.isArray(r0)) this.users.set(r0);
+          else this.users.set(this.unwrapList(r0).map(x => this.normalizeUser(x)));
+        }, error: () => {}, complete: () => {
+          if (calls.length > 1) {
+            calls[1].subscribe({ next: r1 => this.subscriptionPlans.set(Array.isArray(r1)? r1 : this.unwrapList(r1)), error: () => {}, complete: () => { this.loadingSubscriptionDropdowns.set(false); } });
+          } else {
+            this.loadingSubscriptionDropdowns.set(false);
+          }
+        } }) : null;
+    }
+    this.showCreateSubscription.set(true);
+  }
+  closeCreateSubscription() { this.showCreateSubscription.set(false); }
+
+  setEditingPlanField<K extends keyof ReturnType<typeof this.editingPlanForm>>(key: K, value: any) {
+    this.editingPlanForm.update(f => ({ ...f, [key]: key === 'durationInDays' ? Number(value) || 0 : value } as any));
+  }
+
+  openCreatePlan() {
+    // mantém preços preenchidos para criação em série; limpa nome/descrição ao abrir
+    this.monetizationPlanForm.update(f => ({ ...f, name:'', description:'' }));
+    this.monetizationError.set(null);
+    this.showCreatePlan.set(true);
+  }
+  closeCreatePlan() { this.showCreatePlan.set(false); }
+  openEditPlan(plan: any) {
+    if (!plan || !plan.id) return;
+    // populate edit form from plan (coerce types to strings where UI expects)
+    this.editingPlanId.set(plan.id);
+    this.editingPlanForm.set({
+      name: plan.name || '',
+      description: plan.description || '',
+      originalPrice: plan.originalPrice || '',
+      currentPrice: plan.currentPrice || '',
+      durationInDays: Number(plan.durationInDays) || 0,
+      isActive: plan.isActive === undefined ? true : !!plan.isActive
+    });
+    this.monetizationError.set(null);
+    this.showEditPlan.set(true);
+  }
+  closeEditPlan() {
+    this.showEditPlan.set(false);
+    this.editingPlanId.set(null);
+  }
+  submitEditPlan() {
+    const id = this.editingPlanId();
+    if (!id) return;
+    const form = this.editingPlanForm();
+    if (!form.name.trim()) { this.monetizationError.set('Nome do plano é obrigatório.'); return; }
+    this.monetizationError.set(null); this.monetizationMessage.set(null);
+    this.setLoading('updatePlan', true);
+    this.admin.updatePlan(id, {
+      name: String(form.name ?? '').trim(),
+      description: String(form.description ?? '').trim(),
+      originalPrice: String(form.originalPrice ?? '').trim(),
+      currentPrice: String(form.currentPrice ?? '').trim(),
+      durationInDays: Number(form.durationInDays) || 0,
+      isActive: !!form.isActive
+    }).subscribe({
+      next: updated => {
+        // update local list if present
+        this.subscriptionPlans.update(list => list.map(p => p && String(p.id) === String(id) ? ({ ...p, ...updated }) : p));
+        this.monetizationMessage.set('Plano atualizado com sucesso.');
+        this.closeEditPlan();
+      },
+      error: err => this.monetizationError.set(err?.message || 'Falha ao atualizar plano'),
+      complete: () => this.setLoading('updatePlan', false)
     });
   }
   discountPercent(plan: any): number | null {
@@ -219,7 +360,83 @@ export class AdminDashboardComponent {
       if (key === 'content' && this.trainings().length === 0) this.loadTrainings();
   if (key === 'platform' && this.sectors().length === 0) this.loadSectors();
       // (monetization) no fetch inicial porque depende apenas de POSTs por enquanto
+      if (key === 'monetization') {
+        // carregar planos do endpoint se ainda não carregados
+        if (!this.subscriptionPlans().length) this.loadSubscriptionPlans();
+      }
     }
+  }
+
+  loadSubscriptionPlans() {
+    if (!this.isSystemAdmin()) return;
+    this.setLoading('subscriptionPlans', true); this.setError('subscriptionPlans', null);
+    this.admin.getSubscriptionPlans().subscribe({
+      next: list => this.subscriptionPlans.set(list || []),
+      error: err => this.setError('subscriptionPlans', err?.message || 'Falha ao carregar planos'),
+      complete: () => this.setLoading('subscriptionPlans', false)
+    });
+  }
+
+  loadSubscriptions(filters?: { origin?: string; status?: string }) {
+    if (!this.isSystemAdmin()) return;
+    this.loadingSubscriptions.set(true); this.subscriptionsError.set(null);
+    this.admin.getSubscriptions(filters).subscribe({
+      next: list => {
+        const arr = list || [];
+        this.subscriptions.set(arr);
+        // Se não temos a lista de users carregada e as assinaturas trazem userId, prefetch users
+        try {
+          const hasUserIds = arr.some((s: any) => !!(s.userId || s.user?.id || s.customerId));
+          if (hasUserIds && this.users().length === 0) {
+            this.loadUsers();
+          }
+        } catch (e) {
+          // silently ignore
+        }
+      },
+      error: err => this.subscriptionsError.set(err?.message || 'Falha ao carregar assinaturas'),
+      complete: () => this.loadingSubscriptions.set(false)
+    });
+  }
+
+  // control id currently being canceled
+  cancelingSubscriptionId = signal<string | null>(null);
+
+  // subscription details modal
+  selectedSubscription = signal<any | null>(null);
+  showSubscriptionDetails = signal<boolean>(false);
+
+  openSubscriptionDetails(s: any) {
+    if (!s) return;
+    this.selectedSubscription.set(s);
+    this.showSubscriptionDetails.set(true);
+  }
+
+  closeSubscriptionDetails() {
+    this.showSubscriptionDetails.set(false);
+    this.selectedSubscription.set(null);
+  }
+
+  cancelSubscriptionAction(s: any) {
+    if (!s || !s.id) return;
+    const id = s.id;
+    // guarda: se já estiver cancelado, não tenta novamente
+    const status = (s.status || s.status?.toString() || '').toUpperCase();
+    if (status === 'CANCELED' || status === 'CANCELLED') {
+      this.monetizationMessage.set('Esta assinatura já está cancelada.');
+      return;
+    }
+    if (!confirm(`Cancelar assinatura ${id}? Esta ação pode ser irreversível.`)) return;
+    this.cancelingSubscriptionId.set(id);
+    this.admin.cancelSubscription(id).subscribe({
+      next: resp => {
+        // best-effort: atualizar status localmente para 'CANCELED' ou remover da lista
+        this.subscriptions.update(list => list.map((x: any) => x && String(x.id) === String(id) ? ({ ...x, status: 'CANCELED' }) : x));
+        this.monetizationMessage.set('Assinatura cancelada.');
+      },
+      error: err => this.subscriptionsError.set(err?.message || 'Falha ao cancelar assinatura'),
+      complete: () => this.cancelingSubscriptionId.set(null)
+    });
   }
 
   private setLoading(scope: string, value: boolean) {
@@ -315,7 +532,7 @@ export class AdminDashboardComponent {
     this.createTrainingLoading.set(true); this.createTrainingError.set(null);
     const payload: any = {
       title: form.title.trim(),
-      entityType: form.entityType,
+      entityType: this.normalizeEntityType(String(form.entityType)),
       description: form.description?.trim() || null,
       author: form.author?.trim() || null,
       organizationId: form.organizationId || null
@@ -329,6 +546,24 @@ export class AdminDashboardComponent {
       error: err => this.createTrainingError.set(err?.message || 'Falha ao criar treinamento'),
       complete: () => this.createTrainingLoading.set(false)
     });
+  }
+
+  /**
+   * Normaliza variantes de tipo de entidade vindas do UI/inputs externos para os enums
+   * esperados pelo backend. Evita valores como 'COURSE' ou 'LIVE_COURSE' que podem causar
+   * exceções de enum no servidor.
+   */
+  private normalizeEntityType(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const v = String(value).trim().toUpperCase();
+    if (!v) return null;
+    // mapeamentos defensivos para variantes conhecidas
+    if (v === 'COURSE' || v === 'RECORDED' || v === 'RECORDED_COURSE' || v.includes('RECOR')) return 'RECORDED_COURSE';
+    if (v === 'LIVE_COURSE' || v === 'LIVE_TRAINING' || v.includes('LIVE') || v.includes('AO_VIVO')) return 'LIVE_TRAINING';
+    if (v === 'EBOOK' || v.includes('EBOOK')) return 'EBOOK';
+    if (v === 'PACKAGE' || v.includes('PACKAGE')) return 'PACKAGE';
+    // fallback: retorna input original (caller should validate) — but uppercase for consistency
+    return v;
   }
 
   // --- Ações menu popover ---
@@ -547,6 +782,114 @@ export class AdminDashboardComponent {
     if (!id) return '';
     const found = this.sectors().find(s => s.id === id);
     return found ? found.name : '';
+  }
+
+  /**
+   * Retorna um rótulo amigável para o usuário da assinatura.
+   * Aceita o objeto de assinatura e tenta resolver, na ordem:
+   * - objeto embutido `s.user` (name/email)
+   * - campos explícitos como `userEmail`, `customerEmail`
+   * - lookup na lista `users` carregada (email)
+   * - fallback para ID
+   */
+  getSubscriptionUserLabel(s: any): string {
+    if (!s) return '—';
+    const userObj = s.user || s.customer || null;
+    if (userObj) {
+      return String(userObj.name || userObj.fullName || userObj.email || userObj.userEmail || userObj.id || '').trim() || '—';
+    }
+    // try common fields
+    const possibleEmail = s.userEmail || s.customerEmail || s.email;
+    if (possibleEmail) return String(possibleEmail);
+    const id = s.userId || s.user?.id || s.customerId || null;
+    if (!id) return '—';
+    // try lookup in loaded users
+    const found = this.users().find(u => String(u.id) === String(id));
+    if (found) return found.email || String(found.id || '—');
+    return String(id);
+  }
+
+  /**
+   * Retorna um rótulo amigável para o plano da assinatura.
+   * Procura por nome no objeto `s.plan`, ou na lista `subscriptionPlans` carregada.
+   */
+  getSubscriptionPlanLabel(s: any): string {
+    if (!s) return '—';
+    const planObj = s.plan || null;
+    if (planObj) return String(planObj.name || planObj.title || planObj.id || '').trim() || '—';
+    const possibleName = s.planName || s.planTitle;
+    if (possibleName) return String(possibleName);
+    const id = s.planId || s.plan?.id || null;
+    if (!id) return '—';
+    const found = this.subscriptionPlans().find(p => String(p.id) === String(id));
+    if (found) return String(found.name || found.title || found.id || '—');
+    return String(id);
+  }
+
+  /**
+   * Retorna o nome do usuário associado à assinatura.
+   * Procura por campos embutidos (s.user.*), depois faz lookup em `this.users()`.
+   * Se nenhum nome for encontrado retorna 'Não preenchido'.
+   */
+  getSubscriptionUserName(s: any): string {
+    if (!s) return 'Não preenchido';
+    const userObj = s.user || s.customer || null;
+    if (userObj) {
+      const name = userObj.name || userObj.fullName || userObj.firstName || (userObj.personalProfile && (userObj.personalProfile.fullName || userObj.personalProfile.name));
+      return name ? String(name) : 'Não preenchido';
+    }
+    const id = s.userId || s.customerId || (s.user && s.user.id) || null;
+    if (!id) return 'Não preenchido';
+    const found = this.users().find(u => String(u.id) === String(id));
+    if (found) {
+      const name = (found as any).name || (found as any).fullName || ((found as any).personalProfile && ((found as any).personalProfile.fullName || (found as any).personalProfile.name));
+      return name ? String(name) : 'Não preenchido';
+    }
+    return 'Não preenchido';
+  }
+
+  /**
+   * Normaliza e retorna o rótulo da origem da assinatura.
+   * Procura por `origin`, `source`, `originType` ou campos similares e mapeia valores conhecidos.
+   */
+  getSubscriptionOriginLabel(s: any): string {
+    if (!s) return '—';
+
+    // Tenta extrair a origem a partir de várias chaves possíveis e formatos
+    const candidates: any[] = [
+      s.origin, s.origem, s.source, s.originType, s.origin_type, s.originName, s.originName,
+      // estruturas aninhadas comuns
+      s.payment?.origin, s.payment?.source, s.metadata?.origin, s.meta?.origin,
+      s.data?.origin, s.attributes?.origin, s.payload?.origin
+    ];
+
+    let raw: string = '';
+    for (const c of candidates) {
+      if (c === undefined || c === null) continue;
+      if (typeof c === 'object') {
+        // se for objeto, tente chaves internas
+        const inner = c.type || c.name || c.value || c.origin || c.source;
+        if (inner) { raw = String(inner); break; }
+      } else {
+        const str = String(c || '').trim();
+        if (str) { raw = str; break; }
+      }
+    }
+
+    if (!raw) return '—';
+    const v = raw.trim().toUpperCase();
+    if (!v) return '—';
+
+    // Normalizações e rótulos legíveis
+    if (v === 'MANUAL' || v === 'MANU' || v === 'MANUAIS') return 'Manual';
+    if (v === 'API') return 'API';
+    if (v === 'IMPORT' || v === 'IMPORTACAO' || v === 'IMPORTAÇÃO') return 'Importação';
+    // Cobrir variações como PAYMENT_GATEWAY, PAYMENTGATEWAY, GATEWAY
+    if (v.includes('PAYMENT') && v.includes('GATEWAY')) return 'Gateway de Pagamento';
+    if (v === 'GATEWAY' || v === 'PAYMENTGATEWAY' || v === 'PAYMENT-GATEWAY') return 'Gateway de Pagamento';
+
+    // fallback para o valor original
+    return raw || v;
   }
 
   removeTrainingSector(trainingId: string, sectorId: string) {

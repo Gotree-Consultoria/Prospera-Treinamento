@@ -10,7 +10,9 @@ export interface CatalogItem {
   title: string;
   description: string;
   format: CatalogFormat;
+  entityType?: string | null;
   sectors: string[];
+  author?: string | null;
   coverImageUrl?: string | null;
   data?: unknown;
 }
@@ -102,6 +104,28 @@ export class CatalogService {
   }
 
   /**
+   * Busca planos diretamente do endpoint /subscriptions/plans (quando disponível) e mapeia para CatalogItem[]
+   */
+  loadPlansEndpoint() {
+    return this.api.get<any>('/subscriptions/plans').pipe(
+      map(data => {
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+        return list.map((item: any) => this.toCatalogItem(item, 'PACKAGE', item.coverImageUrl ?? item.imageUrl ?? null));
+      }),
+      catchError(err => {
+        console.warn('[CatalogService] falha em /subscriptions/plans', err);
+        return of([] as CatalogItem[]);
+      })
+    );
+  }
+
+  /**
    * Faz merge garantindo unicidade por (format::id) e mantém descrição mais longa.
    */
   private mergeDistinct(items: CatalogItem[]): CatalogItem[] {
@@ -131,9 +155,11 @@ export class CatalogService {
       title: raw?.title ?? raw?.name ?? 'Item',
       description: raw?.description ?? raw?.shortDescription ?? '',
       format: this.normalizeFormat(raw?.format ?? raw?.type ?? raw?.trainingType) ?? fallbackFormat,
+      entityType: (raw?.entityType ?? raw?.format ?? raw?.type ?? raw?.trainingType) ?? null,
       sectors: sectors.map((sector: any) =>
         typeof sector === 'string' ? sector : sector?.id ?? sector?.code ?? 'global'
       ),
+      author: raw?.author ?? raw?.creator ?? raw?.publisher ?? null,
       coverImageUrl: cover || undefined,
       data: raw
     };

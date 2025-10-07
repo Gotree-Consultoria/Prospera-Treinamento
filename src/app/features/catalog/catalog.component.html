@@ -68,7 +68,12 @@
 
     <div class="catalog-grid" *ngIf="!isLoading && !hasError && filteredItems.length">
       <article class="catalog-card" *ngFor="let item of filteredItems; trackBy: trackById">
-        <span class="catalog-card-badge" [ngClass]="item.format.toLowerCase()">{{ item.format | formatLabel }}</span>
+        <span
+          class="catalog-card-badge"
+          [ngClass]="(item.entityType || item.format).toLowerCase()"
+        >
+          {{ (item.entityType || item.format) | formatLabel }}
+        </span>
         <div class="catalog-card-cover" [ngClass]="{ 'no-cover': !item.coverImageUrl }">
           <img
             *ngIf="item.coverImageUrl"
@@ -79,9 +84,9 @@
           />
         </div>
         <h2 class="catalog-card-title">{{ item.title }}</h2>
-        <p class="sr-only" *ngIf="item.description">{{ item.description }}</p>
+        <p class="catalog-card-author" *ngIf="item.author">{{ item.author }}</p>
         <div class="catalog-card-meta" *ngIf="item.sectors?.length">
-          <span class="catalog-card-sector" *ngFor="let sector of item.sectors">{{ sector | uppercase }}</span>
+          <span class="catalog-card-sector" *ngFor="let sectorId of item.sectors">{{ sectorName(sectorId) | uppercase }}</span>
         </div>
         <div class="catalog-card-actions">
           <button class="btn" type="button" (click)="showDetails(item)">Detalhes</button>
@@ -120,15 +125,15 @@
       />
     </div>
 
-    <div class="catalog-details-info">
-      <h2 [id]="'catalog-modal-title-' + detail.id">{{ detail.title }}</h2>
-      <p class="catalog-details-format">{{ detail.format | formatLabel }}</p>
+  <div class="catalog-details-info">
+  <h2 [id]="'catalog-modal-title-' + detail.id">{{ detail.title }}</h2>
+  <p class="catalog-details-format">{{ (detail.entityType || detail.format) | formatLabel }}</p>
       <p [id]="'catalog-modal-description-' + detail.id">
         {{ detail.description || 'Conteúdo atualizado e em breve disponível.' }}
       </p>
 
       <div class="catalog-details-sectors" *ngIf="detail.sectors?.length">
-        <span *ngFor="let sector of detail.sectors">{{ sector | uppercase }}</span>
+        <span *ngFor="let sectorId of detail.sectors">{{ sectorName(sectorId) | uppercase }}</span>
       </div>
 
       <div class="catalog-details-actions">

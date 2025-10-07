@@ -68,11 +68,7 @@ export const routes: Routes = [
 		loadComponent: () => import('./features/about/about.component').then(m => m.AboutComponent),
 		data: { title: 'Sobre' }
 	},
-	{
-		path: 'ebooks',
-		loadComponent: () => import('./features/ebooks/ebooks.component').then(m => m.EbooksComponent),
-		data: { title: 'E-books' }
-	},
+	// E-books route removed
 	{
 		path: 'agenda',
 		loadComponent: () => import('./features/agenda/agenda.component').then(m => m.AgendaComponent),

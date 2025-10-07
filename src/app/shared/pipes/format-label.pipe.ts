@@ -12,11 +12,11 @@ export class FormatLabelPipe implements PipeTransform {
     const normalized = value.toUpperCase();
     switch (normalized) {
       case 'EBOOK':
-        return 'E-book';
+        return 'E-Book';
       case 'RECORDED_COURSE':
-        return 'Curso Gravado';
+        return 'Curso';
       case 'LIVE_TRAINING':
-        return 'Treinamento ao vivo';
+        return 'Ao vivo';
       case 'PACKAGE':
         return 'Pacote';
       default:

@@ -55,6 +55,67 @@ import { AuthService } from '../../core/services/auth.service';
         <h2 class="card-title">Descrição</h2>
         <p class="description">{{t.description || '—'}}</p>
       </section>
+  <!-- Seção Módulos (apenas para cursos gravados) -->
+  <section class="card modules-column" *ngIf="t.entityType === 'RECORDED_COURSE'">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.6rem;">
+          <h2 class="card-title" style="margin:0">Módulos</h2>
+          <div>
+            <button type="button" class="btn btn--primary btn-xs" (click)="openAddModule()">Adicionar Módulo</button>
+          </div>
+        </div>
+
+        <div *ngIf="!(t.modules || []).length" class="mono" style="padding:.6rem;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">Nenhum módulo criado.</div>
+
+        <div *ngFor="let m of (t.modules || [])" style="margin-top:.8rem;border:1px solid #e2e8f0;border-radius:10px;padding:.6rem;background:#fff;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:700">{{m.title || 'Módulo'}}</div>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <button type="button" class="btn btn--ghost btn-xs" (click)="openAddLesson(m.id)">Adicionar Aula</button>
+            </div>
+          </div>
+          <div *ngIf="(m.lessons || []).length" style="margin-top:.5rem;padding-left:.6rem;">
+            <ol style="margin:0;padding-left:1rem;">
+              <li *ngFor="let l of m.lessons" style="margin-bottom:.3rem">{{l.title || 'Aula'}} <span class="mono" style="color:#64748b;font-size:.7rem">(#{{l.lessonOrder || '-' }})</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Modal de adicionar módulo -->
+        <div class="overlay" *ngIf="showAddModule()" (click)="closeAddModule()"></div>
+        <div class="create-modal" *ngIf="showAddModule()" role="dialog" aria-modal="true" (click)="$event.stopPropagation()" style="max-width:520px;">
+          <form (submit)="$event.preventDefault(); submitAddModule();">
+            <h3 style="margin-top:0">Adicionar Módulo</h3>
+            <label style="display:block;margin-bottom:.4rem">Título</label>
+            <input type="text" [value]="addModuleForm().title" (input)="setAddModuleField('title',$any($event.target).value)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.5rem;" />
+            <label style="display:block;margin-bottom:.4rem">Ordem</label>
+            <input type="number" [value]="addModuleForm().moduleOrder" (input)="setAddModuleField('moduleOrder',$any($event.target).value)" style="width:120px;padding:.35rem .5rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.6rem;" />
+            <div style="display:flex;gap:.5rem;justify-content:flex-end">
+              <button type="button" class="btn btn--subtle" (click)="closeAddModule()" [disabled]="creatingModule()">Cancelar</button>
+              <button type="submit" class="btn btn--primary" [disabled]="creatingModule()">{{ creatingModule() ? 'Criando...' : 'Criar Módulo' }}</button>
+            </div>
+            <div *ngIf="addModuleError()" class="error" style="margin-top:.5rem">{{addModuleError()}}</div>
+          </form>
+        </div>
+
+        <!-- Modal de adicionar aula -->
+        <div class="overlay" *ngIf="showAddLessonForModuleId()" (click)="closeAddLesson()"></div>
+        <div class="create-modal" *ngIf="showAddLessonForModuleId()" role="dialog" aria-modal="true" (click)="$event.stopPropagation()" style="max-width:640px;">
+          <form (submit)="$event.preventDefault(); submitAddLesson(showAddLessonForModuleId()!)">
+            <h3 style="margin-top:0">Adicionar Aula</h3>
+            <label style="display:block;margin-bottom:.4rem">Título</label>
+            <input type="text" [value]="addLessonForm().title" (input)="setAddLessonField('title',$any($event.target).value)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.5rem;" />
+            <label style="display:block;margin-bottom:.4rem">Conteúdo (URL do vídeo)</label>
+            <input type="text" [value]="addLessonForm().content" (input)="setAddLessonField('content',$any($event.target).value)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.5rem;" />
+            <label style="display:block;margin-bottom:.4rem">Ordem</label>
+            <input type="number" [value]="addLessonForm().lessonOrder" (input)="setAddLessonField('lessonOrder',$any($event.target).value)" style="width:120px;padding:.35rem .5rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.6rem;" />
+            <div style="display:flex;gap:.5rem;justify-content:flex-end">
+              <button type="button" class="btn btn--subtle" (click)="closeAddLesson()" [disabled]="creatingLesson()">Cancelar</button>
+              <button type="submit" class="btn btn--primary" [disabled]="creatingLesson()">{{ creatingLesson() ? 'Criando...' : 'Criar Aula' }}</button>
+            </div>
+            <div *ngIf="addLessonError()" class="error" style="margin-top:.5rem">{{addLessonError()}}</div>
+          </form>
+        </div>
+      </section>
       <section class="card" *ngIf="t.entityType==='EBOOK' && t.ebookDetails as ed">
         <h2 class="card-title">E-book</h2>
         <div class="kv-grid">
@@ -66,17 +127,37 @@ import { AuthService } from '../../core/services/auth.service';
           <a *ngIf="buildEbookFileUrl(extractPdfFileName(t)) as pdfUrl" class="btn btn--ghost" [href]="pdfUrl" target="_blank" rel="noopener">Abrir PDF</a>
         </div>
       </section>
-      <section class="card" *ngIf="t.sectorAssignments?.length">
+      <section class="card">
         <h2 class="card-title">Setores Vinculados</h2>
+
+        <div class="assignment-form" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;">
+          <select [value]="assignmentForm().sectorId" (change)="setAssignmentField('sectorId',$any($event.target).value)" style="min-width:220px;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">
+            <option value="">— Selecionar setor —</option>
+            <option *ngFor="let s of sectors()" [value]="s.id">{{s.name}}</option>
+          </select>
+          <select [value]="assignmentForm().trainingType" (change)="setAssignmentField('trainingType',$any($event.target).value)" style="padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">
+            <option value="COMPULSORY">COMPULSORY</option>
+            <option value="OPTIONAL">OPTIONAL</option>
+          </select>
+          <input type="text" placeholder="Base legal (opcional)" [value]="assignmentForm().legalBasis" (input)="setAssignmentField('legalBasis',$any($event.target).value)" style="padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;min-width:200px;" />
+          <button type="button" class="btn btn--primary btn-xs" (click)="addSector()" [disabled]="assigning()">{{ assigning() ? 'Vinculando...' : 'Vincular setor' }}</button>
+        </div>
+
+        <div *ngIf="assignmentError()" class="error" style="margin-bottom:.5rem">{{assignmentError()}}</div>
+        <div *ngIf="assignmentMessage()" class="success" style="margin-bottom:.5rem;color:#065f46">{{assignmentMessage()}}</div>
+
         <table class="table mini" aria-label="Setores vinculados">
           <thead><tr><th>ID</th><th>Nome do Setor</th><th>Tipo</th><th>Base Legal</th><th>Ações</th></tr></thead>
           <tbody>
-            <tr *ngFor="let sa of t.sectorAssignments">
+            <tr *ngFor="let sa of (training().sectorAssignments || [])">
               <td data-label="ID" class="mono">{{sa.sectorId}}</td>
               <td data-label="Nome do Setor">{{sectorName(sa.sectorId)}}</td>
               <td data-label="Tipo">{{sa.trainingType || '—'}}</td>
               <td data-label="Base Legal">{{sa.legalBasis || '—'}}</td>
               <td data-label="Ações" class="actions-col"><button type="button" class="btn btn--ghost btn-xs" (click)="unlinkSector(sa.sectorId, t.id)">Remover</button></td>
+            </tr>
+            <tr *ngIf="!(training().sectorAssignments || []).length">
+              <td colspan="5" class="mono">Nenhum setor vinculado.</td>
             </tr>
           </tbody>
         </table>
@@ -139,7 +220,10 @@ import { AuthService } from '../../core/services/auth.service';
     .progress-bar.top { position:relative; height:5px; background:#e2e8f0; border-radius:4px; overflow:hidden; margin-top:-.5rem; }
     .progress-bar .bar { position:absolute; inset:0; background:linear-gradient(90deg,#6366f1,#818cf8); transition:width .25s; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(4px);} to { opacity:1; transform:translateY(0);} }
-    @media (min-width:900px) { .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .meta-card { grid-column:1 / -1; } }
+    /* cards empilhados verticalmente por padrão (uma coluna) */
+    .cards { grid-template-columns: 1fr; }
+    .meta-card { grid-column:1 / -1; }
+    .modules-column { max-height: none; overflow: visible; }
   `]
 })
 export class AdminTrainingDetailComponent {
@@ -154,6 +238,12 @@ export class AdminTrainingDetailComponent {
   uploadProgress = signal<number | null>(null);
   coverBroken = signal<boolean>(false);
   sectors = signal<any[]>([]);
+
+  // formulário local para vincular setor
+  assignmentForm = signal<{ sectorId: string; trainingType: string; legalBasis: string }>({ sectorId: '', trainingType: 'COMPULSORY', legalBasis: '' });
+  assigning = signal<boolean>(false);
+  assignmentError = signal<string | null>(null);
+  assignmentMessage = signal<string | null>(null);
 
   isSystemAdmin = () => this.auth.hasRole('SYSTEM_ADMIN');
 
@@ -213,12 +303,118 @@ export class AdminTrainingDetailComponent {
   extractPdfFileName(t: any) { return this.admin.extractPdfFileName(t); }
   buildEbookFileUrl(fileName: string) { return this.admin.buildEbookFileUrl(fileName); }
 
+  // --- Módulos e Aulas (árvore para RECORDED_COURSE) ---
+  showAddModule = signal<boolean>(false);
+  creatingModule = signal<boolean>(false);
+  addModuleForm = signal<{ title: string; moduleOrder: number }>({ title: '', moduleOrder: 1 });
+  addModuleError = signal<string | null>(null);
+
+  showAddLessonForModuleId = signal<string | null>(null);
+  creatingLesson = signal<boolean>(false);
+  addLessonForm = signal<{ title: string; content: string; lessonOrder: number }>({ title: '', content: '', lessonOrder: 1 });
+  addLessonError = signal<string | null>(null);
+
   unlinkSector(sectorId: string, trainingId: string) {
     if (!sectorId || !trainingId) return;
     if (!confirm('Remover vínculo com setor?')) return;
     this.admin.unlinkTrainingSector(trainingId, sectorId).subscribe({
       next: () => this.training.update(t => t ? { ...t, sectorAssignments: (t.sectorAssignments||[]).filter((s:any)=> s.sectorId !== sectorId) } : t),
       error: err => this.error.set(err?.message || 'Falha ao desvincular setor')
+    });
+  }
+
+  setAssignmentField(key: 'sectorId' | 'trainingType' | 'legalBasis', value: any) {
+    this.assignmentForm.update(f => ({ ...f, [key]: value }));
+  }
+
+  addSector() {
+    const t = this.training();
+    if (!t) return;
+    const form = this.assignmentForm();
+    this.assignmentError.set(null);
+    if (!form.sectorId) { this.assignmentError.set('Selecione um setor.'); return; }
+    this.assigning.set(true);
+    this.admin.assignTrainingToSector(t.id, { sectorId: String(form.sectorId), trainingType: String(form.trainingType), legalBasis: String(form.legalBasis) }).subscribe({
+      next: () => {
+        // Atualiza UI localmente (backend retorna void) => cria o objeto mínimo para exibir
+        const newAssign = { sectorId: form.sectorId, trainingType: form.trainingType, legalBasis: form.legalBasis } as any;
+        this.training.update(curr => curr ? { ...curr, sectorAssignments: [...(curr.sectorAssignments||[]), newAssign] } : curr);
+        this.assignmentMessage.set('Setor vinculado com sucesso.');
+        // limpa formulário
+        this.assignmentForm.set({ sectorId: '', trainingType: 'COMPULSORY', legalBasis: '' });
+        setTimeout(() => this.assignmentMessage.set(null), 2500);
+      },
+      error: err => this.assignmentError.set(err?.message || 'Falha ao vincular setor'),
+      complete: () => this.assigning.set(false)
+    });
+  }
+
+  // Abre modal de criar módulo
+  openAddModule() {
+    this.addModuleForm.set({ title: '', moduleOrder: (this.training()?.modules?.length || 0) + 1 });
+    this.addModuleError.set(null);
+    this.showAddModule.set(true);
+  }
+  closeAddModule() { this.showAddModule.set(false); }
+
+  submitAddModule() {
+    const t = this.training(); if (!t) return;
+    const form = this.addModuleForm();
+    if (!form.title.trim()) { this.addModuleError.set('Título do módulo é obrigatório.'); return; }
+    this.creatingModule.set(true); this.addModuleError.set(null);
+    this.admin.createCourseModule(t.id, { title: form.title.trim(), moduleOrder: Number(form.moduleOrder) || 0 }).subscribe({
+      next: created => {
+        // garante array
+        this.training.update(curr => {
+          if (!curr) return curr;
+          const modules = Array.isArray(curr.modules) ? [...curr.modules, created] : [created];
+          return { ...curr, modules };
+        });
+        this.showAddModule.set(false);
+      },
+      error: err => this.addModuleError.set(err?.message || 'Falha ao criar módulo'),
+      complete: () => this.creatingModule.set(false)
+    });
+  }
+
+  setAddModuleField(key: 'title' | 'moduleOrder', value: any) {
+    this.addModuleForm.update(f => ({ ...f, [key]: key === 'moduleOrder' ? Number(value) || 0 : value }));
+  }
+
+  setAddLessonField(key: 'title' | 'content' | 'lessonOrder', value: any) {
+    this.addLessonForm.update(f => ({ ...f, [key]: key === 'lessonOrder' ? Number(value) || 0 : value }));
+  }
+
+  // Aulas
+  openAddLesson(moduleId: string) {
+    this.addLessonForm.set({ title: '', content: '', lessonOrder: 1 });
+    this.addLessonError.set(null);
+    this.showAddLessonForModuleId.set(moduleId);
+  }
+  closeAddLesson() { this.showAddLessonForModuleId.set(null); }
+
+  submitAddLesson(moduleId: string) {
+    const form = this.addLessonForm();
+    if (!form.title.trim()) { this.addLessonError.set('Título da aula é obrigatório.'); return; }
+    this.creatingLesson.set(true); this.addLessonError.set(null);
+  this.admin.createModuleLesson(moduleId, { title: form.title.trim(), content: form.content?.trim() || undefined, lessonOrder: Number(form.lessonOrder) || 0 }).subscribe({
+      next: created => {
+        // localmente adiciona a lesson ao módulo correspondente
+        this.training.update(curr => {
+          if (!curr) return curr;
+          const modules = Array.isArray(curr.modules) ? curr.modules.map((m:any) => {
+            if (String(m.id) === String(moduleId)) {
+              const lessons = Array.isArray(m.lessons) ? [...m.lessons, created] : [created];
+              return { ...m, lessons };
+            }
+            return m;
+          }) : [];
+          return { ...curr, modules };
+        });
+        this.showAddLessonForModuleId.set(null);
+      },
+      error: err => this.addLessonError.set(err?.message || 'Falha ao criar aula'),
+      complete: () => this.creatingLesson.set(false)
     });
   }
 

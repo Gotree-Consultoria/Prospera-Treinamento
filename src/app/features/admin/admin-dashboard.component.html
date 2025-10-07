@@ -228,14 +228,30 @@
             <td data-label="Status"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{ (t.publicationStatus || '—') }}</span></td>
             <td data-label="Atualizado">{{ t.updatedAt | date:'dd/MM/yyyy' }}</td>
             <td data-label="PDF" class="pdf-col">
-              <span class="pdf-icon" [ngClass]="trainingHasPdf(t) ? 'has' : 'missing'" [title]="pdfDebugInfo(t)">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2Z" fill="currentColor" opacity="0.25"/>
-                  <path d="M13 2v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-                  <path d="M8.5 14h1c.8 0 1.5.7 1.5 1.5v0c0 .8-.7 1.5-1.5 1.5h-1v-3Zm0 0v3M14 14h1.2c.44 0 .8.36.8.8v1.4c0 .44-.36.8-.8.8H14v-3Zm0 0v3M11.5 14v3M17 14v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="sr-only">{{ pdfDebugInfo(t) }}</span>
-              </span>
+              <ng-container *ngIf="t.entityType === 'RECORDED_COURSE'; else showPdf">
+                <span class="stream-icon" title="Streaming">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                    <!-- background rounded rect subtle -->
+                    <rect x="1" y="3" width="22" height="18" rx="3" fill="currentColor" opacity="0.06"></rect>
+                    <!-- play triangle -->
+                    <path d="M9.5 8.5v7l6-3.5-6-3.5z" fill="currentColor"/>
+                    <!-- streaming waves -->
+                    <path d="M17.5 9.5c1 0 2 .9 2 2s-1 2-2 2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"></path>
+                    <path d="M19.5 7.5c1.7 0 3.5 1.4 3.5 3.5S21.2 14.5 19.5 14.5" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"></path>
+                  </svg>
+                  <span class="sr-only">Formato: Streaming</span>
+                </span>
+              </ng-container>
+              <ng-template #showPdf>
+                <span class="pdf-icon" [ngClass]="trainingHasPdf(t) ? 'has' : 'missing'" [title]="pdfDebugInfo(t)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2Z" fill="currentColor" opacity="0.25"/>
+                    <path d="M13 2v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    <path d="M8.5 14h1c.8 0 1.5.7 1.5 1.5v0c0 .8-.7 1.5-1.5 1.5h-1v-3Zm0 0v3M14 14h1.2c.44 0 .8.36.8.8v1.4c0 .44-.36.8-.8.8H14v-3Zm0 0v3M11.5 14v3M17 14v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="sr-only">{{ pdfDebugInfo(t) }}</span>
+                </span>
+              </ng-template>
               <!-- Botão de debug (descomente se quiser ver no UI)
               <button type="button" class="btn-ghost-small" (click)="logPdfDebug(t)" style="margin-left:4px" aria-label="Debug PDF">?</button>
               -->
@@ -348,7 +364,7 @@
               <select [value]="createTrainingForm().entityType" (change)="updateCreateField('entityType',$any($event.target).value)">
                 <option value="EBOOK">EBOOK</option>
                 <option value="RECORDED_COURSE">RECORDED_COURSE</option>
-                <option value="LIVE_COURSE">LIVE_COURSE</option>
+                <option value="LIVE_TRAINING">LIVE_TRAINING</option>
               </select>
             </label>
             <label>Organization ID (opcional)
@@ -428,107 +444,258 @@
       </div>
       <div class="card-body" *ngIf="activeCard()==='monetization'">
         <p class="muted small">Gestão de planos, assinaturas e (em breve) cupons, faturas e métricas de receita.</p>
-        <div class="monetization-grid">
+        <div class="monetization-grid" role="region" aria-labelledby="monetization-heading">
           <!-- Subsec: Criar Plano -->
-          <div class="admin-subcard">
+          <div class="admin-subcard" role="group" aria-labelledby="plan-create-title">
             <div class="admin-subcard-header">
               <div class="icon-wrap" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v2H3V5a2 2 0 0 1 2-2Zm-2 7h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10Zm5 2v2h8v-2H8Z" fill="currentColor"/></svg>
               </div>
               <div class="titles">
-                <h4>Novo Plano</h4>
+                <h4 id="plan-create-title">Planos</h4>
                 <p class="subtitle">Cadastrar assinatura</p>
               </div>
             </div>
             <div class="admin-subcard-body">
-              <form class="form-vertical" (submit)="$event.preventDefault(); submitCreatePlan();">
-                <label>Nome<span>*</span>
-                  <input type="text" [value]="monetizationPlanForm().name" (input)="updatePlanField('name',$any($event.target).value)" required />
-                </label>
-                <label>Descrição (até 512)
-                  <textarea rows="3" maxlength="512" [value]="monetizationPlanForm().description" (input)="updatePlanField('description',$any($event.target).value)"></textarea>
-                </label>
-                <div class="row two">
-                  <label>Preço Original<span>*</span>
-                    <input type="text" inputmode="decimal" placeholder="Ex: 29.90" [value]="monetizationPlanForm().originalPrice" (input)="updatePlanField('originalPrice',$any($event.target).value)" required />
-                  </label>
-                  <label>Preço Atual<span>*</span>
-                    <input type="text" inputmode="decimal" placeholder="Ex: 19.90" [value]="monetizationPlanForm().currentPrice" (input)="updatePlanField('currentPrice',$any($event.target).value)" required />
-                  </label>
+              <div class="actions-row" style="justify-content:space-between; align-items:center;">
+                <div>
+                  <div id="plan-create-help" class="sr-only">Campos obrigatórios marcados com *</div>
+                  <button type="button" class="btn btn--primary" (click)="openCreatePlan()">Criar Novo Plano</button>
                 </div>
-                <label>Duração (dias)
-                  <input type="number" min="1" [value]="monetizationPlanForm().durationInDays" (input)="updatePlanField('durationInDays', $any($event.target).value)" />
-                </label>
-                <div class="actions-row">
-                  <button type="submit" class="btn btn--primary" [disabled]="creatingPlan()">{{ creatingPlan() ? 'Criando...' : 'Criar Plano' }}</button>
-                </div>
-              </form>
+                <div class="muted small">Dica: preços originais e atuais ficam disponíveis para criação em série.</div>
+              </div>
               <div class="feedback" *ngIf="monetizationMessage()" aria-live="polite">{{ monetizationMessage() }}</div>
               <div class="form-error" *ngIf="monetizationError()">{{ monetizationError() }}</div>
-              <div class="created-plans" *ngIf="createdPlans().length">
-                <h5>Planos Criados na Sessão</h5>
-                <table class="table mini">
-                  <thead><tr><th>Nome</th><th>Preço</th><th>Duração</th><th>Desc%</th></tr></thead>
-                  <tbody>
-                    <tr *ngFor="let p of createdPlans()">
-                      <td data-label="Nome">{{p.name}}</td>
-                      <td data-label="Preço">{{p.currentPrice}} <span class="old" *ngIf="p.originalPrice && p.originalPrice!==p.currentPrice">{{p.originalPrice}}</span></td>
-                      <td data-label="Duração">{{p.durationInDays}}d</td>
-                      <td data-label="Desc%">{{ discountPercent(p) || '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          <!-- Subsec: Criar Assinatura Manual -->
-          <div class="admin-subcard">
-            <div class="admin-subcard-header">
-              <div class="icon-wrap" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-3.31 0-6 2.69-6 6v1h12v-1c0-3.31-2.69-6-6-6Zm7.5-4h-2a5.5 5.5 0 0 1-5.5 5.5V18a7.5 7.5 0 0 0 7.5-7.5ZM6.5 10h-2A7.5 7.5 0 0 0 12 17.5V15A5.5 5.5 0 0 1 6.5 10Z" fill="currentColor"/></svg>
-              </div>
-              <div class="titles">
-                <h4>Assinatura Manual</h4>
-                <p class="subtitle">Atribuir plano a usuário</p>
-              </div>
-            </div>
-            <div class="admin-subcard-body">
-              <form class="form-vertical" (submit)="$event.preventDefault(); submitCreateSubscription();">
-                <label>User ID<span>*</span>
-                  <input type="text" [value]="monetizationSubscriptionForm().userId" (input)="updateSubscriptionField('userId',$any($event.target).value)" required />
-                </label>
-                <label>Plan ID<span>*</span>
-                  <input type="text" [value]="monetizationSubscriptionForm().planId" (input)="updateSubscriptionField('planId',$any($event.target).value)" required />
-                </label>
-                <div class="actions-row">
-                  <button type="submit" class="btn btn--primary" [disabled]="creatingSubscription()">{{ creatingSubscription() ? 'Criando...' : 'Criar Assinatura' }}</button>
+
+              <div class="available-plans" *ngIf="subscriptionPlans().length; else noPlans">
+                <h5>Planos Disponíveis</h5>
+                <div class="table-responsive">
+                  <table class="plans-table table" aria-label="Planos disponíveis">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Descrição</th>
+                        <th>Preço Original</th>
+                        <th>Preço Atual</th>
+                        <th style="width:120px; text-align:center">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let plan of subscriptionPlans()">
+                        <td class="plan-id mono">{{ plan.id || '—' }}</td>
+                        <td class="plan-name">{{ plan.name || '—' }}</td>
+                        <td class="plan-desc" [title]="plan.description || '—'">
+                          <div class="desc-text">{{ plan.description || '—' }}</div>
+                          <div class="desc-meta muted tiny">{{ plan.durationInDays }} dias • Desc: {{ discountPercent(plan) || '—' }}</div>
+                        </td>
+                        <td class="plan-original">{{ plan.originalPrice ? ('R$ ' + plan.originalPrice) : '—' }}</td>
+                        <td class="plan-current">{{ plan.currentPrice ? ('R$ ' + plan.currentPrice) : '—' }}</td>
+                        <td class="plan-actions" style="text-align:center">
+                          <button type="button" class="btn-ghost-small" aria-label="Atualizar plano {{ plan.name }}" (click)="$event.stopPropagation(); openEditPlan(plan)">Atualizar</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </form>
-              <div class="form-error" *ngIf="monetizationError() && !creatingSubscription()">{{ monetizationError() }}</div>
-              <div class="feedback" *ngIf="monetizationMessage() && !creatingSubscription()">{{ monetizationMessage() }}</div>
+              </div>
+              <ng-template #noPlans>
+                <div class="empty">Nenhum plano disponível no momento.</div>
+              </ng-template>
+
+              <!-- Modal: Criar Plano -->
+              <div class="overlay" *ngIf="showCreatePlan()" (click)="closeCreatePlan()"></div>
+              <div class="create-modal" *ngIf="showCreatePlan()" role="dialog" aria-modal="true" aria-labelledby="plan-modal-title" (click)="$event.stopPropagation()">
+                <h3 id="plan-modal-title">Novo Plano</h3>
+                <form (submit)="$event.preventDefault(); submitCreatePlan(); closeCreatePlan();">
+                  <label for="modal-plan-name">Nome <span aria-hidden="true">*</span>
+                    <input id="modal-plan-name" type="text" required [value]="monetizationPlanForm().name" (input)="updatePlanField('name',$any($event.target).value)" />
+                  </label>
+                  <label for="modal-plan-desc">Descrição (até 512)
+                    <textarea id="modal-plan-desc" rows="3" maxlength="512" [value]="monetizationPlanForm().description" (input)="updatePlanField('description',$any($event.target).value)"></textarea>
+                  </label>
+                  <div class="row two">
+                    <label for="modal-plan-original-price">Preço Original <span aria-hidden="true">*</span>
+                      <input id="modal-plan-original-price" name="originalPrice" type="text" inputmode="decimal" placeholder="Ex: 29.90" [value]="monetizationPlanForm().originalPrice" (input)="updatePlanField('originalPrice',$any($event.target).value)" required />
+                    </label>
+                    <label for="modal-plan-current-price">Preço Atual <span aria-hidden="true">*</span>
+                      <input id="modal-plan-current-price" name="currentPrice" type="text" inputmode="decimal" placeholder="Ex: 19.90" [value]="monetizationPlanForm().currentPrice" (input)="updatePlanField('currentPrice',$any($event.target).value)" required />
+                    </label>
+                  </div>
+                  <label for="modal-plan-duration">Duração (dias)
+                    <input id="modal-plan-duration" name="durationInDays" type="number" min="1" [value]="monetizationPlanForm().durationInDays" (input)="updatePlanField('durationInDays', $any($event.target).value)" />
+                  </label>
+                  <div class="actions-row modal-actions">
+                    <button type="button" class="btn btn--subtle" (click)="closeCreatePlan()">Cancelar</button>
+                    <button type="submit" class="btn btn--primary" [disabled]="creatingPlan()">{{ creatingPlan() ? 'Criando...' : 'Criar Plano' }}</button>
+                  </div>
+                </form>
+              </div>
+              <!-- Modal: Editar Plano -->
+              <div class="overlay" *ngIf="showEditPlan()" (click)="closeEditPlan()"></div>
+              <div class="create-modal" *ngIf="showEditPlan()" role="dialog" aria-modal="true" aria-labelledby="edit-plan-modal-title" (click)="$event.stopPropagation()">
+                <h3 id="edit-plan-modal-title">Editar Plano</h3>
+                <form (submit)="$event.preventDefault(); submitEditPlan();">
+                    <label for="edit-plan-name">Nome <span aria-hidden="true">*</span>
+                    <input id="edit-plan-name" type="text" required [value]="editingPlanForm().name" (input)="setEditingPlanField('name',$any($event.target).value)" />
+                  </label>
+                  <label for="edit-plan-desc">Descrição (até 512)
+                    <textarea id="edit-plan-desc" rows="3" maxlength="512" [value]="editingPlanForm().description" (input)="setEditingPlanField('description',$any($event.target).value)"></textarea>
+                  </label>
+                  <div class="row two">
+                    <label for="edit-plan-original-price">Preço Original <span aria-hidden="true">*</span>
+                      <input id="edit-plan-original-price" name="originalPrice" type="text" inputmode="decimal" placeholder="Ex: 29.90" [value]="editingPlanForm().originalPrice" (input)="setEditingPlanField('originalPrice',$any($event.target).value)" required />
+                    </label>
+                    <label for="edit-plan-current-price">Preço Atual <span aria-hidden="true">*</span>
+                      <input id="edit-plan-current-price" name="currentPrice" type="text" inputmode="decimal" placeholder="Ex: 19.90" [value]="editingPlanForm().currentPrice" (input)="setEditingPlanField('currentPrice',$any($event.target).value)" required />
+                    </label>
+                  </div>
+                  <label for="edit-plan-duration">Duração (dias)
+                    <input id="edit-plan-duration" name="durationInDays" type="number" min="1" [value]="editingPlanForm().durationInDays" (input)="setEditingPlanField('durationInDays',$any($event.target).value)" />
+                  </label>
+                  <label for="edit-plan-active">Ativo
+                    <input id="edit-plan-active" type="checkbox" [checked]="editingPlanForm().isActive" (change)="setEditingPlanField('isActive',$any($event.target).checked)" />
+                  </label>
+                  <div class="actions-row modal-actions">
+                    <button type="button" class="btn btn--subtle" (click)="closeEditPlan()">Cancelar</button>
+                    <button type="button" class="btn btn--primary" (click)="submitEditPlan()">Salvar Alterações</button>
+                  </div>
+                  <div class="form-error" *ngIf="monetizationError()">{{ monetizationError() }}</div>
+                </form>
+              </div>
             </div>
           </div>
+              <!-- Subsec: Assinaturas -->
+              <div class="admin-subcard" role="group" aria-labelledby="subscriptions-title">
+                <div class="admin-subcard-header">
+                  <div class="icon-wrap" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 4h10v2H4v-2zm0 4h16v4H4v-4z" fill="currentColor"/></svg>
+                  </div>
+                  <div class="titles">
+                    <h4 id="subscriptions-title">Assinaturas</h4>
+                    <p class="subtitle">Listagem e criação</p>
+                  </div>
+                </div>
+                <div class="admin-subcard-body">
+                  <div class="actions-row subcard-actions-top">
+                    <div>
+                      <button type="button" class="btn btn--primary" (click)="openCreateSubscription()">Incluir Assinatura</button>
+                    </div>
+                    <div class="muted tiny">Use os filtros abaixo para navegar entre assinaturas.</div>
+                  </div>
+
+                  <!-- Modal criação de assinatura -->
+                  <div class="overlay" *ngIf="showCreateSubscription()" (click)="closeCreateSubscription()"></div>
+                  <div class="create-modal subscription-modal" *ngIf="showCreateSubscription()" role="dialog" aria-modal="true" aria-labelledby="create-subscription-modal-title" (click)="$event.stopPropagation()">
+                    <h3 id="create-subscription-modal-title">Incluir Assinatura Manual</h3>
+                    <form (submit)="$event.preventDefault(); submitCreateSubscription();">
+                      <label for="modal-sub-user-id">Usuário <span aria-hidden="true">*</span>
+                        <select id="modal-sub-user-id" name="userId" required [value]="monetizationSubscriptionForm().userId" (change)="updateSubscriptionField('userId',$any($event.target).value)" aria-required="true">
+                          <option value="" disabled [selected]="!monetizationSubscriptionForm().userId">Selecione um usuário...</option>
+                          <option *ngFor="let u of users()" [value]="u.id">{{ u.email || u.id }}</option>
+                        </select>
+                      </label>
+                      <label for="modal-sub-plan-id">Plano <span aria-hidden="true">*</span>
+                        <select id="modal-sub-plan-id" name="planId" required [value]="monetizationSubscriptionForm().planId" (change)="updateSubscriptionField('planId',$any($event.target).value)" aria-required="true">
+                          <option value="" disabled [selected]="!monetizationSubscriptionForm().planId">Selecione um plano...</option>
+                          <option *ngFor="let p of subscriptionPlans()" [value]="p.id">{{ p.name || p.title || p.id }}</option>
+                        </select>
+                      </label>
+                      <div class="form-error" *ngIf="monetizationError() && !creatingSubscription()">{{ monetizationError() }}</div>
+                      <div class="actions-row modal-actions">
+                        <button type="button" class="btn btn--subtle" (click)="closeCreateSubscription()" [disabled]="creatingSubscription()">Cancelar</button>
+                        <button type="submit" class="btn btn--primary" [disabled]="creatingSubscription()">{{ creatingSubscription() ? 'Criando...' : 'Criar' }}</button>
+                      </div>
+                    </form>
+                  </div>
+
+                  <div class="actions-row subcard-actions-filters">
+                    <div class="quick-filters" role="toolbar" aria-label="Filtros de assinaturas">
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterOrigin()==='' && subscriptionFilterStatus()===''" (click)="subscriptionFilterOrigin.set(''); subscriptionFilterStatus.set(''); loadSubscriptions()">Todas</button>
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterOrigin()=='MANUAL' && subscriptionFilterStatus()===''" (click)="subscriptionFilterOrigin.set('MANUAL'); subscriptionFilterStatus.set(''); loadSubscriptions({ origin: 'MANUAL' })">Manuais</button>
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterOrigin()=='MANUAL' && subscriptionFilterStatus()=='ACTIVE'" (click)="subscriptionFilterOrigin.set('MANUAL'); subscriptionFilterStatus.set('ACTIVE'); loadSubscriptions({ origin: 'MANUAL', status: 'ACTIVE' })">Manuais Ativas</button>
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterOrigin()=='PAYMENT_GATEWAY' && subscriptionFilterStatus()===''" (click)="subscriptionFilterOrigin.set('PAYMENT_GATEWAY'); subscriptionFilterStatus.set(''); loadSubscriptions({ origin: 'PAYMENT_GATEWAY' })">Pagas</button>
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterOrigin()=='PAYMENT_GATEWAY' && subscriptionFilterStatus()=='ACTIVE'" (click)="subscriptionFilterOrigin.set('PAYMENT_GATEWAY'); subscriptionFilterStatus.set('ACTIVE'); loadSubscriptions({ origin: 'PAYMENT_GATEWAY', status: 'ACTIVE' })">Pagas Ativas</button>
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterStatus()=='EXPIRED'" (click)="subscriptionFilterOrigin.set(''); subscriptionFilterStatus.set('EXPIRED'); loadSubscriptions({ status: 'EXPIRED' })">Expiradas</button>
+                      <button type="button" class="btn-small" [class.active]="subscriptionFilterStatus()=='CANCELED'" (click)="subscriptionFilterOrigin.set(''); subscriptionFilterStatus.set('CANCELED'); loadSubscriptions({ status: 'CANCELED' })">Canceladas</button>
+                    </div>
+                    <div class="subcard-actions-right">
+                      <button type="button" class="btn btn--primary" (click)="loadSubscriptions({ origin: subscriptionFilterOrigin() || undefined, status: subscriptionFilterStatus() || undefined })">Atualizar</button>
+                    </div>
+                  </div>
+
+                  <div *ngIf="loadingSubscriptions()" class="loading">Carregando assinaturas...</div>
+                  <div *ngIf="subscriptionsError()" class="error">{{ subscriptionsError() }}</div>
+                  <table *ngIf="!loadingSubscriptions() && !subscriptionsError()" class="table responsive" aria-label="Lista de Assinaturas">
+                    <thead>
+                      <tr>
+                          <th>ID</th>
+                          <th>Nome</th>
+                          <th>Usuário</th>
+                          <th>Status</th>
+                          <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let s of subscriptions()">
+                        <td data-label="ID" class="mono">{{ s.id || '—' }}</td>
+                        <td data-label="Nome">{{ getSubscriptionUserName(s) }}</td>
+                        <td data-label="Usuário">{{ getSubscriptionUserLabel(s) }}</td>
+                        <td data-label="Status">
+                          <span class="badge" [class.badge-active]="(s.status||'').toUpperCase()==='ACTIVE'" [class.badge-inactive]="(s.status||'').toUpperCase()!=='ACTIVE'">{{ s.status || '—' }}</span>
+                        </td>
+                        <td data-label="Ações" class="actions-col">
+                          <div class="actions-col-inner" style="display:flex; gap:.5rem;">
+                            <button type="button" class="btn-ghost-small" (click)="$event.stopPropagation(); openSubscriptionDetails(s)">Detalhes</button>
+                            <button *ngIf="((s.status||'') | uppercase) !== 'CANCELED'" type="button" class="btn-ghost-small btn-danger" (click)="$event.stopPropagation(); cancelSubscriptionAction(s)" [disabled]="cancelingSubscriptionId()===s.id">
+                              <span *ngIf="cancelingSubscriptionId()===s.id">Cancelando...</span>
+                              <span *ngIf="cancelingSubscriptionId()!==s.id">Cancelar</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr *ngIf="!subscriptions().length"><td colspan="9" class="empty">Nenhuma assinatura encontrada.</td></tr>
+                    </tbody>
+                  </table>
+                  <!-- Subscription Details Modal -->
+                  <div class="overlay" *ngIf="showSubscriptionDetails()" (click)="closeSubscriptionDetails()"></div>
+                  <div class="create-modal small" *ngIf="showSubscriptionDetails()" role="dialog" aria-modal="true" aria-labelledby="subscription-details-title" (click)="$event.stopPropagation()">
+                    <h3 id="subscription-details-title">Detalhes da Assinatura</h3>
+                    <div *ngIf="selectedSubscription() as sub">
+                      <div class="kv">
+                        <div><span>Plano:</span><strong>{{ getSubscriptionPlanLabel(sub) }}</strong></div>
+                        <div><span>Origem:</span><strong>{{ getSubscriptionOriginLabel(sub) }}</strong></div>
+                        <div><span>Início:</span><strong>{{ sub.startedAt ? (sub.startedAt | date:'dd/MM/yyyy') : (sub.startDate ? (sub.startDate | date:'dd/MM/yyyy') : '—') }}</strong></div>
+                        <div><span>Fim:</span><strong>{{ sub.expiresAt ? (sub.expiresAt | date:'dd/MM/yyyy') : (sub.endDate ? (sub.endDate | date:'dd/MM/yyyy') : '—') }}</strong></div>
+                      </div>
+                      <div class="actions-row modal-actions">
+                        <button type="button" class="btn btn--subtle" (click)="closeSubscriptionDetails()">Fechar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
           <!-- Subsec: Cupons (Mock) -->
-          <div class="admin-subcard">
+          <div class="admin-subcard" role="group" aria-labelledby="coupons-title">
             <div class="admin-subcard-header">
               <div class="icon-wrap" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4V4Zm0 10h6v6H4v-6Zm10-10h6v6h-6V4Zm0 10h6v6h-6v-6Z" fill="currentColor"/></svg>
               </div>
               <div class="titles">
-                <h4>Gestão de Cupons</h4>
+                <h4 id="coupons-title">Gestão de Cupons</h4>
                 <p class="subtitle">(Mock)</p>
               </div>
             </div>
             <div class="admin-subcard-body placeholder muted tiny">Em breve: CRUD de cupons, tipos (percentual / valor fixo), limites de uso e expiração.</div>
           </div>
           <!-- Subsec: Logs de Transações (Mock) -->
-          <div class="admin-subcard">
+          <div class="admin-subcard" role="group" aria-labelledby="tx-logs-title">
             <div class="admin-subcard-header">
               <div class="icon-wrap" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M5 4h14v2H5V4Zm0 4h10v2H5V8Zm0 4h14v2H5v-2Zm0 4h10v2H5v-2Z" fill="currentColor"/></svg>
               </div>
               <div class="titles">
-                <h4>Logs de Transações</h4>
+                <h4 id="tx-logs-title">Logs de Transações</h4>
                 <p class="subtitle">(Mock)</p>
               </div>
             </div>
@@ -543,26 +710,26 @@
             </div>
           </div>
           <!-- Subsec: Faturas (Mock) -->
-          <div class="admin-subcard">
+          <div class="admin-subcard" role="group" aria-labelledby="invoices-title">
             <div class="admin-subcard-header">
               <div class="icon-wrap" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2Zm0 2v16h12V9h-5V4H6Zm2 4h5v2H8V8Zm0 4h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
               </div>
               <div class="titles">
-                <h4>Faturas (Invoices)</h4>
+                <h4 id="invoices-title">Faturas (Invoices)</h4>
                 <p class="subtitle">(Mock)</p>
               </div>
             </div>
             <div class="admin-subcard-body placeholder muted tiny">Em breve: listagem de faturas, reenvio de segunda via e status de pagamento.</div>
           </div>
           <!-- Subsec: Métricas de Faturamento (Mock) -->
-          <div class="admin-subcard">
+          <div class="admin-subcard" role="group" aria-labelledby="metrics-title">
             <div class="admin-subcard-header">
               <div class="icon-wrap" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4 4h2v16H4V4Zm7 6h2v10h-2V10Zm7-4h2v14h-2V6Z" fill="currentColor"/></svg>
               </div>
               <div class="titles">
-                <h4>Métricas de Faturamento</h4>
+                <h4 id="metrics-title">Métricas de Faturamento</h4>
                 <p class="subtitle">(Mock)</p>
               </div>
             </div>

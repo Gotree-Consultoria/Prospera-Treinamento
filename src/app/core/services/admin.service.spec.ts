@@ -73,7 +73,8 @@ describe('AdminService', () => {
 
   it('should build ebook url with base path', () => {
     const url = service.buildEbookFileUrl('ebook.pdf');
-    expect(url).toContain('/admin/ebooks/ebook.pdf');
+    // URL should include the encoded filename and be an absolute URL
+    expect(url).toContain(encodeURIComponent('ebook.pdf'));
     expect(url?.startsWith('http')).toBeTrue();
   });
 

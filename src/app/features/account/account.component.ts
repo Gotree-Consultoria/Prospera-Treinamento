@@ -54,7 +54,7 @@ export class AccountComponent implements OnInit {
     { id: 'dados', label: 'Dados cadastrais' },
     { id: 'payments', label: 'Pagamentos' },
     { id: 'password', label: 'Trocar senha' },
-    { id: 'company', label: 'Gestão de empresas', requiresCompanyAdmin: true }
+    // 'company' tab removed from profile per request; company management remains available via the sidebar menu
   ];
 
   readonly profileForm = this.fb.nonNullable.group({

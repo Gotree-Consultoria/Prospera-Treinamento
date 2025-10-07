@@ -20,18 +20,67 @@ export class PlansComponent implements OnInit {
   errorMessage = '';
 
   ngOnInit(): void {
-    this.catalogService.loadCatalog().subscribe({
+    this.loadPlansPreferential();
+  }
+
+  retryLoadPlans() {
+    this.isLoading = true;
+    this.errorMessage = '';
+    // Tentar somente o endpoint /plans — sem fallback para catálogo público
+    this.catalogService.loadPlansEndpoint().subscribe({
       next: (items: CatalogItem[]) => {
-        const plansOnly = items.filter(i => i.format === 'PACKAGE');
-        this.plans = plansOnly.map((i: CatalogItem) => this.toPlan(i));
-        this.isLoading = false;
-        if (!plansOnly.length) {
-          this.errorMessage = 'Nenhum plano disponível no momento.';
+        if (items && items.length) {
+          this.plans = items.map(i => this.toPlan(i));
+          this.isLoading = false;
+        } else {
+          this.plans = [];
+          this.isLoading = false;
+          this.errorMessage = 'Nenhum plano retornado por /plans.';
         }
       },
-      error: (error: any) => {
-        this.errorMessage = error?.message ?? 'Não foi possível carregar os planos agora.';
+      error: (err: any) => {
         this.isLoading = false;
+        this.errorMessage = err?.message ?? 'Falha ao carregar planos via /plans.';
+      }
+    });
+  }
+
+  private loadPlansPreferential() {
+    this.catalogService.loadPlansEndpoint().subscribe({
+      next: (items: CatalogItem[]) => {
+        if (items && items.length) {
+          this.plans = items.map(i => this.toPlan(i));
+          this.isLoading = false;
+          return;
+        }
+        // fallback para catálogo público
+        this.catalogService.loadCatalog().subscribe({
+          next: (all: CatalogItem[]) => {
+            const packages = (all || []).filter(i => i.format === 'PACKAGE');
+            this.plans = packages.map(i => this.toPlan(i));
+            this.isLoading = false;
+            if (!this.plans.length) this.errorMessage = 'Nenhum plano disponível no momento.';
+          },
+          error: (err: any) => {
+            this.errorMessage = err?.message ?? 'Não foi possível carregar os planos agora.';
+            this.isLoading = false;
+          }
+        });
+      },
+      error: (err: any) => {
+        // fallback direto em caso de erro
+        this.catalogService.loadCatalog().subscribe({
+          next: (all: CatalogItem[]) => {
+            const packages = (all || []).filter(i => i.format === 'PACKAGE');
+            this.plans = packages.map(i => this.toPlan(i));
+            this.isLoading = false;
+            if (!this.plans.length) this.errorMessage = 'Nenhum plano disponível no momento.';
+          },
+          error: (err2: any) => {
+            this.errorMessage = err2?.message ?? 'Não foi possível carregar os planos agora.';
+            this.isLoading = false;
+          }
+        });
       }
     });
   }

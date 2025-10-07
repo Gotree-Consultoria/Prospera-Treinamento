@@ -21,7 +21,7 @@ interface HeroContent {
   primaryCta: HeroCTA;
   secondaryCta?: HeroCTA;
 }
-type TrainingIconType = 'ebooks' | 'courses' | 'live';
+type TrainingIconType = 'courses' | 'live';
 interface TrainingFormat {
   iconType: TrainingIconType;
   title: string;
@@ -68,7 +68,7 @@ export class HomeComponent implements OnDestroy, AfterViewInit {
     secondaryCta: { label: 'Ver Apenas Treinamentos', link: '/planos' }
   };
   readonly trainingFormats: TrainingFormat[] = [
-    { iconType: 'ebooks', title: 'E-books', description: 'Guias objetivos e rápidos para consulta e implementação imediata.', link: '/ebooks', cta: 'Ver E-books' },
+  // E-books removed from catalog
     { iconType: 'courses', title: 'Cursos Gravados', description: 'Conteúdos estruturados sob demanda para evolução progressiva.', link: '/catalog', cta: 'Ver Cursos' },
     { iconType: 'live', title: 'Treinamentos Ao Vivo', description: 'Interação direta, dúvidas em tempo real e foco aplicado ao contexto.', link: '/catalog', cta: 'Próximas Sessões' }
   ];

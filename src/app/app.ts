@@ -65,7 +65,7 @@ export class App {
       links: [
         { label: 'Como funciona', route: '/sobre' },
   { label: 'Catálogo de treinamentos', route: '/catalog' },
-        { label: 'E-books e materiais', route: '/ebooks' }
+  // E-books removed from footer per request
       ]
     },
     {

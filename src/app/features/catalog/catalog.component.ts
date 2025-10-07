@@ -113,6 +113,12 @@ export class CatalogComponent implements OnInit {
     this.selectedItem = null;
   }
 
+  sectorName(id: string): string {
+    if (!id) return id;
+    const found = this.sectors.find(s => s.id === id);
+    return found?.name ?? id;
+  }
+
   @HostListener('document:keydown.escape')
   onEscape() {
     if (this.selectedItem) {

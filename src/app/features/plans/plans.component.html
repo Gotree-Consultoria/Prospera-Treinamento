@@ -6,8 +6,8 @@
     </div>
 
     <div class="error" *ngIf="!isLoading && errorMessage">
-      <p>{{ errorMessage }}</p>
-      <button class="btn btn-secondary" (click)="ngOnInit()">Tentar novamente</button>
+  <p>{{ errorMessage }}</p>
+  <button class="btn btn-secondary" (click)="retryLoadPlans()">Tentar novamente</button>
     </div>
 
     <div class="grid" *ngIf="!isLoading && !errorMessage">

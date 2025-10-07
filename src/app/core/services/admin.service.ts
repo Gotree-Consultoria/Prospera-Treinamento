@@ -96,8 +96,13 @@ export class AdminService {
   }
 
   createTraining(payload: AdminTrainingPayload): Observable<AdminTraining> {
+    // normaliza entityType defensivamente antes de enviar
+    const body = { ...payload } as any;
+    if (body.entityType !== undefined && body.entityType !== null) {
+      body.entityType = this.normalizeEntityType(String(body.entityType));
+    }
     return this.api
-      .post<AdminTraining>('/admin/trainings', payload)
+      .post<AdminTraining>('/admin/trainings', body)
       .pipe(map(this.normalizeTraining));
   }
 
@@ -108,9 +113,27 @@ export class AdminService {
   }
 
   updateTraining(id: string, changes: AdminTrainingUpdatePayload): Observable<AdminTraining> {
+    const body = { ...changes } as any;
+    if (body.entityType !== undefined && body.entityType !== null) {
+      body.entityType = this.normalizeEntityType(String(body.entityType));
+    }
     return this.api
-      .put<AdminTraining>(`/admin/trainings/${encodeURIComponent(id)}`, changes)
+      .put<AdminTraining>(`/admin/trainings/${encodeURIComponent(id)}`, body)
       .pipe(map(this.normalizeTraining));
+  }
+
+  /**
+   * Normaliza variantes conhecidas de entityType para os enums aceitos pelo backend.
+   * Evita enviar valores legados como 'COURSE' que causam InvalidDataAccessApiUsageException.
+   */
+  private normalizeEntityType(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const v = String(value).trim().toUpperCase();
+    if (!v) return null;
+    if (v === 'COURSE' || v === 'RECORDED' || v === 'RECORDED_COURSE' || v.includes('RECOR')) return 'RECORDED_COURSE';
+    if (v === 'LIVE_COURSE' || v === 'LIVE_TRAINING' || v.includes('LIVE') || v.includes('AO_VIVO')) return 'LIVE_TRAINING';
+    if (v === 'EBOOK' || v.includes('EBOOK')) return 'EBOOK';
+    return v;
   }
 
   publishTraining(id: string): Observable<void> {
@@ -131,6 +154,24 @@ export class AdminService {
     return this.api
       .delete<void>(`/admin/trainings/${encodeURIComponent(trainingId)}/sectors/${encodeURIComponent(sectorId)}`)
       .pipe(map(() => void 0));
+  }
+
+  /**
+   * Cria um módulo para um curso gravado (RECORDED_COURSE).
+   * POST /admin/courses/{trainingId}/modules
+   */
+  createCourseModule(trainingId: string, payload: { title: string; moduleOrder?: number }): Observable<any> {
+    const body = { title: (payload.title || '').trim(), moduleOrder: Number(payload.moduleOrder) || 0 };
+    return this.api.post<any>(`/admin/trainings/courses/${encodeURIComponent(trainingId)}/modules`, body).pipe(map(resp => resp as any));
+  }
+
+  /**
+   * Cria uma aula (lesson) dentro de um módulo.
+   * POST /admin/modules/{moduleId}/lessons
+   */
+  createModuleLesson(moduleId: string, payload: { title: string; content?: string; lessonOrder?: number }): Observable<any> {
+    const body = { title: (payload.title || '').trim(), content: payload.content ?? undefined, lessonOrder: Number(payload.lessonOrder) || 0 };
+    return this.api.post<any>(`/admin/trainings/modules/${encodeURIComponent(moduleId)}/lessons`, body).pipe(map(resp => resp as any));
   }
 
   orgUnfollowSector(orgId: string, sectorId: string): Observable<void> {
@@ -201,6 +242,40 @@ export class AdminService {
         return throwError(() => error);
       })
     );
+  }
+
+  // --- Monetization: subscription plans (public/internal)
+  getSubscriptionPlans(): Observable<any[]> {
+    // endpoint correto: /subscriptions/plans (aceita autenticação ou acesso público)
+    return this.api.get<unknown>('/subscriptions/plans').pipe(
+      map(resp => this.unwrapList<any>(resp))
+    );
+  }
+
+  /**
+   * Lista assinaturas com suporte a filtros opcionais.
+   * Exemplos:
+   *  - GET /admin/subscriptions
+   *  - GET /admin/subscriptions?origin=MANUAL&status=ACTIVE
+   *  - GET /admin/subscriptions?status=EXPIRED
+   */
+  getSubscriptions(filters?: { origin?: string; status?: string }): Observable<any[]> {
+    const params: string[] = [];
+    if (filters?.origin) params.push(`origin=${encodeURIComponent(String(filters.origin))}`);
+    if (filters?.status) params.push(`status=${encodeURIComponent(String(filters.status))}`);
+    const path = params.length ? `/admin/subscriptions?${params.join('&')}` : '/admin/subscriptions';
+    return this.api.get<unknown>(path).pipe(
+      map(resp => this.unwrapList<any>(resp))
+    );
+  }
+
+  /**
+   * Cancela uma assinatura administrativa.
+   * POST /admin/subscriptions/{subscriptionId}/cancel
+   */
+  cancelSubscription(subscriptionId: string): Observable<any> {
+    if (!subscriptionId) return of(null);
+    return this.api.post<any>(`/admin/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {}).pipe(map(resp => resp));
   }
 
   updateEbookProgress(trainingId: string, lastPageRead: number): Observable<void> {
@@ -409,11 +484,33 @@ export class AdminService {
       title: String((source as any).title ?? (source as any).name ?? 'Treinamento'),
       description: (source as any).description ?? null,
       author: (source as any).author ?? null,
-      entityType: ((source as any).entityType ?? (source as any).format ?? (source as any).type) ?? null,
+      entityType: this.normalizeEntityType(((source as any).entityType ?? (source as any).format ?? (source as any).type) ?? null),
       publicationStatus: (source as any).publicationStatus ?? (source as any).status ?? null,
       coverImageUrl: (source as any).coverImageUrl ?? (source as any).imageUrl ?? null,
       organizationId: (source as any).organizationId ?? null,
-      updatedAt: (source as any).updatedAt ?? null
+      updatedAt: (source as any).updatedAt ?? null,
+      // normalize modules: accept different shapes from backend
+      modules: ((): any[] => {
+        const m = (source as any).modules ?? (source as any).courseModules ?? (source as any).sections ?? (source as any).courseDetails?.modules ?? null;
+        if (!m) return [];
+        if (!Array.isArray(m)) return [];
+        return m.map((mod: any) => ({
+          id: String(mod.id ?? mod.moduleId ?? mod._id ?? ''),
+          title: mod.title ?? mod.name ?? 'Módulo',
+          moduleOrder: mod.moduleOrder ?? mod.order ?? null,
+          lessons: ((): any[] => {
+            const ls = mod.lessons ?? mod.items ?? mod.talks ?? null;
+            if (!ls) return [];
+            if (!Array.isArray(ls)) return [];
+            return ls.map((l: any) => ({
+              id: String(l.id ?? l.lessonId ?? l._id ?? ''),
+              title: l.title ?? l.name ?? 'Aula',
+              content: l.content ?? l.url ?? null,
+              lessonOrder: l.lessonOrder ?? l.order ?? null
+            }));
+          })()
+        }));
+      })()
     } as AdminTraining;
   };
 
@@ -433,6 +530,29 @@ export class AdminService {
       durationInDays: Number(payload.durationInDays) || 0
     };
     return this.api.post<any>('/admin/plans', body);
+  }
+
+  /**
+   * Atualiza um plano existente via PUT /admin/plans/{planId}
+   * Aceita partial payloads; sanitiza nome/descrição e repassa preços como fornecidos.
+   */
+  updatePlan(planId: string, payload: {
+    name?: string;
+    description?: string;
+    originalPrice?: any;
+    currentPrice?: any;
+    durationInDays?: number;
+    isActive?: boolean;
+  }): Observable<any> {
+    const body: Record<string, unknown> = {};
+  if (payload['name'] !== undefined) body['name'] = String(payload['name']).trim();
+  if (payload['description'] !== undefined) body['description'] = String(payload['description']).trim().slice(0, 512);
+  if (payload['originalPrice'] !== undefined) body['originalPrice'] = payload['originalPrice'];
+  if (payload['currentPrice'] !== undefined) body['currentPrice'] = payload['currentPrice'];
+  if (payload['durationInDays'] !== undefined) body['durationInDays'] = Number(payload['durationInDays']) || 0;
+  if (payload['isActive'] !== undefined) body['isActive'] = !!payload['isActive'];
+
+    return this.api.put<any>(`/admin/plans/${encodeURIComponent(planId)}`, body);
   }
 
   /**
