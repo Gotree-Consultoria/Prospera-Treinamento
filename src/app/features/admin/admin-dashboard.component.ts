@@ -108,8 +108,10 @@ export class AdminDashboardComponent {
   error = signal<{[key:string]: string | null}>({});
   activeCard = signal<string | null>(null);
   // --- Monetização (Planos & Assinaturas) ---
-  monetizationPlanForm = signal<{name:string; description:string; originalPrice:string; currentPrice:string; durationInDays:number}>({ name:'', description:'', originalPrice:'', currentPrice:'', durationInDays:30 });
+  monetizationPlanForm = signal<{name:string; description:string; originalPrice:string; currentPrice:string; durationInDays:number; type?: string}>({ name:'', description:'', originalPrice:'', currentPrice:'', durationInDays:30, type: 'INDIVIDUAL' });
   monetizationSubscriptionForm = signal<{userId:string; planId:string}>({ userId:'', planId:'' });
+  // tipo do modal de criação de assinatura: 'PERSONAL' | 'ORGANIZATION'
+  subscriptionType = signal<'PERSONAL'|'ORGANIZATION'>('PERSONAL');
   creatingPlan = signal<boolean>(false);
   creatingSubscription = signal<boolean>(false);
   monetizationMessage = signal<string | null>(null);
@@ -125,13 +127,23 @@ export class AdminDashboardComponent {
   // edit flow signals
   editingPlanId = signal<string | null>(null);
   showEditPlan = signal<boolean>(false);
-  editingPlanForm = signal<{name:string; description:string; originalPrice:string; currentPrice:string; durationInDays:number; isActive?:boolean}>({ name:'', description:'', originalPrice:'', currentPrice:'', durationInDays:30, isActive: true });
+  editingPlanForm = signal<{name:string; description:string; originalPrice:string; currentPrice:string; durationInDays:number; isActive?:boolean; type?: string}>({ name:'', description:'', originalPrice:'', currentPrice:'', durationInDays:30, isActive: true, type: 'INDIVIDUAL' });
   // simples memória local de planos criados nesta sessão (até termos GET /admin/plans)
   createdPlans = signal<any[]>([]);
   // aba selecionada na listagem de planos criados
   selectedCreatedPlanIndex = signal<number>(0);
   // planos disponíveis vindos do endpoint (GET /subscription/plans)
   subscriptionPlans = signal<any[]>([]);
+  // planos filtrados conforme tipo selecionado no modal
+  filteredSubscriptionPlans = computed(() => {
+    const type = this.subscriptionType();
+    const list = this.subscriptionPlans() || [];
+    if (!type) return list;
+    if (type === 'PERSONAL') {
+      return list.filter(p => (String(p?.type || p?.format || '').toUpperCase() === 'INDIVIDUAL') || (p?.isIndividual === true));
+    }
+    return list.filter(p => (String(p?.type || p?.format || '').toUpperCase() === 'ENTERPRISE') || (p?.isEnterprise === true));
+  });
   // modal control para criação de planos
   showCreatePlan = signal<boolean>(false);
   // modal control for creating manual subscription
@@ -151,10 +163,11 @@ export class AdminDashboardComponent {
     this.admin.createPlan({
       name: form.name.trim(),
       description: form.description.trim(),
-      originalPrice: form.originalPrice.trim(),
-      currentPrice: form.currentPrice.trim(),
-      durationInDays: form.durationInDays||0
-    }).subscribe({
+      originalPrice: Number(String(form.originalPrice).replace(',', '.')) || 0,
+      currentPrice: Number(String(form.currentPrice).replace(',', '.')) || 0,
+      durationInDays: form.durationInDays||0,
+      type: form.type ? String(form.type).trim().toUpperCase() : undefined
+    } as any).subscribe({
       next: created => {
         this.monetizationMessage.set('Plano criado com sucesso.');
         this.createdPlans.update(list => [created, ...list]);
@@ -169,65 +182,58 @@ export class AdminDashboardComponent {
   }
   submitCreateSubscription() {
     const form = this.monetizationSubscriptionForm();
-    if (!form.userId.trim() || !form.planId.trim()) { this.monetizationError.set('User ID e Plan ID são obrigatórios para criar assinatura.'); return; }
+    const type = this.subscriptionType();
+    // basic validation conforme tipo
+    if (type === 'PERSONAL') {
+      if (!form.userId.trim() || !form.planId.trim()) { this.monetizationError.set('User ID e Plan ID são obrigatórios para criar assinatura pessoal.'); return; }
+    } else {
+      if (!this.selectedOrgId() || !form.planId.trim()) { this.monetizationError.set('Conta Cliente e Plan ID são obrigatórios para criar assinatura para empresa.'); return; }
+    }
     this.creatingSubscription.set(true); this.monetizationError.set(null); this.monetizationMessage.set(null);
-    this.admin.createSubscription({ userId: form.userId.trim(), planId: form.planId.trim() }).subscribe({
-      next: created => {
-        this.monetizationMessage.set('Assinatura criada manualmente.');
-        this.monetizationSubscriptionForm.set({ userId:'', planId:'' });
-        // fechar modal ao criar com sucesso
-        this.showCreateSubscription.set(false);
-      },
-      error: err => {
-        // tenta extrair mensagem mais detalhada do payload do servidor
-        const serverMsg = err?.error?.message || err?.error || err?.message || '';
-        const text = String(serverMsg || '').trim();
-        const lower = text.toLowerCase();
 
-        // Mensagens específicas de negócio (mapeadas pelo backend)
-        if (text && (text.includes('não está mais ativo') || lower.includes('não está mais ativo') || lower.includes('not active'))) {
-          // Ex: "O plano X não está mais ativo."
-          this.monetizationError.set(text);
-          this.creatingSubscription.set(false);
-          return;
-        }
+    if (type === 'PERSONAL') {
+      this.admin.createPersonalSubscription({ userId: form.userId.trim(), planId: form.planId.trim() }).subscribe({
+        next: created => this.onCreateSubscriptionSuccess(),
+        error: err => this.handleCreateSubscriptionError(err),
+        complete: () => this.creatingSubscription.set(false)
+      });
+      return;
+    }
 
-        if (text && (text.includes('Membros de uma organização ativa') || lower.includes('membros de uma organização ativa') || lower.includes('members of an active organization'))) {
-          this.monetizationError.set(text);
-          this.creatingSubscription.set(false);
-          return;
-        }
-
-        if (text && (text.includes('já possui uma assinatura ativa') || lower.includes('já possui uma assinatura ativa') || lower.includes('already has an active subscription') || lower.includes('already has a subscription'))) {
-          this.monetizationError.set(text);
-          this.creatingSubscription.set(false);
-          return;
-        }
-
-        // Fallbacks por status HTTP (quando o backend não envia mensagem textual)
-        if (err && err.status === 409) {
-          this.monetizationError.set('O usuário já possui uma assinatura ativa.');
-          this.creatingSubscription.set(false);
-          return;
-        }
-
-        // mensagem genérica final
-        this.monetizationError.set(text || 'Falha ao criar assinatura');
-        this.creatingSubscription.set(false);
-      },
+    // ORGANIZATION
+    this.admin.createOrganizationSubscription(this.selectedOrgId() || '', { planId: form.planId.trim() }).subscribe({
+      next: created => this.onCreateSubscriptionSuccess(),
+      error: err => this.handleCreateSubscriptionError(err),
       complete: () => this.creatingSubscription.set(false)
     });
+  }
+
+  private onCreateSubscriptionSuccess() {
+    this.monetizationMessage.set('Assinatura criada manualmente.');
+    this.monetizationSubscriptionForm.set({ userId:'', planId:'' });
+    this.showCreateSubscription.set(false);
+  }
+
+  private handleCreateSubscriptionError(err: any) {
+    const serverMsg = err?.error?.message || err?.error || err?.message || '';
+    const text = String(serverMsg || '').trim();
+    this.monetizationError.set(text || 'Falha ao criar assinatura');
+    this.creatingSubscription.set(false);
   }
 
   openCreateSubscription() {
     this.monetizationSubscriptionForm.set({ userId: '', planId: '' });
     this.monetizationError.set(null);
+    // reset para default PESSOAL
+    this.subscriptionType.set('PERSONAL');
     // ensure we have users and plans for the selects
     if (this.users().length === 0 || this.subscriptionPlans().length === 0) {
       this.loadingSubscriptionDropdowns.set(true);
       const calls: Array<import('rxjs').Observable<any>> = [];
-      if (this.users().length === 0) calls.push(this.admin.getUsers());
-      if (this.subscriptionPlans().length === 0) calls.push(this.admin.getSubscriptionPlans());
+  if (this.users().length === 0) calls.push(this.admin.getUsers());
+  if (this.subscriptionPlans().length === 0) calls.push(this.admin.getSubscriptionPlans());
+  // se abrirmos o modal e quisermos criar para ORGANIZATION, podemos precisar de organizations
+  if (this.organizations().length === 0) calls.push(this.admin.getOrganizations());
       // perform requests sequentially to keep logic simple
       const sub = calls.length ? calls[0].subscribe({ next: r0 => {
           if (Array.isArray(r0)) this.users.set(r0);
@@ -284,11 +290,12 @@ export class AdminDashboardComponent {
     this.admin.updatePlan(id, {
       name: String(form.name ?? '').trim(),
       description: String(form.description ?? '').trim(),
-      originalPrice: String(form.originalPrice ?? '').trim(),
-      currentPrice: String(form.currentPrice ?? '').trim(),
+      originalPrice: Number(String(form.originalPrice ?? '').replace(',', '.')) || 0,
+      currentPrice: Number(String(form.currentPrice ?? '').replace(',', '.')) || 0,
       durationInDays: Number(form.durationInDays) || 0,
-      isActive: !!form.isActive
-    }).subscribe({
+      isActive: !!form.isActive,
+      type: form.type ? String(form.type).trim().toUpperCase() : undefined
+    } as any).subscribe({
       next: updated => {
         // update local list if present
         this.subscriptionPlans.update(list => list.map(p => p && String(p.id) === String(id) ? ({ ...p, ...updated }) : p));

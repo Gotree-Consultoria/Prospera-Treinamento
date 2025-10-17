@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { catchError, defaultIfEmpty, filter, forkJoin, from, map, of, switchMap, take } from 'rxjs';
+import { catchError, defaultIfEmpty, filter, forkJoin, from, map, of, switchMap, take, tap } from 'rxjs';
 
 import { ApiService } from './api.service';
 
@@ -83,8 +83,9 @@ export class CatalogService {
    * Busca catálogo completo resumido (todos os formatos) sem filtro de tipo.
    */
   private fetchPublicCatalogAll() {
-    return this.api.get<any>('/public/catalog').pipe(
-      map(data => {
+  return this.api.get<any>('/public/catalog').pipe(
+    tap(data => console.debug('[CatalogService] GET /public/catalog =>', data)),
+    map(data => {
         const list = Array.isArray(data)
           ? data
           : Array.isArray(data?.items)
@@ -95,7 +96,7 @@ export class CatalogService {
         return list.map((item: any) =>
           this.toCatalogItem(
             item,
-            this.normalizeFormat(item?.format ?? item?.type ?? item?.trainingType) ?? 'EBOOK',
+            this.normalizeFormat(item?.format ?? item?.type ?? item?.trainingType ?? item?.entityType) ?? 'EBOOK',
             item.coverImageUrl ?? item.imageUrl ?? null
           )
         );
@@ -104,10 +105,12 @@ export class CatalogService {
   }
 
   /**
-   * Busca planos diretamente do endpoint /subscriptions/plans (quando disponível) e mapeia para CatalogItem[]
+   * Busca possíveis planos/pacotes dentro do catálogo público.
+   * Usa /public/catalog e filtra por formato PACKAGE (ou por heurística quando necessário).
    */
   loadPlansEndpoint() {
-    return this.api.get<any>('/subscriptions/plans').pipe(
+    return this.api.get<any>('/public/catalog/plans').pipe(
+      tap(data => console.debug('[CatalogService] GET /public/catalog/plans =>', data)),
       map(data => {
         const list = Array.isArray(data)
           ? data
@@ -116,10 +119,23 @@ export class CatalogService {
           : Array.isArray(data?.data)
           ? data.data
           : [];
-        return list.map((item: any) => this.toCatalogItem(item, 'PACKAGE', item.coverImageUrl ?? item.imageUrl ?? null));
+        // filtra itens que parecem pacotes/plano (formato PACKAGE ou type/package)
+        const filtered = list.filter((item: any) => {
+          const t = (item?.format ?? item?.type ?? '').toString().toUpperCase();
+          const hasPrice = (typeof item?.originalPrice === 'number') || (typeof item?.currentPrice === 'number');
+          const hasDuration = typeof item?.durationInDays === 'number' || typeof item?.duration === 'number';
+          // aceitável: PACKAGE/PLAN/SUBSCRIPTION, flags isPackage, tipos ENTERPRISE/INDIVIDUAL,
+          // ou qualquer item que tenha preços e duração (provável plano)
+          return (
+            t === 'PACKAGE' || t === 'PLAN' || t === 'SUBSCRIPTION' || t === 'PACKAGE' ||
+            t === 'ENTERPRISE' || t === 'INDIVIDUAL' || (item?.isPackage === true) ||
+            (hasPrice && hasDuration)
+          );
+        });
+        return filtered.map((item: any) => this.toCatalogItem(item, 'PACKAGE', item.coverImageUrl ?? item.imageUrl ?? null));
       }),
       catchError(err => {
-        console.warn('[CatalogService] falha em /subscriptions/plans', err);
+        console.warn('[CatalogService] falha em /public/catalog/plans (plans fallback)', err);
         return of([] as CatalogItem[]);
       })
     );

@@ -37,7 +37,7 @@ import { AuthService } from '../../core/services/auth.service';
       <section class="card meta-card">
         <div class="cover-meta">
           <figure class="cover" *ngIf="t.coverImageUrl as cover">
-            <img [src]="cover" alt="Capa" (error)="coverBroken.set(true)" *ngIf="!coverBroken()" />
+            <img [src]="cover" alt="Capa" title="Capa" (error)="coverBroken.set(true)" *ngIf="!coverBroken()" />
             <div class="cover-fallback" *ngIf="coverBroken()">Sem capa</div>
             <figcaption *ngIf="trainingHasPdf(t)" class="pdf-flag">PDF</figcaption>
           </figure>

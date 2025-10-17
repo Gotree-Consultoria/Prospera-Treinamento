@@ -78,8 +78,8 @@
           <img
             *ngIf="item.coverImageUrl"
             [src]="item.coverImageUrl"
-            [attr.alt]="item.title"
-            [title]="item.title"
+            alt="{{ item.title || 'Capa do conteúdo' }}"
+            title="{{ item.title || 'Capa do conteúdo' }}"
             loading="lazy"
           />
         </div>
@@ -115,12 +115,12 @@
       ×
     </button>
 
-    <div class="catalog-details-cover" [ngClass]="{ 'no-cover': !detail.coverImageUrl }">
+      <div class="catalog-details-cover" [ngClass]="{ 'no-cover': !detail.coverImageUrl }">
       <img
         *ngIf="detail.coverImageUrl"
         [src]="detail.coverImageUrl"
-        [attr.alt]="detail.title"
-        [title]="detail.title"
+        alt="{{ detail.title || 'Capa do conteúdo' }}"
+        title="{{ detail.title || 'Capa do conteúdo' }}"
         loading="lazy"
       />
     </div>

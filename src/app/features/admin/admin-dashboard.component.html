@@ -525,6 +525,12 @@
                   <label for="modal-plan-duration">Duração (dias)
                     <input id="modal-plan-duration" name="durationInDays" type="number" min="1" [value]="monetizationPlanForm().durationInDays" (input)="updatePlanField('durationInDays', $any($event.target).value)" />
                   </label>
+                  <label for="modal-plan-type">Tipo do Plano
+                    <select id="modal-plan-type" [value]="monetizationPlanForm().type" (change)="updatePlanField('type', $any($event.target).value)">
+                      <option value="INDIVIDUAL">INDIVIDUAL</option>
+                      <option value="ENTERPRISE">ENTERPRISE</option>
+                    </select>
+                  </label>
                   <div class="actions-row modal-actions">
                     <button type="button" class="btn btn--subtle" (click)="closeCreatePlan()">Cancelar</button>
                     <button type="submit" class="btn btn--primary" [disabled]="creatingPlan()">{{ creatingPlan() ? 'Criando...' : 'Criar Plano' }}</button>
@@ -552,6 +558,12 @@
                   </div>
                   <label for="edit-plan-duration">Duração (dias)
                     <input id="edit-plan-duration" name="durationInDays" type="number" min="1" [value]="editingPlanForm().durationInDays" (input)="setEditingPlanField('durationInDays',$any($event.target).value)" />
+                  </label>
+                  <label for="edit-plan-type">Tipo do Plano
+                    <select id="edit-plan-type" [value]="editingPlanForm().type" (change)="setEditingPlanField('type', $any($event.target).value)">
+                      <option value="INDIVIDUAL">INDIVIDUAL</option>
+                      <option value="ENTERPRISE">ENTERPRISE</option>
+                    </select>
                   </label>
                   <label for="edit-plan-active">Ativo
                     <input id="edit-plan-active" type="checkbox" [checked]="editingPlanForm().isActive" (change)="setEditingPlanField('isActive',$any($event.target).checked)" />
@@ -589,16 +601,34 @@
                   <div class="create-modal subscription-modal" *ngIf="showCreateSubscription()" role="dialog" aria-modal="true" aria-labelledby="create-subscription-modal-title" (click)="$event.stopPropagation()">
                     <h3 id="create-subscription-modal-title">Incluir Assinatura Manual</h3>
                     <form (submit)="$event.preventDefault(); submitCreateSubscription();">
-                      <label for="modal-sub-user-id">Usuário <span aria-hidden="true">*</span>
+                      <fieldset>
+                        <legend class="sr-only">Tipo de Assinatura</legend>
+                        <label class="radio-inline">
+                          <input type="radio" name="subscriptionType" value="PERSONAL" [checked]="subscriptionType() === 'PERSONAL'" (change)="subscriptionType.set('PERSONAL')" /> Pessoal
+                        </label>
+                        <label class="radio-inline">
+                          <input type="radio" name="subscriptionType" value="ORGANIZATION" [checked]="subscriptionType() === 'ORGANIZATION'" (change)="subscriptionType.set('ORGANIZATION')" /> Para Empresa
+                        </label>
+                      </fieldset>
+
+                      <label *ngIf="subscriptionType() === 'PERSONAL'" for="modal-sub-user-id">Usuário <span aria-hidden="true">*</span>
                         <select id="modal-sub-user-id" name="userId" required [value]="monetizationSubscriptionForm().userId" (change)="updateSubscriptionField('userId',$any($event.target).value)" aria-required="true">
                           <option value="" disabled [selected]="!monetizationSubscriptionForm().userId">Selecione um usuário...</option>
                           <option *ngFor="let u of users()" [value]="u.id">{{ u.email || u.id }}</option>
                         </select>
                       </label>
+
+                      <label *ngIf="subscriptionType() === 'ORGANIZATION'" for="modal-sub-org-id">Conta Cliente <span aria-hidden="true">*</span>
+                        <select id="modal-sub-org-id" name="organizationId" required [value]="selectedOrgId()" (change)="selectedOrgId.set($any($event.target).value)" aria-required="true">
+                          <option value="" disabled [selected]="!selectedOrgId()">Selecione uma conta cliente...</option>
+                          <option *ngFor="let o of organizations()" [value]="o.id">{{ o.name || o.id }}</option>
+                        </select>
+                      </label>
+
                       <label for="modal-sub-plan-id">Plano <span aria-hidden="true">*</span>
                         <select id="modal-sub-plan-id" name="planId" required [value]="monetizationSubscriptionForm().planId" (change)="updateSubscriptionField('planId',$any($event.target).value)" aria-required="true">
                           <option value="" disabled [selected]="!monetizationSubscriptionForm().planId">Selecione um plano...</option>
-                          <option *ngFor="let p of subscriptionPlans()" [value]="p.id">{{ p.name || p.title || p.id }}</option>
+                          <option *ngFor="let p of filteredSubscriptionPlans()" [value]="p.id">{{ p.name || p.title || p.id }}</option>
                         </select>
                       </label>
                       <div class="form-error" *ngIf="monetizationError() && !creatingSubscription()">{{ monetizationError() }}</div>

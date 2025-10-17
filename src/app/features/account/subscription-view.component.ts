@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SubscriptionService, UserSubscription } from '../../core/services/subscription.service';
+import { SubscriptionService, UserSubscription, AccessStatus } from '../../core/services/subscription.service';
 
 @Component({
   selector: 'pros-subscription-view',
@@ -95,12 +95,47 @@ export class SubscriptionViewComponent implements OnInit {
       this.subscription.set(undefined);
       this.error.set(null);
     }
-    this.service.getMySubscription().subscribe({
-      next: sub => {
-        this.subscription.set(sub); // sub === null => sem assinatura
+    // Primeiro consulte o status de acesso — para membros de organização o backend
+    // informa se o acesso vem da organização. Se for PERSONAL_SUBSCRIPTION, busque
+    // os detalhes completos da assinatura pessoal; se for ORGANIZATIONAL_SUBSCRIPTION
+    // mapeie para um cartão resumido indicando "Acesso via organização".
+    this.service.getMyAccessStatus().subscribe({
+      next: (status: AccessStatus) => {
+        if (!status || status.accessType === 'NONE') {
+          this.subscription.set(null);
+          return;
+        }
+
+        if (status.accessType === 'PERSONAL_SUBSCRIPTION') {
+          // usuário tem assinatura pessoal — carregar detalhes completos
+          this.service.getMySubscription().subscribe({
+            next: sub => this.subscription.set(sub),
+            error: err => {
+              console.warn('[SubscriptionView] erro ao carregar assinatura pessoal', err);
+              this.error.set('Não foi possível carregar sua assinatura agora.');
+              this.subscription.set(null);
+            }
+          });
+          return;
+        }
+
+        // ORGANIZATIONAL_SUBSCRIPTION — exibir acesso fornecido pela organização
+        this.subscription.set({
+          id: 'org-access',
+          planName: status.planName ?? 'Plano (fornecido pela organização)',
+          origin: 'ORGANIZATION',
+          description: status.organizationName ? `Acesso via organização ${status.organizationName}` : 'Acesso via organização',
+          startedAt: undefined,
+          expiresAt: status.endDate ?? undefined,
+          originalPrice: null,
+          currentPrice: null,
+          durationInDays: null,
+          status: 'ATIVA',
+          raw: status.raw ?? status
+        } as UserSubscription);
       },
       error: err => {
-        console.warn('[SubscriptionView] erro ao carregar assinatura', err);
+        console.warn('[SubscriptionView] erro ao carregar status de acesso', err);
         this.error.set('Não foi possível carregar sua assinatura agora.');
         this.subscription.set(null);
       }

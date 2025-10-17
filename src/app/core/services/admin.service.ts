@@ -180,6 +180,78 @@ export class AdminService {
       .pipe(map(() => void 0));
   }
 
+  // --- Organization members / enrollments ---
+  /**
+   * Lista membros matriculados em um treinamento específico dentro de uma organização.
+   * GET /organizations/{orgId}/trainings/{trainingId}/enrollments
+   */
+  getOrganizationEnrollments(orgId: string, trainingId: string): Observable<any[]> {
+    if (!orgId || !trainingId) return of([]);
+    const path = `/organizations/${encodeURIComponent(orgId)}/trainings/${encodeURIComponent(trainingId)}/enrollments`;
+    return this.api.get<unknown>(path).pipe(map(resp => this.unwrapList<any>(resp)));
+  }
+
+  /**
+   * Lista membros da organização (endpoint alternativo mais genérico).
+   * GET /organizations/{orgId}/members
+   */
+  getOrganizationMembers(orgId: string): Observable<any[]> {
+    if (!orgId) return of([]);
+    return this.api.get<unknown>(`/organizations/${encodeURIComponent(orgId)}/members`).pipe(map(resp => this.unwrapList<any>(resp)));
+  }
+
+  /**
+   * Lista organizações do usuário autenticado
+   * GET /profile/me/organizations
+   */
+  getMyOrganizations(): Observable<any[]> {
+    return this.api.get<unknown>('/profile/me/organizations').pipe(map(resp => this.unwrapList<any>(resp)));
+  }
+
+  /**
+   * Cria nova organização
+   * POST /organizations
+   */
+  createOrganization(payload: { razaoSocial: string; cnpj: string }): Observable<any> {
+    const body = { razaoSocial: (payload.razaoSocial || '').trim(), cnpj: (payload.cnpj || '').trim() };
+    return this.api.post<any>('/organizations', body);
+  }
+
+  /**
+   * Adiciona um membro à organização (Admin role required)
+   * POST /organizations/{organizationId}/members
+   */
+  addOrganizationMember(orgId: string, payload: any): Observable<any> {
+    const body = { ...(payload || {}) };
+    return this.api.post<any>(`/organizations/${encodeURIComponent(orgId)}/members`, body);
+  }
+
+  /**
+   * Remove um membro da organização
+   * DELETE /organizations/{organizationId}/members/{membershipId}
+   */
+  deleteOrganizationMember(orgId: string, membershipId: string): Observable<void> {
+    return this.api.delete<void>(`/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(membershipId)}`).pipe(map(() => void 0));
+  }
+
+  /**
+   * Atualiza a role de um membro na organização
+   * PATCH /organizations/{organizationId}/members/{membershipId}
+   */
+  updateOrganizationMemberRole(orgId: string, membershipId: string, payload: any): Observable<any> {
+    const body = { ...(payload || {}) };
+    return this.api.patch<any>(`/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(membershipId)}`, body);
+  }
+
+  /**
+   * Busca o progresso de um membro em todos os seus cursos
+   * GET /organizations/{organizationId}/members/{membershipId}/progress
+   */
+  getMemberProgress(orgId: string, membershipId: string): Observable<any> {
+    if (!orgId || !membershipId) return of(null);
+    return this.api.get<unknown>(`/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(membershipId)}/progress`).pipe(map(resp => resp as any));
+  }
+
   uploadEbookFile(trainingId: string, file: File): Observable<unknown> {
     const formData = new FormData();
     formData.append('file', file);
@@ -246,9 +318,20 @@ export class AdminService {
 
   // --- Monetization: subscription plans (public/internal)
   getSubscriptionPlans(): Observable<any[]> {
-    // endpoint correto: /subscriptions/plans (aceita autenticação ou acesso público)
-    return this.api.get<unknown>('/subscriptions/plans').pipe(
-      map(resp => this.unwrapList<any>(resp))
+    // Busca planos a partir do catálogo público (/public/catalog) e filtra itens tipo PACKAGE/PLAN
+    return this.api.get<unknown>('/public/catalog/plans').pipe(
+      map(resp => {
+        const list = this.unwrapList<any>(resp);
+        return list.filter((item: any) => {
+          const t = String(item?.format ?? item?.type ?? '').toUpperCase();
+          const hasPrice = (typeof item?.originalPrice === 'number') || (typeof item?.currentPrice === 'number');
+          const hasDuration = typeof item?.durationInDays === 'number' || typeof item?.duration === 'number';
+          return (
+            t === 'PACKAGE' || t === 'PLAN' || t === 'SUBSCRIPTION' || t === 'ENTERPRISE' || t === 'INDIVIDUAL' ||
+            item?.isPackage === true || (hasPrice && hasDuration)
+          );
+        });
+      })
     );
   }
 
@@ -267,6 +350,29 @@ export class AdminService {
     return this.api.get<unknown>(path).pipe(
       map(resp => this.unwrapList<any>(resp))
     );
+  }
+
+  /**
+   * Cria uma nova assinatura pessoal (vinculada à "Conta Pessoal" do usuário).
+   * POST /admin/subscriptions/users
+   * body: { userId: string, planId: string }
+   */
+  createPersonalSubscription(payload: { userId: string; planId: string }): Observable<any> {
+    if (!payload || !payload.userId || !payload.planId) return of(null);
+    const body = { userId: String(payload.userId), planId: String(payload.planId) };
+    return this.api.post<any>('/admin/subscriptions/users', body).pipe(map(resp => resp));
+  }
+
+  /**
+   * Cria uma nova assinatura para toda uma organização (Enterprise).
+   * POST /admin/subscriptions/organizations/{organizationId}
+   * body: { planId: string }
+   */
+  createOrganizationSubscription(organizationId: string, payload: { planId: string }): Observable<any> {
+    if (!organizationId || !payload || !payload.planId) return of(null);
+    const body = { planId: String(payload.planId) };
+    const path = `/admin/subscriptions/organizations/${encodeURIComponent(organizationId)}`;
+    return this.api.post<any>(path, body).pipe(map(resp => resp));
   }
 
   /**
@@ -517,18 +623,18 @@ export class AdminService {
   // --- Monetização: Planos & Assinaturas ---
   /**
    * Cria um novo plano de assinatura.
-   * O backend (exemplo fornecido) mostra os preços como strings ("19.90").
-   * Enviamos como string para preservar precisão e formato decimal esperado.
+   * Agora o payload espera preços numéricos e campo `type` (ex: INDIVIDUAL, ENTERPRISE).
    */
-  createPlan(payload: { name: string; description: string; originalPrice: string; currentPrice: string; durationInDays: number }): Observable<any> {
+  createPlan(payload: { name: string; description: string; originalPrice: number; currentPrice: number; durationInDays: number; type?: string }): Observable<any> {
     // Sanitização mínima: trim e corte de descrição (máx 512 chars conforme requisito)
-    const body = {
+    const body: any = {
       name: (payload.name || '').trim(),
       description: (payload.description || '').trim().slice(0, 512),
-      originalPrice: (payload.originalPrice || '').trim(),
-      currentPrice: (payload.currentPrice || '').trim(),
+      originalPrice: typeof payload.originalPrice === 'number' ? payload.originalPrice : Number(payload.originalPrice) || 0,
+      currentPrice: typeof payload.currentPrice === 'number' ? payload.currentPrice : Number(payload.currentPrice) || 0,
       durationInDays: Number(payload.durationInDays) || 0
     };
+    if (payload.type) body.type = String(payload.type).trim();
     return this.api.post<any>('/admin/plans', body);
   }
 
@@ -543,12 +649,14 @@ export class AdminService {
     currentPrice?: any;
     durationInDays?: number;
     isActive?: boolean;
+    type?: string;
   }): Observable<any> {
     const body: Record<string, unknown> = {};
   if (payload['name'] !== undefined) body['name'] = String(payload['name']).trim();
   if (payload['description'] !== undefined) body['description'] = String(payload['description']).trim().slice(0, 512);
   if (payload['originalPrice'] !== undefined) body['originalPrice'] = payload['originalPrice'];
   if (payload['currentPrice'] !== undefined) body['currentPrice'] = payload['currentPrice'];
+  if (payload['type'] !== undefined) body['type'] = String(payload['type']).trim();
   if (payload['durationInDays'] !== undefined) body['durationInDays'] = Number(payload['durationInDays']) || 0;
   if (payload['isActive'] !== undefined) body['isActive'] = !!payload['isActive'];
 
