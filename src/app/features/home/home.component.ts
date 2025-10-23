@@ -41,7 +41,7 @@ interface TrainingsHighlight {
   standalone: true,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
-  imports: [CommonModule, RouterLink, NgFor]
+  imports: [CommonModule, RouterLink]
 })
 export class HomeComponent implements OnDestroy, AfterViewInit {
   // --- INJEÇÃO DE DEPENDÊNCIAS E CONTEÚDO ESTÁTICO ---

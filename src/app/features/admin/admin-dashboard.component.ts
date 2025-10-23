@@ -1,7 +1,10 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { AdminService } from '../../core/services/admin.service';
+import { CatalogService } from '../../core/services/catalog.service';
+import { SubscriptionService } from '../../core/services/subscription.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AdminTraining, AdminSector } from '../../core/models/admin';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -32,6 +35,8 @@ interface AdminOrganizationSummary {
 })
 export class AdminDashboardComponent {
   private readonly admin = inject(AdminService);
+  private readonly catalogService = inject(CatalogService);
+  private readonly subscription = inject(SubscriptionService);
   private readonly auth = inject(AuthService);
 
   // signals
@@ -116,6 +121,9 @@ export class AdminDashboardComponent {
   creatingSubscription = signal<boolean>(false);
   monetizationMessage = signal<string | null>(null);
   monetizationError = signal<string | null>(null);
+  // Sinais dedicados para mensagens de assinatura (separados de planos)
+  subscriptionSuccessMessage = signal<string | null>(null);
+  subscriptionErrorMessage = signal<string | null>(null);
   // dropdown helper signals
   loadingSubscriptionDropdowns = signal<boolean>(false);
   // Subscriptions listing (admin)
@@ -148,6 +156,7 @@ export class AdminDashboardComponent {
   showCreatePlan = signal<boolean>(false);
   // modal control for creating manual subscription
   showCreateSubscription = signal<boolean>(false);
+  subscriptionModalTab = signal<'create' | 'login'>('create');
 
   updatePlanField<K extends keyof ReturnType<typeof this.monetizationPlanForm>>(key: K, value: any) {
     this.monetizationPlanForm.update(f => ({ ...f, [key]: key==='durationInDays' ? Number(value)||0 : value }));
@@ -159,6 +168,7 @@ export class AdminDashboardComponent {
     const form = this.monetizationPlanForm();
     if (!form.name.trim()) { this.monetizationError.set('Nome do plano é obrigatório.'); return; }
     if (!form.originalPrice.trim() || !form.currentPrice.trim()) { this.monetizationError.set('Preços original e atual são obrigatórios.'); return; }
+    if (!String(form.description || '').trim()) { this.monetizationError.set('Descrição do plano é obrigatória.'); return; }
     this.creatingPlan.set(true); this.monetizationError.set(null); this.monetizationMessage.set(null);
     this.admin.createPlan({
       name: form.name.trim(),
@@ -171,12 +181,16 @@ export class AdminDashboardComponent {
       next: created => {
         this.monetizationMessage.set('Plano criado com sucesso.');
         this.createdPlans.update(list => [created, ...list]);
+        // Atualiza também a lista de planos disponíveis no contexto admin para refletir imediatamente a criação
+        this.subscriptionPlans.update(list => [created, ...list]);
+        // Notifica consumidores que os planos foram atualizados para que a lista pública recarregue
+        try { this.catalogService.notifyPlansUpdated(); } catch (e) { /* no-op */ }
         // seleciona o plano recém-criado (o primeiro da lista)
         this.selectedCreatedPlanIndex.set(0);
         // mantém valores de preço para facilitar criação em série, limpa nome/desc
         this.monetizationPlanForm.update(f => ({ ...f, name:'', description:'' }));
       },
-      error: err => this.monetizationError.set(err?.message || 'Falha ao criar plano'),
+      error: err => { this.monetizationError.set(this.formatServerError(err) || 'Falha ao criar plano'); this.creatingPlan.set(false); },
       complete: () => this.creatingPlan.set(false)
     });
   }
@@ -189,10 +203,12 @@ export class AdminDashboardComponent {
     } else {
       if (!this.selectedOrgId() || !form.planId.trim()) { this.monetizationError.set('Conta Cliente e Plan ID são obrigatórios para criar assinatura para empresa.'); return; }
     }
-    this.creatingSubscription.set(true); this.monetizationError.set(null); this.monetizationMessage.set(null);
+    this.creatingSubscription.set(true); 
+    this.monetizationError.set(null); 
+    // NÃO limpar a mensagem aqui, pois será usada no sucesso
 
     if (type === 'PERSONAL') {
-      this.admin.createPersonalSubscription({ userId: form.userId.trim(), planId: form.planId.trim() }).subscribe({
+      this.subscription.createPersonalSubscription(form.userId.trim(), form.planId.trim()).subscribe({
         next: created => this.onCreateSubscriptionSuccess(),
         error: err => this.handleCreateSubscriptionError(err),
         complete: () => this.creatingSubscription.set(false)
@@ -201,7 +217,7 @@ export class AdminDashboardComponent {
     }
 
     // ORGANIZATION
-    this.admin.createOrganizationSubscription(this.selectedOrgId() || '', { planId: form.planId.trim() }).subscribe({
+    this.subscription.createOrganizationSubscription(this.selectedOrgId() || '', form.planId.trim()).subscribe({
       next: created => this.onCreateSubscriptionSuccess(),
       error: err => this.handleCreateSubscriptionError(err),
       complete: () => this.creatingSubscription.set(false)
@@ -209,15 +225,16 @@ export class AdminDashboardComponent {
   }
 
   private onCreateSubscriptionSuccess() {
-    this.monetizationMessage.set('Assinatura criada manualmente.');
-    this.monetizationSubscriptionForm.set({ userId:'', planId:'' });
-    this.showCreateSubscription.set(false);
+    // Define a mensagem de sucesso usando o sinal dedicado para assinatura
+    this.subscriptionSuccessMessage.set('Assinatura efetivada com sucesso.');
+    this.monetizationSubscriptionForm.set({ userId: '', planId: '' });
+    // Não faz mais transição automática - deixa o usuário clicar
   }
 
   private handleCreateSubscriptionError(err: any) {
     const serverMsg = err?.error?.message || err?.error || err?.message || '';
     const text = String(serverMsg || '').trim();
-    this.monetizationError.set(text || 'Falha ao criar assinatura');
+    this.subscriptionErrorMessage.set(text || 'Falha ao criar assinatura');
     this.creatingSubscription.set(false);
   }
 
@@ -226,29 +243,45 @@ export class AdminDashboardComponent {
     this.monetizationError.set(null);
     // reset para default PESSOAL
     this.subscriptionType.set('PERSONAL');
-    // ensure we have users and plans for the selects
-    if (this.users().length === 0 || this.subscriptionPlans().length === 0) {
+    // ensure we have users, plans and organizations for the selects
+    const reqs: { [key: string]: import('rxjs').Observable<any> } = {};
+  if (this.users().length === 0) reqs['users'] = this.admin.getUsers();
+  if (this.subscriptionPlans().length === 0) reqs['plans'] = this.admin.getSubscriptionPlans();
+  if (this.organizations().length === 0) reqs['orgs'] = this.admin.getOrganizations();
+
+    if (Object.keys(reqs).length) {
       this.loadingSubscriptionDropdowns.set(true);
-      const calls: Array<import('rxjs').Observable<any>> = [];
-  if (this.users().length === 0) calls.push(this.admin.getUsers());
-  if (this.subscriptionPlans().length === 0) calls.push(this.admin.getSubscriptionPlans());
-  // se abrirmos o modal e quisermos criar para ORGANIZATION, podemos precisar de organizations
-  if (this.organizations().length === 0) calls.push(this.admin.getOrganizations());
-      // perform requests sequentially to keep logic simple
-      const sub = calls.length ? calls[0].subscribe({ next: r0 => {
-          if (Array.isArray(r0)) this.users.set(r0);
-          else this.users.set(this.unwrapList(r0).map(x => this.normalizeUser(x)));
-        }, error: () => {}, complete: () => {
-          if (calls.length > 1) {
-            calls[1].subscribe({ next: r1 => this.subscriptionPlans.set(Array.isArray(r1)? r1 : this.unwrapList(r1)), error: () => {}, complete: () => { this.loadingSubscriptionDropdowns.set(false); } });
-          } else {
-            this.loadingSubscriptionDropdowns.set(false);
+      // forkJoin will emit an object with the same keys containing the responses
+      forkJoin(reqs).subscribe({
+        next: res => {
+          if (res['users'] !== undefined) {
+            const u = res['users'];
+            this.users.set(Array.isArray(u) ? u.map(x => this.normalizeUser(x)) : this.unwrapList(u).map(x => this.normalizeUser(x)));
           }
-        } }) : null;
+          if (res['plans'] !== undefined) {
+            const p = res['plans'];
+            this.subscriptionPlans.set(Array.isArray(p) ? p : this.unwrapList(p));
+          }
+          if (res['orgs'] !== undefined) {
+            const o = res['orgs'];
+            this.organizations.set(Array.isArray(o) ? o.map(x => this.normalizeOrganization(x)) : this.unwrapList(o).map(x => this.normalizeOrganization(x)));
+          }
+        },
+        error: () => {
+          // best-effort: ignore errors here and let individual parts remain empty
+        },
+        complete: () => this.loadingSubscriptionDropdowns.set(false)
+      });
     }
     this.showCreateSubscription.set(true);
+    this.subscriptionModalTab.set('create'); // Sempre abre na aba de criação
   }
-  closeCreateSubscription() { this.showCreateSubscription.set(false); }
+  closeCreateSubscription() { 
+    this.showCreateSubscription.set(false); 
+    this.subscriptionModalTab.set('create'); // Reseta para aba de criação ao fechar
+    this.subscriptionSuccessMessage.set(null); // Limpa mensagem de sucesso de assinatura
+    this.subscriptionErrorMessage.set(null); // Limpa mensagens de erro de assinatura
+  }
 
   setEditingPlanField<K extends keyof ReturnType<typeof this.editingPlanForm>>(key: K, value: any) {
     this.editingPlanForm.update(f => ({ ...f, [key]: key === 'durationInDays' ? Number(value) || 0 : value } as any));
@@ -302,9 +335,30 @@ export class AdminDashboardComponent {
         this.monetizationMessage.set('Plano atualizado com sucesso.');
         this.closeEditPlan();
       },
-      error: err => this.monetizationError.set(err?.message || 'Falha ao atualizar plano'),
+      error: err => this.monetizationError.set(this.formatServerError(err) || 'Falha ao atualizar plano'),
       complete: () => this.setLoading('updatePlan', false)
     });
+  }
+
+  // Formata erros vindos do servidor, incluindo objetos de validação (422)
+  private formatServerError(err: any): string {
+    try {
+      // Caso padrão: objeto com campo error e array validationErros
+      const body = err?.error ?? err;
+      if (err?.status === 422 && Array.isArray(body?.validationErros)) {
+        const parts = body.validationErros.map((v: any) => {
+          const field = v?.field ? `${v.field}` : null;
+          const msg = v?.message || v?.defaultMessage || '';
+          return field ? `${field}: ${msg}` : `${msg}`;
+        });
+        return parts.join('; ');
+      }
+      // Mensagem simples do servidor
+      const serverMsg = body?.message || body?.error || err?.message;
+      return serverMsg ? String(serverMsg) : '';
+    } catch (e) {
+      return '';
+    }
   }
   discountPercent(plan: any): number | null {
     const op = parseFloat(plan?.originalPrice);
@@ -372,6 +426,35 @@ export class AdminDashboardComponent {
         if (!this.subscriptionPlans().length) this.loadSubscriptionPlans();
       }
     }
+  }
+
+  /** Retorna o rótulo legível para o tipo do plano */
+  planTypeLabel(type?: string | null): string {
+    const t = String(type || '').toUpperCase();
+    if (!t) return '—';
+    switch (t) {
+      case 'ENTERPRISE':
+      case 'EMPRESARIAL':
+        return 'Empresarial';
+      case 'INDIVIDUAL':
+      case 'PERSONAL':
+      case 'INDIVIDUALO':
+        return 'Individual';
+      default:
+        return (t.charAt(0) + t.slice(1).toLowerCase()) || t;
+    }
+  }
+
+  /** Evita exibir 'Global' como nome do plano quando o backend usa placeholders; prefere mostrar o nome real ou 'Empresarial/Individual' quando fizer sentido */
+  displayPlanName(plan: any): string {
+    if (!plan) return '—';
+    const name = String(plan.name || plan.title || '').trim();
+    // se o nome for 'Global' ou vazio, tenta inferir a partir do tipo
+    if (!name || name.toLowerCase() === 'global') {
+      const tLabel = this.planTypeLabel(plan.type || plan?.planType || plan?.format);
+      return tLabel === '—' ? (name || '—') : tLabel;
+    }
+    return name;
   }
 
   loadSubscriptionPlans() {

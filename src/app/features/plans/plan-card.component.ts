@@ -10,6 +10,7 @@ export interface Plan {
   currentPrice?: number | null;
   durationInDays?: number | null;
   sectors?: string[];
+  type?: string | null;
 }
 
 @Component({
@@ -21,6 +22,7 @@ export interface Plan {
     <header class="plan-header">
       <span class="badge" *ngIf="durationLabel()">{{ durationLabel() }}</span>
       <h2>{{ plan?.name }}</h2>
+      <p class="plan-type">{{ planTypeLabel(plan?.type) }}</p>
     </header>
     <p class="plan-description">{{ plan?.description }}</p>
 
@@ -36,13 +38,6 @@ export interface Plan {
         <span class="price-current">Sob consulta</span>
       </div>
     </ng-template>
-
-    <div class="plan-sectors" *ngIf="plan?.sectors?.length">
-      <h3 class="sr-only">Setores indicados</h3>
-      <ul>
-        <li *ngFor="let s of plan!.sectors">{{ s | uppercase }}</li>
-      </ul>
-    </div>
 
     <div class="plan-actions">
       <a class="btn btn-primary" routerLink="/contato">Falar com um especialista</a>
@@ -73,6 +68,29 @@ export class PlanCardComponent {
 
   formatPrice(value: number) {
     return this.currency.format(value);
+  }
+
+  // Retorna o rótulo do tipo do plano em português
+  planTypeLabel(type?: string | null): string {
+    const t = String(type || '').trim().toUpperCase();
+    if (!t) return '—';
+    if (t === 'ENTERPRISE' || t === 'ENTERPRISE_ORGANIZATION' || t === 'ENTERPRISE_ORG' || t === 'ENTERPRISES' || t === 'EMPRESARIAL') {
+      return 'Empresarial';
+    }
+    if (t === 'INDIVIDUAL' || t === 'PERSONAL' || t === 'PESSOAL' || t === 'PERSON') {
+      return 'Individual';
+    }
+    return t[0] + t.slice(1).toLowerCase();
+  }
+
+  // Mostra o rótulo do setor; se o setor for 'global' usa o tipo do plano
+  displaySectorLabel(sector?: string | null): string {
+    const s = String(sector || '').trim();
+    if (!s) return '—';
+    if (s.toLowerCase() === 'global') {
+      return this.planTypeLabel(this.plan?.type);
+    }
+    return s.toUpperCase();
   }
 
   private buildDurationLabel(days?: number | null): string {

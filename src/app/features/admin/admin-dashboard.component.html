@@ -253,7 +253,7 @@
                 </span>
               </ng-template>
               <!-- Botão de debug (descomente se quiser ver no UI)
-              <button type="button" class="btn-ghost-small" (click)="logPdfDebug(t)" style="margin-left:4px" aria-label="Debug PDF">?</button>
+              <button type="button" class="btn-ghost-small debug-btn" (click)="logPdfDebug(t)" aria-label="Debug PDF">?</button>
               -->
             </td>
             <td data-label="Ações" class="actions-col">
@@ -457,7 +457,7 @@
               </div>
             </div>
             <div class="admin-subcard-body">
-              <div class="actions-row" style="justify-content:space-between; align-items:center;">
+              <div class="actions-row plan-create-actions">
                 <div>
                   <div id="plan-create-help" class="sr-only">Campos obrigatórios marcados com *</div>
                   <button type="button" class="btn btn--primary" (click)="openCreatePlan()">Criar Novo Plano</button>
@@ -476,23 +476,25 @@
                         <th>ID</th>
                         <th>Nome</th>
                         <th>Descrição</th>
+                        <th>Tipo</th>
                         <th>Preço Original</th>
                         <th>Preço Atual</th>
-                        <th style="width:120px; text-align:center">Ações</th>
+                        <th class="plan-actions-header">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr *ngFor="let plan of subscriptionPlans()">
                         <td class="plan-id mono">{{ plan.id || '—' }}</td>
-                        <td class="plan-name">{{ plan.name || '—' }}</td>
+                        <td class="plan-name">{{ displayPlanName(plan) }}</td>
                         <td class="plan-desc" [title]="plan.description || '—'">
                           <div class="desc-text">{{ plan.description || '—' }}</div>
                           <div class="desc-meta muted tiny">{{ plan.durationInDays }} dias • Desc: {{ discountPercent(plan) || '—' }}</div>
                         </td>
+                        <td class="plan-type">{{ planTypeLabel(plan.type || plan?.planType) }}</td>
                         <td class="plan-original">{{ plan.originalPrice ? ('R$ ' + plan.originalPrice) : '—' }}</td>
                         <td class="plan-current">{{ plan.currentPrice ? ('R$ ' + plan.currentPrice) : '—' }}</td>
-                        <td class="plan-actions" style="text-align:center">
-                          <button type="button" class="btn-ghost-small" aria-label="Atualizar plano {{ plan.name }}" (click)="$event.stopPropagation(); openEditPlan(plan)">Atualizar</button>
+                        <td class="plan-actions-cell">
+                          <button type="button" class="btn-ghost-small" aria-label="Atualizar plano {{ displayPlanName(plan) }}" (click)="$event.stopPropagation(); openEditPlan(plan)">Atualizar</button>
                         </td>
                       </tr>
                     </tbody>
@@ -507,12 +509,12 @@
               <div class="overlay" *ngIf="showCreatePlan()" (click)="closeCreatePlan()"></div>
               <div class="create-modal" *ngIf="showCreatePlan()" role="dialog" aria-modal="true" aria-labelledby="plan-modal-title" (click)="$event.stopPropagation()">
                 <h3 id="plan-modal-title">Novo Plano</h3>
-                <form (submit)="$event.preventDefault(); submitCreatePlan(); closeCreatePlan();">
+                <form (submit)="$event.preventDefault(); submitCreatePlan();">
                   <label for="modal-plan-name">Nome <span aria-hidden="true">*</span>
                     <input id="modal-plan-name" type="text" required [value]="monetizationPlanForm().name" (input)="updatePlanField('name',$any($event.target).value)" />
                   </label>
-                  <label for="modal-plan-desc">Descrição (até 512)
-                    <textarea id="modal-plan-desc" rows="3" maxlength="512" [value]="monetizationPlanForm().description" (input)="updatePlanField('description',$any($event.target).value)"></textarea>
+                  <label for="modal-plan-desc">Descrição (até 512) <span aria-hidden="true">*</span>
+                    <textarea id="modal-plan-desc" rows="3" maxlength="512" required [value]="monetizationPlanForm().description" (input)="updatePlanField('description',$any($event.target).value)"></textarea>
                   </label>
                   <div class="row two">
                     <label for="modal-plan-original-price">Preço Original <span aria-hidden="true">*</span>
@@ -599,44 +601,70 @@
                   <!-- Modal criação de assinatura -->
                   <div class="overlay" *ngIf="showCreateSubscription()" (click)="closeCreateSubscription()"></div>
                   <div class="create-modal subscription-modal" *ngIf="showCreateSubscription()" role="dialog" aria-modal="true" aria-labelledby="create-subscription-modal-title" (click)="$event.stopPropagation()">
-                    <h3 id="create-subscription-modal-title">Incluir Assinatura Manual</h3>
-                    <form (submit)="$event.preventDefault(); submitCreateSubscription();">
-                      <fieldset>
-                        <legend class="sr-only">Tipo de Assinatura</legend>
-                        <label class="radio-inline">
-                          <input type="radio" name="subscriptionType" value="PERSONAL" [checked]="subscriptionType() === 'PERSONAL'" (change)="subscriptionType.set('PERSONAL')" /> Pessoal
-                        </label>
-                        <label class="radio-inline">
-                          <input type="radio" name="subscriptionType" value="ORGANIZATION" [checked]="subscriptionType() === 'ORGANIZATION'" (change)="subscriptionType.set('ORGANIZATION')" /> Para Empresa
-                        </label>
-                      </fieldset>
-
-                      <label *ngIf="subscriptionType() === 'PERSONAL'" for="modal-sub-user-id">Usuário <span aria-hidden="true">*</span>
-                        <select id="modal-sub-user-id" name="userId" required [value]="monetizationSubscriptionForm().userId" (change)="updateSubscriptionField('userId',$any($event.target).value)" aria-required="true">
-                          <option value="" disabled [selected]="!monetizationSubscriptionForm().userId">Selecione um usuário...</option>
-                          <option *ngFor="let u of users()" [value]="u.id">{{ u.email || u.id }}</option>
-                        </select>
-                      </label>
-
-                      <label *ngIf="subscriptionType() === 'ORGANIZATION'" for="modal-sub-org-id">Conta Cliente <span aria-hidden="true">*</span>
-                        <select id="modal-sub-org-id" name="organizationId" required [value]="selectedOrgId()" (change)="selectedOrgId.set($any($event.target).value)" aria-required="true">
-                          <option value="" disabled [selected]="!selectedOrgId()">Selecione uma conta cliente...</option>
-                          <option *ngFor="let o of organizations()" [value]="o.id">{{ o.name || o.id }}</option>
-                        </select>
-                      </label>
-
-                      <label for="modal-sub-plan-id">Plano <span aria-hidden="true">*</span>
-                        <select id="modal-sub-plan-id" name="planId" required [value]="monetizationSubscriptionForm().planId" (change)="updateSubscriptionField('planId',$any($event.target).value)" aria-required="true">
-                          <option value="" disabled [selected]="!monetizationSubscriptionForm().planId">Selecione um plano...</option>
-                          <option *ngFor="let p of filteredSubscriptionPlans()" [value]="p.id">{{ p.name || p.title || p.id }}</option>
-                        </select>
-                      </label>
-                      <div class="form-error" *ngIf="monetizationError() && !creatingSubscription()">{{ monetizationError() }}</div>
-                      <div class="actions-row modal-actions">
-                        <button type="button" class="btn btn--subtle" (click)="closeCreateSubscription()" [disabled]="creatingSubscription()">Cancelar</button>
-                        <button type="submit" class="btn btn--primary" [disabled]="creatingSubscription()">{{ creatingSubscription() ? 'Criando...' : 'Criar' }}</button>
+                    
+                    <!-- Mensagem de sucesso após criar a assinatura -->
+                    <ng-container *ngIf="subscriptionSuccessMessage()">
+                      <h3 id="create-subscription-modal-title">✓ Sucesso!</h3>
+                      <div class="feedback success-feedback" aria-live="polite" role="alert">
+                        <p><strong>{{ subscriptionSuccessMessage() }}</strong></p>
                       </div>
-                    </form>
+                      <div class="actions-row modal-actions">
+                        <button type="button" class="btn btn--subtle" (click)="closeCreateSubscription()">Fechar</button>
+                      </div>
+                    </ng-container>
+
+                    <!-- Mensagem de erro -->
+                    <ng-container *ngIf="subscriptionErrorMessage() && !subscriptionSuccessMessage()">
+                      <h3 id="create-subscription-modal-title">⚠ Erro!</h3>
+                      <div class="feedback form-error" aria-live="polite" role="alert">
+                        <p><strong>{{ subscriptionErrorMessage() }}</strong></p>
+                      </div>
+                      <div class="actions-row modal-actions">
+                        <button type="button" class="btn btn--subtle" (click)="closeCreateSubscription()">Fechar</button>
+                      </div>
+                    </ng-container>
+
+                    <!-- Tab de Criação (oculto quando há mensagem de sucesso ou erro) -->
+                    <ng-container *ngIf="subscriptionModalTab() === 'create' && !subscriptionSuccessMessage() && !subscriptionErrorMessage()">
+                      <h3 id="create-subscription-modal-title">Incluir Assinatura Manual</h3>
+                      <form (submit)="$event.preventDefault(); submitCreateSubscription();">
+                        <fieldset>
+                          <legend class="sr-only">Tipo de Assinatura</legend>
+                          <label class="radio-inline">
+                            <input type="radio" name="subscriptionType" value="PERSONAL" [checked]="subscriptionType() === 'PERSONAL'" (change)="subscriptionType.set('PERSONAL')" /> Pessoal
+                          </label>
+                          <label class="radio-inline">
+                            <input type="radio" name="subscriptionType" value="ORGANIZATION" [checked]="subscriptionType() === 'ORGANIZATION'" (change)="subscriptionType.set('ORGANIZATION')" /> Para Empresa
+                          </label>
+                        </fieldset>
+
+                        <label *ngIf="subscriptionType() === 'PERSONAL'" for="modal-sub-user-id">Usuário <span aria-hidden="true">*</span>
+                          <select id="modal-sub-user-id" name="userId" required [value]="monetizationSubscriptionForm().userId" (change)="updateSubscriptionField('userId',$any($event.target).value)" aria-required="true">
+                            <option value="" disabled [selected]="!monetizationSubscriptionForm().userId">Selecione um usuário...</option>
+                            <option *ngFor="let u of users()" [value]="u.id">{{ u.email || u.id }}</option>
+                          </select>
+                        </label>
+
+                        <label *ngIf="subscriptionType() === 'ORGANIZATION'" for="modal-sub-org-id">Conta Cliente <span aria-hidden="true">*</span>
+                          <select id="modal-sub-org-id" name="organizationId" required [value]="selectedOrgId()" (change)="selectedOrgId.set($any($event.target).value)" aria-required="true">
+                            <option value="" disabled [selected]="!selectedOrgId()">Selecione uma conta cliente...</option>
+                            <option *ngFor="let o of organizations()" [value]="o.id">{{ o.name || o.id }}</option>
+                          </select>
+                        </label>
+
+                        <label for="modal-sub-plan-id">Plano <span aria-hidden="true">*</span>
+                          <select id="modal-sub-plan-id" name="planId" required [value]="monetizationSubscriptionForm().planId" (change)="updateSubscriptionField('planId',$any($event.target).value)" aria-required="true">
+                            <option value="" disabled [selected]="!monetizationSubscriptionForm().planId">Selecione um plano...</option>
+                            <option *ngFor="let p of filteredSubscriptionPlans()" [value]="p.id">{{ displayPlanName(p) || p.title || p.id }}</option>
+                          </select>
+                        </label>
+                        <div class="form-error" *ngIf="subscriptionErrorMessage() && !creatingSubscription()">{{ subscriptionErrorMessage() }}</div>
+                        <div class="actions-row modal-actions">
+                          <button type="button" class="btn btn--subtle" (click)="closeCreateSubscription()" [disabled]="creatingSubscription()">Cancelar</button>
+                          <button type="submit" class="btn btn--primary" [disabled]="creatingSubscription()">{{ creatingSubscription() ? 'Criando...' : 'Criar' }}</button>
+                        </div>
+                      </form>
+                    </ng-container>
                   </div>
 
                   <div class="actions-row subcard-actions-filters">
@@ -675,7 +703,7 @@
                           <span class="badge" [class.badge-active]="(s.status||'').toUpperCase()==='ACTIVE'" [class.badge-inactive]="(s.status||'').toUpperCase()!=='ACTIVE'">{{ s.status || '—' }}</span>
                         </td>
                         <td data-label="Ações" class="actions-col">
-                          <div class="actions-col-inner" style="display:flex; gap:.5rem;">
+                          <div class="actions-col-inner">
                             <button type="button" class="btn-ghost-small" (click)="$event.stopPropagation(); openSubscriptionDetails(s)">Detalhes</button>
                             <button *ngIf="((s.status||'') | uppercase) !== 'CANCELED'" type="button" class="btn-ghost-small btn-danger" (click)="$event.stopPropagation(); cancelSubscriptionAction(s)" [disabled]="cancelingSubscriptionId()===s.id">
                               <span *ngIf="cancelingSubscriptionId()===s.id">Cancelando...</span>

@@ -29,6 +29,23 @@ export interface UserSubscription {
   raw?: any;
 }
 
+export interface CreateSubscriptionRequest {
+  userId?: string;
+  planId: string;
+}
+
+export interface SubscriptionResponseDTO {
+  id: string;
+  userId?: string | null;
+  planId: string;
+  planName: string;
+  startDate: string;
+  endDate?: string | null;
+  status: string;
+  origin: string;
+  accountName?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SubscriptionService {
   constructor(private readonly api: ApiService) {}
@@ -79,6 +96,94 @@ export class SubscriptionService {
         if (err?.status === 404) {
           return of(null); // regra de negócio: sem assinatura ativa
         }
+        return throwError(() => err);
+      })
+    );
+  }
+
+  /**
+   * Cria uma nova assinatura pessoal para um usuário específico.
+   * @param userId ID do usuário
+   * @param planId ID do plano
+   * @returns Observable com a resposta da assinatura criada
+   */
+  createPersonalSubscription(userId: string, planId: string) {
+    return this.api.post<any>('/admin/subscriptions/users', {
+      userId,
+      planId
+    }).pipe(
+      map(res => res?.data || res),
+      catchError(err => {
+        console.error('Erro ao criar assinatura pessoal:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  /**
+   * Cria uma nova assinatura empresarial para uma organização específica.
+   * @param organizationId ID da organização (Account)
+   * @param planId ID do plano
+   * @returns Observable com a resposta da assinatura criada
+   */
+  createOrganizationSubscription(organizationId: string, planId: string) {
+    return this.api.post<any>(`/admin/subscriptions/organizations/${organizationId}`, {
+      planId
+    }).pipe(
+      map(res => res?.data || res),
+      catchError(err => {
+        console.error('Erro ao criar assinatura empresarial:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  /**
+   * Cancela uma assinatura existente.
+   * @param subscriptionId ID da assinatura a cancelar
+   * @returns Observable vazio
+   */
+  cancelSubscription(subscriptionId: string) {
+    return this.api.post<void>(`/admin/subscriptions/${subscriptionId}/cancel`, {}).pipe(
+      catchError(err => {
+        console.error('Erro ao cancelar assinatura:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  /**
+   * Lista todas as assinaturas com filtros opcionais.
+   * @param status Status opcional (ex: 'ACTIVE')
+   * @param origin Origem opcional (ex: 'MANUAL')
+   * @returns Observable com a lista de assinaturas
+   */
+  listAllSubscriptions(status?: string, origin?: string) {
+    let queryParams = '';
+    if (status) queryParams += `status=${status}`;
+    if (origin) queryParams += `${queryParams ? '&' : ''}origin=${origin}`;
+    
+    const endpoint = queryParams ? `/admin/subscriptions?${queryParams}` : '/admin/subscriptions';
+    
+    return this.api.get<any>(endpoint).pipe(
+      map(res => res?.data || res),
+      catchError(err => {
+        console.error('Erro ao listar assinaturas:', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  /**
+   * Obtém os detalhes de uma assinatura específica.
+   * @param subscriptionId ID da assinatura
+   * @returns Observable com os detalhes da assinatura
+   */
+  getSubscriptionById(subscriptionId: string) {
+    return this.api.get<any>(`/admin/subscriptions/${subscriptionId}`).pipe(
+      map(res => res?.data || res),
+      catchError(err => {
+        console.error('Erro ao buscar assinatura:', err);
         return throwError(() => err);
       })
     );

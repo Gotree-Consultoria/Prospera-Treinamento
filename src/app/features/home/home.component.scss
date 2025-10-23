@@ -189,8 +189,21 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
-.trainings-benefits .benefit-icon { width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; color:#0a7a47; }
-.trainings-benefits .benefit-icon svg { width:22px; height:22px; stroke: currentColor; fill: currentColor; }
+.trainings-benefits .benefit-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a7a47;
+}
+
+.trainings-benefits .benefit-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: currentColor;
+}
 
 .trainings-cta-buttons {
   display: flex;
@@ -351,10 +364,15 @@
   // 4. Garante que o "snap" considere o padding
   scroll-padding-inline: 24px;
 
-  // 5. Esconde a barra de rolagem para um visual limpo
-  scrollbar-width: none; /* Firefox */
+  // 5. Esconde a barra de rolagem para um visual limpo (com fallbacks de compatibilidade)
+  -ms-overflow-style: none; /* IE and Edge */
+  
   &::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    display: none; /* Chrome, Safari, Opera - hide scrollbar */
+  }
+  
+  @supports (scrollbar-width: none) {
+    scrollbar-width: none; /* Firefox - modern versions */
   }
 }
 

@@ -52,7 +52,9 @@ export class LoginComponent {
       .subscribe({
         next: () => this.router.navigate(['/conta']),
         error: error => {
-          this.errorMessage = error?.message || 'Não foi possível entrar. Verifique suas credenciais.';
+          // Prefer server-provided message in the JSON body: error.error.message
+          const serverMsg = error?.error?.message || error?.error || error?.message || 'Não foi possível entrar. Verifique suas credenciais.';
+          this.errorMessage = String(serverMsg);
         }
       });
   }
@@ -70,8 +72,10 @@ export class LoginComponent {
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: () => {
-          this.successMessage = 'Cadastro realizado com sucesso! Você já pode entrar com seu e-mail e senha.';
+          // Primeiro muda para a aba 'login' (que limpa mensagens de erro),
+          // depois definimos a mensagem de sucesso para que ela persista na aba de login.
           this.selectTab('login');
+          this.successMessage = 'Cadastro realizado com sucesso! Você já pode entrar com seu e-mail e senha.';
           this.loginForm.patchValue({ email: this.registerForm.value.email ?? '' });
         },
         error: error => {

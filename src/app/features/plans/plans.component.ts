@@ -14,13 +14,16 @@ import { PlanCardComponent, Plan } from './plan-card.component';
 })
 export class PlansComponent implements OnInit {
   private readonly catalogService = inject(CatalogService);
+  private plansUpdateSub: any;
 
   plans: Plan[] = [];
   isLoading = true;
   errorMessage = '';
 
   ngOnInit(): void {
-    this.loadPlansPreferential();
+    this.loadPlansFromPublicApi();
+    // Recarrega planos quando outro lugar do app notificar mudança
+    this.plansUpdateSub = this.catalogService.plansUpdated.subscribe(() => this.loadPlansFromPublicApi());
   }
 
   retryLoadPlans() {
@@ -85,6 +88,27 @@ export class PlansComponent implements OnInit {
     });
   }
 
+  private loadPlansFromPublicApi() {
+    this.catalogService.loadFromPublicApi('//localhost:8080/public/catalog/plans').subscribe({
+      next: (items: any[]) => {
+        this.plans = items.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          originalPrice: item.originalPrice,
+          currentPrice: item.currentPrice,
+          durationInDays: item.durationInDays,
+          type: item.type
+        }));
+        this.isLoading = false;
+      },
+      error: (err: any) => {
+        this.errorMessage = err?.message || 'Erro ao carregar planos da API pública';
+        this.isLoading = false;
+      }
+    });
+  }
+
   trackById(_: number, item: Plan) {
     return item.id;
   }
@@ -110,6 +134,7 @@ export class PlansComponent implements OnInit {
     const original = raw.originalPrice ?? raw.priceOriginal ?? raw.basePrice ?? null;
     const current = raw.currentPrice ?? raw.price ?? raw.finalPrice ?? original ?? null;
     const duration = raw.durationInDays ?? raw.duration ?? raw.days ?? null;
+    const type = raw.type ?? null;
     return {
       id: item.id,
       name: item.title,
@@ -117,7 +142,20 @@ export class PlansComponent implements OnInit {
       originalPrice: typeof original === 'number' ? original : null,
       currentPrice: typeof current === 'number' ? current : (typeof original === 'number' ? original : null),
       durationInDays: typeof duration === 'number' ? duration : null,
-      sectors: item.sectors
+      sectors: item.sectors,
+      type: type
     };
+  }
+
+  planTypeLabel(type?: string | null): string {
+    const t = String(type || '').trim().toUpperCase();
+    if (!t) return '—';
+    if (t === 'ENTERPRISE' || t === 'ENTERPRISE_ORGANIZATION' || t === 'ENTERPRISE_ORG' || t === 'ENTERPRISES' || t === 'EMPRESARIAL') {
+      return 'Empresarial';
+    }
+    if (t === 'INDIVIDUAL' || t === 'PERSONAL' || t === 'PESSOAL' || t === 'PERSON') {
+      return 'Individual';
+    }
+    return t[0] + t.slice(1).toLowerCase();
   }
 }

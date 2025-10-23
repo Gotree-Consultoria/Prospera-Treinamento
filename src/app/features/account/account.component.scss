@@ -5,6 +5,28 @@
 
 .account-page .container {
   display: grid;
+
+/* Improved invite role dropdown & inline layout */
+.invite-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; align-items: center; }
+.invite-email input { width: 100%; }
+.invite-role select {
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--gray-light);
+  border-radius: var(--border-radius-md);
+  background: var(--white);
+  font-weight: 600;
+  color: var(--gray-dark);
+}
+.invite-role select:focus { outline: none; box-shadow: 0 0 0 3px rgba(79,168,108,0.08); border-color: var(--verde-escuro); }
+.invite-actions { display:flex; align-items:center; }
+.invite-row .btn { padding: 0.55rem 0.9rem; }
+
+@media (max-width: 640px) {
+  .invite-row { grid-template-columns: 1fr; }
+  .invite-role { order: 2; }
+  .invite-actions { order: 3; justify-content: flex-start; }
+}
   grid-template-columns: 320px 1fr;
   gap: var(--spacing-xl);
   align-items: flex-start;

@@ -22,6 +22,8 @@
     display: grid;
     gap: 2rem;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    /* garantir que cada célula do grid estique seu conteúdo verticalmente */
+    align-items: stretch;
   }
 
   .plan-card {
@@ -85,6 +87,13 @@
         margin-top: 1.5rem;
       }
     }
+  }
+
+  /* aplica height:100% nos componentes dentro do grid para que o card ocupe todo o espaço */
+  .grid > * {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
   }
 }
 @keyframes spin {

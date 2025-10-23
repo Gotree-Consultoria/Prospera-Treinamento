@@ -1,5 +1,6 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, defaultIfEmpty, filter, forkJoin, from, map, of, switchMap, take, tap } from 'rxjs';
+import { catchError, defaultIfEmpty, filter, forkJoin, from, map, of, switchMap, take, tap, Subject } from 'rxjs';
 
 import { ApiService } from './api.service';
 
@@ -24,7 +25,13 @@ export interface CatalogSector {
 
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
-  constructor(private readonly api: ApiService) {}
+  // Emite quando os planos/catalogo mudam (criação/atualização) permitindo que consumidores recarreguem
+  plansUpdated = new Subject<void>();
+
+  notifyPlansUpdated() {
+    try { this.plansUpdated.next(); } catch (e) { /* no-op */ }
+  }
+  constructor(private readonly api: ApiService, private http: HttpClient) {}
 
   /**
    * Lista todo o catálogo público usando o endpoint único /public/catalog (resumido).
@@ -139,6 +146,13 @@ export class CatalogService {
         return of([] as CatalogItem[]);
       })
     );
+  }
+
+  /**
+   * Carrega dados de um endpoint público.
+   */
+  loadFromPublicApi(endpoint: string) {
+    return this.http.get<any[]>(endpoint);
   }
 
   /**

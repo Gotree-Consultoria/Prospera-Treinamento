@@ -74,7 +74,8 @@ export class AccountComponent implements OnInit {
   });
 
   readonly inviteForm = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]]
+    email: ['', [Validators.required, Validators.email]],
+    role: ['ORG_MEMBER']
   });
 
   activeSection: AccountMenuItem['id'] = 'profile';
@@ -97,6 +98,7 @@ export class AccountComponent implements OnInit {
   passwordErrorMessage = '';
   inviteSuccessMessage = '';
   inviteErrorMessage = '';
+  isAddingMember = false;
   // import/report variables removed — feature deprecated in this UI
   companySubusers: CompanySubuser[] = [];
   // Organization members (from backend)
@@ -173,13 +175,63 @@ export class AccountComponent implements OnInit {
         .subscribe((res: any) => {
           this.lookupInProgress = false;
           if (res && typeof res === 'object') {
-            const name = String(res.razaoSocial ?? res.nome ?? res.companyName ?? res.corporateName ?? '');
+            // backend may return different keys; support snake_case and common alternatives
+            const name = String(
+              res.razao_social ?? res.razaoSocial ?? res.nome ?? res.companyName ?? res.corporateName ?? res.nome_fantasia ?? res.fantasia ?? ''
+            );
             if (name) {
               this.orgCreateForm.patchValue({ razaoSocial: name });
             }
           }
         });
     }
+  }
+
+  // Trigger CNPJ lookup on blur or explicit user action. This complements the valueChanges auto-lookup
+  // and ensures pasted values or quick inputs still trigger a lookup.
+  private lastLookupDigits: string | null = null;
+
+  onCnpjInput(): void {
+    const raw = String(this.orgCreateForm.get('cnpj')?.value || '');
+    const digits = raw.replace(/\D/g, '');
+    // If user has typed/pasted the full 14 digits, trigger lookup immediately
+    if (digits.length === 14) {
+      this.triggerCnpjLookup(digits);
+    }
+  }
+
+  triggerCnpjLookup(digitsParam?: string): void {
+    const raw = digitsParam ?? String(this.orgCreateForm.get('cnpj')?.value || '');
+    const digits = raw.replace(/\D/g, '');
+    if (!digits || digits.length < 14) {
+      return;
+    }
+    // Avoid duplicate lookups for same CNPJ
+    if (this.lastLookupDigits === digits) return;
+    this.lastLookupDigits = digits;
+    // Avoid overlapping lookups
+    if (this.lookupInProgress) return;
+    this.lookupInProgress = true;
+    this.lookupError = '';
+    const url = `http://localhost:8080/api/lookup/cnpj/${digits}`;
+    this.http.get(url).pipe(take(1)).subscribe({
+      next: (res: any) => {
+        this.lookupInProgress = false;
+        if (res && typeof res === 'object') {
+          const name = String(
+            res.razao_social ?? res.razaoSocial ?? res.nome ?? res.companyName ?? res.corporateName ?? res.nome_fantasia ?? res.fantasia ?? ''
+          );
+          if (name) {
+            this.orgCreateForm.patchValue({ razaoSocial: name });
+          }
+        }
+      },
+      error: err => {
+        this.lookupInProgress = false;
+        console.warn('[Account] lookup cnpj (on blur) falhou', err);
+        this.lookupError = 'Não foi possível buscar a razão social para este CNPJ.';
+      }
+    });
   }
 
   private loadMyOrganizations() {
@@ -368,9 +420,8 @@ export class AccountComponent implements OnInit {
   }
 
   selectSection(section: AccountMenuItem['id']): void {
-    if (section === 'manageCompanies' && !this.isCompanyAdmin) {
-      return;
-    }
+    // Allow users (even non-company-admin) to open the Manage Companies view
+    // so they can create a new organization if they don't have one yet.
     this.activeSection = section;
     if (section === 'profile' && !this.availableProfileSections.some(item => item.id === this.activeProfileTab)) {
       this.activeProfileTab = this.availableProfileSections[0]?.id ?? 'dados';
@@ -413,11 +464,25 @@ export class AccountComponent implements OnInit {
       birthDate: this.normalizeBirthDate(birth)
     };
     this.authService.updateProfile(payload).subscribe({
-      next: profile => {
-        this.isSaving = false;
-        this.successMessage = 'Dados atualizados com sucesso!';
-        this.patchUser(profile);
-        this.isEditingProfile = false;
+      next: () => {
+        // Garantir que a UI reflita exatamente os dados no servidor:
+        this.authService.fetchProfile({ suppressNavigation: true }).subscribe({
+          next: profile => {
+            // Debugging: log returned profile and derived values to help diagnose why UI may still show 'incompleto'
+            console.debug('[Account] fetchProfile returned', profile);
+            this.isSaving = false;
+            this.successMessage = 'Perfil preenchido com sucesso!';
+            this.patchUser(profile);
+            // after patching, also log the derived display fields
+            console.debug('[Account] displayName=', this.displayName, 'displayCPF=', this.displayCPF, 'isProfileComplete=', this.isProfileComplete);
+            this.isEditingProfile = false;
+          },
+          error: err => {
+            // Atualização ocorreu, mas falha ao recuperar perfil atualizado
+            this.isSaving = false;
+            this.errorMessage = err?.message || 'Dados atualizados, mas não foi possível carregar o perfil atualizado.';
+          }
+        });
       },
       error: error => {
         this.isSaving = false;
@@ -454,20 +519,28 @@ export class AccountComponent implements OnInit {
       return;
     }
     const email = (this.inviteForm.value.email ?? '').trim();
-  const orgId = String(((this.user?.company as any)?.['id']) ?? ((this.user?.organizations as any)?.[0]?.['id']) ?? '');
+    const role = String(this.inviteForm.value.role || 'ORG_MEMBER');
+    // Prefer the currently selected organization in the UI, fall back to user's company/orgs
+  const orgId = String(this.selectedOrgId || (((this.user?.company as any)?.['id']) ?? (((this.user?.organizations as any)?.[0]?.['id']) ?? '')));
     if (!orgId) {
-      this.inviteErrorMessage = 'Organização não encontrada.';
+      this.inviteErrorMessage = 'Organização não encontrada. Selecione uma organização antes de adicionar membros.';
       return;
     }
-    const payload = { email };
-    this.adminService.addOrganizationMember(orgId, payload).subscribe({
+    const payload = { email, role };
+    const url = `http://localhost:8080/organizations/${orgId}/members`;
+    console.debug('[Account] inviteSubuser POST', { url, payload });
+    this.isAddingMember = true;
+    this.http.post(url, payload).subscribe({
       next: resp => {
         this.inviteSuccessMessage = `Membro ${email} adicionado.`;
-        this.inviteForm.reset();
+        this.inviteForm.reset({ role: 'ORG_MEMBER', email: '' });
         this.loadOrganizationMembers();
+        this.isAddingMember = false;
       },
       error: err => {
+        console.warn('Falha ao adicionar membro via POST', err);
         this.inviteErrorMessage = err?.message ?? 'Falha ao adicionar membro.';
+        this.isAddingMember = false;
       }
     });
   }
@@ -475,7 +548,7 @@ export class AccountComponent implements OnInit {
   private loadOrganizationMembers() {
     this.orgMembers = [];
     this.orgMembersError = '';
-  const orgId = String(((this.user?.company as any)?.['id']) ?? ((this.user?.organizations as any)?.[0]?.['id']) ?? '');
+  const orgId = String(this.selectedOrgId || (((this.user?.company as any)?.['id']) ?? (((this.user?.organizations as any)?.[0]?.['id']) ?? '')));
     if (!orgId) {
       // fallback: mantemos os mocks já presentes
       this.populateCompanySubusers(this.user!);
@@ -676,9 +749,8 @@ export class AccountComponent implements OnInit {
       ) ?? ''
     });
     this.populateCompanySubusers(user);
-    if (!this.isCompanyAdmin && this.activeSection === 'manageCompanies') {
-      this.activeSection = 'profile';
-    }
+    // Keep the activeSection as the user left it. Allow non-admin users to access
+    // the manageCompanies view so they can create an organization.
     // carregar assinatura do usuário quando os dados do perfil estiverem prontos
     this.loadMySubscription();
     // carregar organizações do usuário

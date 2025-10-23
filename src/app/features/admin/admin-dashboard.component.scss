@@ -104,6 +104,7 @@
 
 /* Coluna PDF com ícone */
 .pdf-col { text-align:center; }
+.debug-btn { margin-left:4px; }
 .pdf-icon { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; transition:.2s; }
 .pdf-icon svg { width:16px; height:16px; display:block; }
 .pdf-icon.has { color:#15803d; background:#dcfce7; border-color:#bbf7d0; }
@@ -115,9 +116,8 @@
 
 /* Ações com ícones */
 .actions-wrapper .icon { width:14px; height:14px; fill:currentColor; }
-.actions-menu .icon { width:14px; height:14px; }
-.actions-menu .menu-item { gap:.4rem; }
 .actions-wrapper { position:relative; display:inline-block; }
+.actions-col-inner { display:flex; gap:.5rem; }
 .more-trigger { position:relative; padding-right:1.2rem; }
 .actions-menu { position:absolute; top:100%; right:0; margin-top:.35rem; background:#fff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 28px -6px rgba(0,0,0,.22); min-width:150px; display:flex; flex-direction:column; padding:.4rem; z-index:30; animation:fade .18s ease; }
 .actions-menu .menu-item { background:transparent; border:0; text-align:left; padding:.45rem .55rem; font-size:.65rem; border-radius:6px; cursor:pointer; color:#334155; display:flex; align-items:center; gap:.5rem; }
@@ -232,6 +232,65 @@
 /* Media query antiga removida pois layout agora é sempre empilhado */
 @keyframes fade { from{opacity:.0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
 
+/* Feedback & Success Messages */
+.feedback { 
+	padding:.75rem 1rem; 
+	border-radius:8px; 
+	font-size:.8rem; 
+	line-height:1.4;
+	margin:.5rem 0;
+	border:1px solid #dcfce7;
+	background:#f0fdf4;
+	color:#166534;
+	font-weight:500;
+	animation:fadeInUp .4s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity:0;
+		transform:translateY(8px);
+	}
+	to {
+		opacity:1;
+		transform:translateY(0);
+	}
+}
+
+.feedback.success-feedback {
+	padding:1rem 1.1rem;
+	border-radius:10px;
+	background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+	border:1px solid #86efac;
+	color:#15803d;
+	font-weight:600;
+	animation:fadeInUp .5s cubic-bezier(.4,0,.2,1);
+}
+
+.feedback.success-feedback p {
+	margin:.25rem 0 0;
+	font-size:.8rem;
+	color:#15803d;
+}
+
+.feedback.success-feedback .success-feedback-sub {
+	margin-top:.5rem;
+	font-size:.7rem;
+	opacity:.9;
+	font-weight:400;
+}
+
+.form-error {
+	padding:.6rem .8rem;
+	border-radius:6px;
+	font-size:.75rem;
+	background:#fee2e2;
+	border:1px solid #fecaca;
+	color:#b91c1c;
+	font-weight:500;
+	animation:fadeInUp .4s cubic-bezier(.4,0,.2,1);
+}
+
 /* === Analytics & Relatórios (Card 4) === */
 .analytics-placeholder { margin-top:.75rem; display:flex; flex-direction:column; gap:1rem; }
 .analytics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.85rem; }
@@ -278,6 +337,7 @@
 .admin-subcard-body input[type=text]:focus, .admin-subcard-body input[type=number]:focus, .admin-subcard-body textarea:focus { outline:3px solid rgba(99,102,241,.18); outline-offset:2px; }
 .admin-subcard-body .row.two { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
 .admin-subcard-body .actions-row { display:flex; gap:.6rem; justify-content:flex-start; margin-top:.25rem; }
+.plan-create-actions { justify-content:space-between; align-items:center; }
 .admin-subcard .created-plans h5 { margin:.4rem 0 .25rem; font-size:.8rem; }
 
 /* Horizontal plans scroller */
@@ -320,6 +380,8 @@
 .plan-desc .desc-meta { margin-top:.25rem; }
 .plan-original, .plan-current { font-weight:600; color:#0f172a; white-space:nowrap; text-align:right; padding-right:.5rem; width:90px; }
 .plan-actions { width:100px; }
+.plan-actions-header { width:120px; text-align:center; }
+.plan-actions-cell { text-align:center; }
 .plan-actions .btn-ghost-small { padding:.28rem .5rem; }
 
 @media (max-width:780px) {

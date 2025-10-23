@@ -80,9 +80,9 @@ describe('AuthService', () => {
     apiService.post.and.returnValue(of({ token: 'token', profile }));
     await firstValueFrom(service.login({ email: 'ana@empresa.com', password: '123456' }));
 
-    apiService.patch.and.returnValue(of({ id: '1', name: 'Ana Carolina' } as UserProfile));
+  apiService.post.and.returnValue(of({ id: '1', name: 'Ana Carolina' } as UserProfile));
 
-    const updated = await firstValueFrom(service.updateProfile({ name: 'Ana Carolina' }));
+  const updated = await firstValueFrom(service.updateProfile({ name: 'Ana Carolina' }));
     expect(updated.name).toBe('Ana Carolina');
 
     const state = (service as any).userSubject.value as UserProfile | null;

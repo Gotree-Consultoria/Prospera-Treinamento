@@ -42,19 +42,15 @@
       }
     </div>
 
-    @if (pagesCount() > 1) {
-    <nav class="sectors-pagination" aria-label="Páginas do carrossel">
+    <nav class="sectors-pagination" *ngIf="pagesCount() > 1" aria-label="Páginas do carrossel">
       <ul>
-        @for (i of pagesArray(); track i) {
-        <li>
+        <li *ngFor="let i of pagesArray()">
           <button class="dot" [class.active]="pageIndex() === i" (click)="goToPage(i)"
             [attr.aria-current]="pageIndex() === i ? 'true' : null" aria-label="Ir para página {{i + 1}}">
           </button>
         </li>
-        }
       </ul>
     </nav>
-    }
     }
 
     @if (!sectorsLoading() && !sectorsError() && !sectors().length) {
@@ -124,29 +120,38 @@
     </div>
 
     <div class="training-formats-cards">
-      <article class="format-card" *ngFor="let format of trainingFormats">
-        <div class="format-icon" [ngSwitch]="format.iconType">
-          <!-- E-books icon removed since E-books page was consolidated into catalog -->
-          <svg *ngSwitchCase="'courses'" viewBox="0 0 48 48" role="img" aria-label="Ícone de curso gravado">
+      @for (format of trainingFormats; track format.iconType) {
+      <article class="format-card">
+        <div class="format-icon">
+          @switch (format.iconType) {
+            @case ('courses') {
+            <svg viewBox="0 0 48 48" role="img" aria-label="Ícone de curso gravado">
             <path
               d="M6 8a4 4 0 0 1 4-4h28a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H22v6h6a2 2 0 1 1 0 4H20a2 2 0 1 1 0-4h2v-6H10a4 4 0 0 1-4-4Zm4-2a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h28a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" />
             <path
               d="M21 16.566v7.868a1 1 0 0 0 1.548.836l6.264-3.934a1 1 0 0 0 0-1.672l-6.264-3.934A1 1 0 0 0 21 16.566Z" />
-          </svg>
-          <svg *ngSwitchCase="'live'" viewBox="0 0 48 48" role="img" aria-label="Ícone de treinamento ao vivo">
-            <path
-              d="M24 6c5.523 0 10 4.477 10 10a9.964 9.964 0 0 1-2.508 6.6l3.954 3.954a2 2 0 0 1 0 2.828l-2.828 2.828a2 2 0 0 1-2.828 0l-4.057-4.057A9.983 9.983 0 0 1 24 32c-5.523 0-10-4.477-10-10S18.477 12 24 12s10 4.477 10 10h-4a6 6 0 1 0-6 6c1.36 0 2.607-.452 3.6-1.21l5.657 5.657 1.414-1.414-5.626-5.627A9.96 9.96 0 0 1 24 30c-5.523 0-10-4.477-10-10S18.477 10 24 10s10 4.477 10 10a2 2 0 1 1-4 0 6 6 0 1 0-12 0 6 6 0 0 0 6 6c1.886 0 3.563-.867 4.657-2.225L33.1 24.9A9.964 9.964 0 0 1 34 22c0-5.523-4.477-10-10-10Z" />
-            <path
-              d="M11 39a2 2 0 0 1-1.414-3.414l5-5a2 2 0 1 1 2.828 2.828l-5 5A1.996 1.996 0 0 1 11 39Zm26 0a1.996 1.996 0 0 1-1.414-.586l-5-5a2 2 0 1 1 2.828-2.828l5 5A2 2 0 0 1 37 39Z" />
-          </svg>
-          <svg *ngSwitchDefault viewBox="0 0 24 24" role="img" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"></circle>
-          </svg>
+            </svg>
+            }
+            @case ('live') {
+            <svg viewBox="0 0 48 48" role="img" aria-label="Ícone de treinamento ao vivo">
+              <path
+                d="M24 6c5.523 0 10 4.477 10 10a9.964 9.964 0 0 1-2.508 6.6l3.954 3.954a2 2 0 0 1 0 2.828l-2.828 2.828a2 2 0 0 1-2.828 0l-4.057-4.057A9.983 9.983 0 0 1 24 32c-5.523 0-10-4.477-10-10S18.477 12 24 12s10 4.477 10 10h-4a6 6 0 1 0-6 6c1.36 0 2.607-.452 3.6-1.21l5.657 5.657 1.414-1.414-5.626-5.627A9.96 9.96 0 0 1 24 30c-5.523 0-10-4.477-10-10S18.477 10 24 10s10 4.477 10 10a2 2 0 1 1-4 0 6 6 0 1 0-12 0 6 6 0 0 0 6 6c1.886 0 3.563-.867 4.657-2.225L33.1 24.9A9.964 9.964 0 0 1 34 22c0-5.523-4.477-10-10-10Z" />
+              <path
+                d="M11 39a2 2 0 0 1-1.414-3.414l5-5a2 2 0 1 1 2.828 2.828l-5 5A1.996 1.996 0 0 1 11 39Zm26 0a1.996 1.996 0 0 1-1.414-.586l-5-5a2 2 0 1 1 2.828-2.828l5 5A2 2 0 0 1 37 39Z" />
+            </svg>
+            }
+            @default {
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            }
+          }
         </div>
         <h3>{{ format.title }}</h3>
         <p>{{ format.description }}</p>
         <a class="btn btn-small" [routerLink]="format.link">{{ format.cta }}</a>
       </article>
+      }
     </div>
   </div>
 </section>

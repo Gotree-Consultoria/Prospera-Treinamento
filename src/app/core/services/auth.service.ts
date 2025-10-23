@@ -113,8 +113,8 @@ export class AuthService {
   }
 
   updateProfile(changes: Partial<UserProfile>): Observable<UserProfile> {
-    // Usar PATCH para atualizar perfil (testes e backend podem usar PATCH)
-    return this.api.patch<UserProfile | null>('/profile/pf', changes).pipe(
+    // O endpoint de perfil do backend espera POST em /profile/pf com o corpo: { fullName, cpf, birthDate, phone }
+    return this.api.post<UserProfile | null>('/profile/pf', changes).pipe(
       map(profile => {
         const previous = this.userSubject.value;
         if (!profile) {

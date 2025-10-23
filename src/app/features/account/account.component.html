@@ -2,7 +2,6 @@
   <div class="container">
     <aside class="account-sidebar" *ngIf="user">
       <div class="user-summary">
-        <div class="avatar" aria-hidden="true">{{ displayName.charAt(0) }}</div>
         <div>
           <p class="user-name">{{ displayName }}</p>
           <p class="user-email">{{ displayEmail }}</p>
@@ -13,7 +12,6 @@
         <span class="badge" [class.badge-warning]="!isProfileComplete">
           {{ isProfileComplete ? 'Perfil completo' : 'Complete seu perfil' }}
         </span>
-  <p *ngIf="user.role" class="user-role">Perfil: {{ user.role }}</p>
       </div>
 
       <nav class="account-menu" aria-label="Seções da conta">
@@ -304,12 +302,12 @@
           </div>
         <form [formGroup]="orgCreateForm" (ngSubmit)="createOrganizationFromModal()" novalidate>
           <label>
-            <span>Razão social</span>
-            <input type="text" formControlName="razaoSocial" placeholder="Razão social (preenchimento automático via CNPJ)" />
+            <span>CNPJ</span>
+            <input type="text" formControlName="cnpj" placeholder="00.000.000/0000-00" (input)="onCnpjInput()" (blur)="triggerCnpjLookup()" />
           </label>
           <label>
-            <span>CNPJ</span>
-            <input type="text" formControlName="cnpj" placeholder="00.000.000/0000-00" />
+            <span>Razão social</span>
+            <input type="text" formControlName="razaoSocial" placeholder="Razão social (preenchimento automático via CNPJ)" />
           </label>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" (click)="closeCreateOrgModal()" [disabled]="isCreatingOrg">Cancelar</button>
@@ -416,14 +414,27 @@
               </div>
             </div>
 
-            <div class="org-actions">
-              <form class="invite-form" [formGroup]="inviteForm" (ngSubmit)="inviteSubuser()">
-                <label>
-                  <span>Adicionar membro por e-mail</span>
+              <div class="org-actions">
+              <form class="invite-form invite-row" [formGroup]="inviteForm" (ngSubmit)="inviteSubuser()">
+                <label class="invite-email">
+                  <span class="sr-only">Adicionar membro por e-mail</span>
                   <input type="email" formControlName="email" placeholder="colaborador@empresa.com" />
                 </label>
-                <button type="submit" class="btn btn-primary">Adicionar Membro</button>
+                <label class="invite-role">
+                  <span class="sr-only">Role</span>
+                  <select formControlName="role" aria-label="Role do membro">
+                    <option value="ORG_ADMIN">Administrador</option>
+                    <option value="ORG_MEMBER">Membro</option>
+                  </select>
+                </label>
+                <div class="invite-actions">
+                  <button type="submit" class="btn btn-primary" [disabled]="isAddingMember">{{ isAddingMember ? 'Adicionando…' : 'Adicionar Membro' }}</button>
+                </div>
               </form>
+              <div class="invite-messages">
+                <p class="success" *ngIf="inviteSuccessMessage">{{ inviteSuccessMessage }}</p>
+                <p class="error" *ngIf="inviteErrorMessage">{{ inviteErrorMessage }}</p>
+              </div>
               <!-- import/report actions removidas -->
             </div>
           </div>
