@@ -591,7 +591,7 @@ export class AdminService {
       description: (source as any).description ?? null,
       author: (source as any).author ?? null,
       entityType: this.normalizeEntityType(((source as any).entityType ?? (source as any).format ?? (source as any).type) ?? null),
-      publicationStatus: (source as any).publicationStatus ?? (source as any).status ?? null,
+  publicationStatus: this.normalizePublicationStatus(source),
       coverImageUrl: (source as any).coverImageUrl ?? (source as any).imageUrl ?? null,
       organizationId: (source as any).organizationId ?? null,
       updatedAt: (source as any).updatedAt ?? null,
@@ -619,6 +619,32 @@ export class AdminService {
       })()
     } as AdminTraining;
   };
+
+  private normalizePublicationStatus(source: any): string | null {
+    if (!source || typeof source !== 'object') return null;
+    const candidates = [
+      source.publicationStatus,
+      source.publication_status,
+      source.publicationState,
+      source.publication,
+      source.status,
+      source.state,
+      source.pubStatus,
+      source.publicado,
+      source.publicacao
+    ];
+    for (const c of candidates) {
+      if (c === undefined || c === null) continue;
+      const s = String(c).trim();
+      if (!s) continue;
+      const up = s.toUpperCase();
+      if (up === 'DRAFT' || up === 'RAScunho'.toUpperCase() || up === 'RASCUNHO') return 'DRAFT';
+      if (up === 'PUBLISHED' || up === 'PUBLICADO' || up === 'PUBLICADO'.toUpperCase()) return 'PUBLISHED';
+      // fallback: return normalized uppercase token
+      return up;
+    }
+    return null;
+  }
 
   // --- Monetização: Planos & Assinaturas ---
   /**

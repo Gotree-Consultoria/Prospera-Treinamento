@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe';
 import { forkJoin } from 'rxjs';
 import { AdminService } from '../../core/services/admin.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -29,7 +30,7 @@ interface AdminOrganizationSummary {
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, RouterModule, ReactiveFormsModule],
+  imports: [CommonModule, NgIf, NgFor, RouterModule, ReactiveFormsModule, PublicationStatusPipe],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.scss']
 })
@@ -424,6 +425,15 @@ export class AdminDashboardComponent {
       if (key === 'monetization') {
         // carregar planos do endpoint se ainda não carregados
         if (!this.subscriptionPlans().length) this.loadSubscriptionPlans();
+        // carregar a listagem de assinaturas automaticamente ao abrir Monetização
+        // (evita depender do botão 'Atualizar') — respeita filtros atuais
+        if (!this.subscriptions().length) {
+          try {
+            this.loadSubscriptions({ origin: this.subscriptionFilterOrigin() || undefined, status: this.subscriptionFilterStatus() || undefined });
+          } catch (e) {
+            // no-op: loadSubscriptions já trata erros internamente
+          }
+        }
       }
     }
   }
@@ -868,6 +878,28 @@ export class AdminDashboardComponent {
     return [];
   }
 
+  /**
+   * Retorna um rótulo legível para o tipo de vínculo do setor.
+   */
+  displaySectorType(type: string | null | undefined): string {
+    if (!type) return '—';
+    let t = String(type).trim().toUpperCase();
+    if (!t) return '—';
+    // Normalize legacy token OPTIONAL to ELECTIVE
+    if (t === 'OPTIONAL') t = 'ELECTIVE';
+    switch (t) {
+      case 'COMPULSORY':
+      case 'MANDATORY':
+        return 'Compulsório';
+      case 'ELECTIVE':
+      case 'OPTIONAL':
+        return 'Eletivo';
+      default:
+        // Fallback: capitaliza
+        return t.charAt(0) + t.slice(1).toLowerCase();
+    }
+  }
+
   sectorName(id: string | null | undefined): string {
     if (!id) return '';
     const found = this.sectors().find(s => s.id === id);
@@ -884,6 +916,8 @@ export class AdminDashboardComponent {
    */
   getSubscriptionUserLabel(s: any): string {
     if (!s) return '—';
+    // Prefer ownerName when backend provides it (ex: ownerName for organization-owned subscriptions)
+    if (s.ownerName) return String(s.ownerName);
     const userObj = s.user || s.customer || null;
     if (userObj) {
       return String(userObj.name || userObj.fullName || userObj.email || userObj.userEmail || userObj.id || '').trim() || '—';
@@ -923,6 +957,8 @@ export class AdminDashboardComponent {
    */
   getSubscriptionUserName(s: any): string {
     if (!s) return 'Não preenchido';
+    // Prefer ownerName when available
+    if (s.ownerName) return String(s.ownerName);
     const userObj = s.user || s.customer || null;
     if (userObj) {
       const name = userObj.name || userObj.fullName || userObj.firstName || (userObj.personalProfile && (userObj.personalProfile.fullName || userObj.personalProfile.name));

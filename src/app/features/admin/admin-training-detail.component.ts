@@ -3,18 +3,19 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { AdminService } from '../../core/services/admin.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe';
 
 @Component({
   selector: 'app-admin-training-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, PublicationStatusPipe],
   template: `
   <div class="training-detail-page" *ngIf="isSystemAdmin(); else noAccess" (click)="closeFilePickers()">
     <div class="header-row" *ngIf="training() as t">
       <div class="title-block">
         <a class="back-link" routerLink="/admin">← Voltar</a>
         <h1 class="title">{{t.title}}</h1>
-        <span class="status-badge" [class.published]="(t.publicationStatus||'').toLowerCase()==='published'">{{t.publicationStatus || '—'}}</span>
+  <span class="status-badge" [class.published]="(t.publicationStatus||'').toLowerCase()==='published'">{{ (t.publicationStatus || '—') | publicationStatus }}</span>
       </div>
       <div class="action-bar">
         <button type="button" class="btn btn--primary" (click)="publish()" [disabled]="publishing() || (t.publicationStatus||'').toLowerCase()==='published'">{{ (t.publicationStatus||'').toLowerCase()==='published' ? 'Publicado' : 'Publicar' }}</button>
@@ -45,7 +46,7 @@ import { AuthService } from '../../core/services/auth.service';
             <div class="field"><label>ID</label><div class="value mono">{{t.id}}</div></div>
             <div class="field"><label>Autor</label><div class="value">{{t.author || '—'}}</div></div>
             <div class="field"><label>Tipo</label><div class="value">{{t.entityType || '—'}}</div></div>
-            <div class="field"><label>Status</label><div class="value"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{t.publicationStatus || '—'}}</span></div></div>
+              <div class="field"><label>Status</label><div class="value"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{ (t.publicationStatus || '—') | publicationStatus }}</span></div></div>
             <div class="field"><label>Criado</label><div class="value">{{t.createdAt | date:'short'}}</div></div>
             <div class="field"><label>Atualizado</label><div class="value">{{t.updatedAt | date:'short'}}</div></div>
           </div>
@@ -136,8 +137,8 @@ import { AuthService } from '../../core/services/auth.service';
             <option *ngFor="let s of sectors()" [value]="s.id">{{s.name}}</option>
           </select>
           <select [value]="assignmentForm().trainingType" (change)="setAssignmentField('trainingType',$any($event.target).value)" style="padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;background:#fff;">
-            <option value="COMPULSORY">COMPULSORY</option>
-            <option value="OPTIONAL">OPTIONAL</option>
+            <option value="COMPULSORY">Compulsório</option>
+            <option value="ELECTIVE">Eletivo</option>
           </select>
           <input type="text" placeholder="Base legal (opcional)" [value]="assignmentForm().legalBasis" (input)="setAssignmentField('legalBasis',$any($event.target).value)" style="padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;min-width:200px;" />
           <button type="button" class="btn btn--primary btn-xs" (click)="addSector()" [disabled]="assigning()">{{ assigning() ? 'Vinculando...' : 'Vincular setor' }}</button>
@@ -146,15 +147,15 @@ import { AuthService } from '../../core/services/auth.service';
         <div *ngIf="assignmentError()" class="error" style="margin-bottom:.5rem">{{assignmentError()}}</div>
         <div *ngIf="assignmentMessage()" class="success" style="margin-bottom:.5rem;color:#065f46">{{assignmentMessage()}}</div>
 
-        <table class="table mini" aria-label="Setores vinculados">
-          <thead><tr><th>ID</th><th>Nome do Setor</th><th>Tipo</th><th>Base Legal</th><th>Ações</th></tr></thead>
+  <table class="table mini center-headers" aria-label="Setores vinculados">
+    <thead><tr><th>ID</th><th>Nome do Setor</th><th>Tipo</th><th>Base Legal</th><th class="actions-header">Ações</th></tr></thead>
           <tbody>
             <tr *ngFor="let sa of (training().sectorAssignments || [])">
               <td data-label="ID" class="mono">{{sa.sectorId}}</td>
               <td data-label="Nome do Setor">{{sectorName(sa.sectorId)}}</td>
-              <td data-label="Tipo">{{sa.trainingType || '—'}}</td>
+              <td data-label="Tipo">{{ displaySectorType(sa.trainingType) }}</td>
               <td data-label="Base Legal">{{sa.legalBasis || '—'}}</td>
-              <td data-label="Ações" class="actions-col"><button type="button" class="btn btn--ghost btn-xs" (click)="unlinkSector(sa.sectorId, t.id)">Remover</button></td>
+              <td data-label="Ações" class="actions-col"><div style="display:flex;justify-content:center"><button type="button" class="btn btn--ghost btn-xs" (click)="unlinkSector(sa.sectorId, t.id)">Remover</button></div></td>
             </tr>
             <tr *ngIf="!(training().sectorAssignments || []).length">
               <td colspan="5" class="mono">Nenhum setor vinculado.</td>
@@ -200,7 +201,9 @@ import { AuthService } from '../../core/services/auth.service';
     .kv-item .v { font-size:.7rem; font-weight:500; color:#1e293b; }
     .ebook-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
     .table { width:100%; border-collapse:collapse; font-size:.65rem; }
-    .table thead th { text-align:left; font-size:.55rem; letter-spacing:.05em; text-transform:uppercase; font-weight:600; padding:.45rem .5rem; background:#f1f5f9; color:#334155; }
+  .table thead th { text-align:left; font-size:.55rem; letter-spacing:.05em; text-transform:uppercase; font-weight:600; padding:.45rem .5rem; background:#f1f5f9; color:#334155; }
+  /* centered header only for the Ações column (use class 'center-headers' on table) */
+  .center-headers thead th.actions-header { text-align:center; }
     .table tbody td { padding:.45rem .5rem; border-top:1px solid #e2e8f0; }
     .actions-col { text-align:right; }
     /* Buttons */
@@ -429,6 +432,16 @@ export class AdminTrainingDetailComponent {
     if (!sectorId) return '—';
     const found = this.sectors().find(s => s.id === sectorId);
     return found?.name || sectorId;
+  }
+
+  displaySectorType(type: string | null | undefined): string {
+    if (!type) return '—';
+    const t = String(type).toUpperCase();
+    // Normalize OPTIONAL -> ELECTIVE token if needed, then provide Portuguese labels
+    if (t === 'OPTIONAL' || t === 'ELECTIVE') return 'Eletivo';
+    if (t === 'COMPULSORY' || t === 'MANDATORY') return 'Compulsório';
+    // Fallback: return as-is to avoid losing data
+    return type as string;
   }
 
   // Placeholder para futuras interações (ex: fechar menus/file pickers externos se necessário)

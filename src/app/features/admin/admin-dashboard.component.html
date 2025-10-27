@@ -225,7 +225,7 @@
             <td data-label="ID">{{t.id}}</td>
             <td data-label="Título">{{t.title}}</td>
             <td data-label="Tipo">{{t.entityType || '—'}}</td>
-            <td data-label="Status"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{ (t.publicationStatus || '—') }}</span></td>
+            <td data-label="Status"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{ (t.publicationStatus || '—') | publicationStatus }}</span></td>
             <td data-label="Atualizado">{{ t.updatedAt | date:'dd/MM/yyyy' }}</td>
             <td data-label="PDF" class="pdf-col">
               <ng-container *ngIf="t.entityType === 'RECORDED_COURSE'; else showPdf">
@@ -303,7 +303,7 @@
               <div><label>ID</label><div class="value mono">{{d.id}}</div></div>
               <div><label>Título</label><div class="value">{{d.title}}</div></div>
               <div><label>Autor</label><div class="value">{{d.author || '—'}}</div></div>
-              <div><label>Status</label><div class="value"><span class="badge" [class.badge-active]="(d.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(d.publicationStatus||'').toLowerCase()!=='published'">{{d.publicationStatus || '—'}}</span></div></div>
+              <div><label>Status</label><div class="value"><span class="badge" [class.badge-active]="(d.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(d.publicationStatus||'').toLowerCase()!=='published'">{{ (d.publicationStatus || '—') | publicationStatus }}</span></div></div>
               <div><label>Tipo</label><div class="value">{{d.entityType || '—'}}</div></div>
             </div>
             <div class="section">
@@ -335,7 +335,7 @@
                   <tr *ngFor="let a of getTrainingSectorAssignments(d)">
                     <td data-label="ID" class="mono">{{ a.sectorId }}</td>
                     <td data-label="Nome do Setor">{{ sectorName(a.sectorId) || '—' }}</td>
-                    <td data-label="Tipo">{{ a.trainingType || '—' }}</td>
+                    <td data-label="Tipo">{{ displaySectorType(a.trainingType || a.type || a.category) }}</td>
                     <td data-label="Base Legal">{{ a.legalBasis || '—' }}</td>
                     <td data-label="Ações" class="actions-col">
                       <button type="button" class="btn-ghost-small" (click)="removeTrainingSector(d.id, a.sectorId)" [disabled]="removingTrainingSectorId()===a.sectorId">{{ removingTrainingSectorId()===a.sectorId ? '...' : 'Remover' }}</button>
@@ -687,18 +687,18 @@
                   <table *ngIf="!loadingSubscriptions() && !subscriptionsError()" class="table responsive" aria-label="Lista de Assinaturas">
                     <thead>
                       <tr>
-                          <th>ID</th>
-                          <th>Nome</th>
-                          <th>Usuário</th>
-                          <th>Status</th>
-                          <th>Ações</th>
-                        </tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Plano</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
                     </thead>
                     <tbody>
                       <tr *ngFor="let s of subscriptions()">
                         <td data-label="ID" class="mono">{{ s.id || '—' }}</td>
                         <td data-label="Nome">{{ getSubscriptionUserName(s) }}</td>
-                        <td data-label="Usuário">{{ getSubscriptionUserLabel(s) }}</td>
+                        <td data-label="Plano">{{ s.planName || getSubscriptionPlanLabel(s) }}</td>
                         <td data-label="Status">
                           <span class="badge" [class.badge-active]="(s.status||'').toUpperCase()==='ACTIVE'" [class.badge-inactive]="(s.status||'').toUpperCase()!=='ACTIVE'">{{ s.status || '—' }}</span>
                         </td>
@@ -721,11 +721,20 @@
                     <h3 id="subscription-details-title">Detalhes da Assinatura</h3>
                     <div *ngIf="selectedSubscription() as sub">
                       <div class="kv">
-                        <div><span>Plano:</span><strong>{{ getSubscriptionPlanLabel(sub) }}</strong></div>
-                        <div><span>Origem:</span><strong>{{ getSubscriptionOriginLabel(sub) }}</strong></div>
+                        <div><span>ID:</span><strong class="mono">{{ sub.id || '—' }}</strong></div>
+                        <div><span>Plano:</span><strong>{{ sub.planName || getSubscriptionPlanLabel(sub) }}</strong></div>
+                        <div><span>Plano ID:</span><strong class="mono">{{ sub.planId || sub.plan?.id || '—' }}</strong></div>
                         <div><span>Início:</span><strong>{{ sub.startedAt ? (sub.startedAt | date:'dd/MM/yyyy') : (sub.startDate ? (sub.startDate | date:'dd/MM/yyyy') : '—') }}</strong></div>
                         <div><span>Fim:</span><strong>{{ sub.expiresAt ? (sub.expiresAt | date:'dd/MM/yyyy') : (sub.endDate ? (sub.endDate | date:'dd/MM/yyyy') : '—') }}</strong></div>
+                        <div><span>Status:</span><strong>{{ sub.status || '—' }}</strong></div>
+                        <div><span>Origem:</span><strong>{{ getSubscriptionOriginLabel(sub) }}</strong></div>
+                        <div><span>Owner Account:</span><strong class="mono">{{ sub.ownerAccountId || '—' }}</strong></div>
+                        <div><span>Owner User ID:</span><strong class="mono">{{ sub.ownerUserId || '—' }}</strong></div>
+                        <div><span>Owner Name:</span><strong>{{ sub.ownerName || '—' }}</strong></div>
                       </div>
+
+                      <!-- JSON bruto removido por solicitação do usuário; exibimos apenas os campos importantes acima -->
+
                       <div class="actions-row modal-actions">
                         <button type="button" class="btn btn--subtle" (click)="closeSubscriptionDetails()">Fechar</button>
                       </div>

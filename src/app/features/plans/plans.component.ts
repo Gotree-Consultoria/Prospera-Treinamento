@@ -103,7 +103,15 @@ export class PlansComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err: any) => {
-        this.errorMessage = err?.message || 'Erro ao carregar planos da API pública';
+        // Tratamento amigável para falhas de rede/CORS que aparecem como status 0
+        // Exemplo: "Http failure response for //localhost:8080/public/catalog/plans: 0 undefined"
+        const status = err?.status;
+        const msg = err?.message || '';
+        if (status === 0 || (typeof msg === 'string' && msg.includes('Http failure response for'))) {
+          this.errorMessage = 'Não foi possível conectar ao serviço de planos. Verifique sua conexão com a internet ou se o servidor está acessível e tente novamente.';
+        } else {
+          this.errorMessage = msg || 'Erro ao carregar planos da API pública';
+        }
         this.isLoading = false;
       }
     });
