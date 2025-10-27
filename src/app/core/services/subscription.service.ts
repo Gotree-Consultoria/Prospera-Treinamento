@@ -57,7 +57,8 @@ export class SubscriptionService {
    * um AccessStatus com accessType='NONE' para simplificar o consumo.
    */
   getMyAccessStatus() {
-    return this.api.get<any>('/subscriptions/me/access-status').pipe(
+    // Novo endpoint unificado conforme especificado: /api/me/access-status
+    return this.api.get<any>('/api/me/access-status').pipe(
       map(res => {
         if (!res || (typeof res === 'object' && Object.keys(res).length === 0)) {
           return { accessType: 'NONE', planName: null, endDate: null, organizationName: null } as AccessStatus;
@@ -84,17 +85,50 @@ export class SubscriptionService {
   }
 
   getMySubscription() {
-    return this.api.get<any>('/subscriptions/me/subscription').pipe(
-      map(res => {
-        // se o backend retornar 200 com corpo vazio ou objeto vazio, considere sem assinatura
-        if (!res || (typeof res === 'object' && Object.keys(res).length === 0)) {
+    // Substitui a consulta direta ao endpoint legado que vinha gerando 500
+    // pelo novo endpoint unificado de access-status. A partir do status retornado
+    // sintetizamos um objeto UserSubscription simples quando aplicável.
+    return this.getMyAccessStatus().pipe(
+      map(status => {
+        if (!status || status.accessType === 'NONE') {
           return null;
         }
-        return this.normalize(res);
+
+        if (status.accessType === 'PERSONAL_SUBSCRIPTION') {
+          // Construir uma representação mínima de assinatura pessoal a partir do access-status
+          return {
+            id: 'personal-sub',
+            planName: status.planName ?? 'Plano',
+            origin: 'PERSONAL',
+            description: '',
+            startedAt: undefined,
+            expiresAt: status.endDate ?? null,
+            originalPrice: null,
+            currentPrice: null,
+            durationInDays: null,
+            status: 'ATIVA',
+            raw: status.raw ?? status
+          } as UserSubscription;
+        }
+
+        // ORGANIZATIONAL_SUBSCRIPTION => mapear para um cartão resumido
+        return {
+          id: 'org-access',
+          planName: status.planName ?? 'Plano (fornecido pela organização)',
+          origin: 'ORGANIZATION',
+          description: status.organizationName ? `Acesso via organização ${status.organizationName}` : 'Acesso via organização',
+          startedAt: undefined,
+          expiresAt: status.endDate ?? null,
+          originalPrice: null,
+          currentPrice: null,
+          durationInDays: null,
+          status: 'ATIVA',
+          raw: status.raw ?? status
+        } as UserSubscription;
       }),
       catchError(err => {
         if (err?.status === 404) {
-          return of(null); // regra de negócio: sem assinatura ativa
+          return of(null);
         }
         return throwError(() => err);
       })

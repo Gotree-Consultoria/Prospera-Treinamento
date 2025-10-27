@@ -15,11 +15,13 @@
     <pros-auth-modal (closed)="onCloseAuthModal()"></pros-auth-modal>
   }
 
-  <pros-layout-footer
-    brand="Prospera"
-    [description]="footerDescription"
-    [columns]="footerColumns"
-    [socialLinks]="socialLinks"
-    [copyright]="'© ' + currentYear + ' Prospera Treinamentos. Todos os direitos reservados.'"
-  ></pros-layout-footer>
+  @if (showFooter()) {
+    <pros-layout-footer
+      brand="Prospera"
+      [description]="footerDescription"
+      [columns]="footerColumns"
+      [socialLinks]="socialLinks"
+      [copyright]="'© ' + currentYear + ' Prospera Treinamentos. Todos os direitos reservados.'"
+    ></pros-layout-footer>
+  }
 </div>

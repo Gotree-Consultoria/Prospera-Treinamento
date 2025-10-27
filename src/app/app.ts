@@ -1,7 +1,7 @@
 import { AsyncPipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
-import { map } from 'rxjs/operators';
+import { Component, inject, signal } from '@angular/core';
+import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { map, filter } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 import { FooterColumn, FooterLink } from './core/models/footer';
 import { NavItem } from './core/models/navigation';
@@ -19,6 +19,7 @@ import { AuthModalComponent } from './features/auth/auth-modal/auth-modal.compon
 })
 export class App {
   showAuthModal = false;
+  showFooter = signal(true);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
 
@@ -100,6 +101,17 @@ export class App {
   ];
 
   readonly currentYear = new Date().getFullYear();
+
+  constructor() {
+    // Detectar quando estamos na página de visualização de EBOOK
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      // Esconder footer apenas na rota /conteudo/visualizar/:id
+      const isEbookViewer = /^\/conteudo\/visualizar\//.test(event.urlAfterRedirects);
+      this.showFooter.set(!isEbookViewer);
+    });
+  }
 
   onAccountClick(): void {
     if (this.authService.isAuthenticated()) {

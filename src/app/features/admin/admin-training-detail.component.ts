@@ -14,8 +14,7 @@ import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe'
     <div class="header-row" *ngIf="training() as t">
       <div class="title-block">
         <a class="back-link" routerLink="/admin">← Voltar</a>
-        <h1 class="title">{{t.title}}</h1>
-  <span class="status-badge" [class.published]="(t.publicationStatus||'').toLowerCase()==='published'">{{ (t.publicationStatus || '—') | publicationStatus }}</span>
+    <h1 class="title">{{t.title}}</h1>
       </div>
       <div class="action-bar">
         <button type="button" class="btn btn--primary" (click)="publish()" [disabled]="publishing() || (t.publicationStatus||'').toLowerCase()==='published'">{{ (t.publicationStatus||'').toLowerCase()==='published' ? 'Publicado' : 'Publicar' }}</button>
@@ -27,6 +26,7 @@ import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe'
           <span>Upload Capa</span>
           <input type="file" accept="image/*" (change)="onCoverSelected($any($event.target).files[0]); $event.target.value=''; $event.stopPropagation();" hidden />
         </label>
+        <button type="button" class="btn btn--subtle" (click)="openEditMetadata()">Atualizar</button>
       </div>
     </div>
     <div *ngIf="loading()" class="loading skeleton">Carregando...</div>
@@ -47,11 +47,29 @@ import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe'
             <div class="field"><label>Autor</label><div class="value">{{t.author || '—'}}</div></div>
             <div class="field"><label>Tipo</label><div class="value">{{t.entityType || '—'}}</div></div>
               <div class="field"><label>Status</label><div class="value"><span class="badge" [class.badge-active]="(t.publicationStatus||'').toLowerCase()==='published'" [class.badge-inactive]="(t.publicationStatus||'').toLowerCase()!=='published'">{{ (t.publicationStatus || '—') | publicationStatus }}</span></div></div>
-            <div class="field"><label>Criado</label><div class="value">{{t.createdAt | date:'short'}}</div></div>
-            <div class="field"><label>Atualizado</label><div class="value">{{t.updatedAt | date:'short'}}</div></div>
+            <div class="field"><label>Criado</label><div class="value">{{t.createdAt | date:'dd/MM/yyyy HH:mm'}}</div></div>
+            <div class="field"><label>Atualizado</label><div class="value">{{t.updatedAt | date:'dd/MM/yyyy HH:mm'}}</div></div>
           </div>
         </div>
       </section>
+      <!-- Modal de editar metadados do treinamento (disponível para todos os tipos) -->
+      <div class="overlay" *ngIf="showEditModal()" (click)="closeEditMetadata()"></div>
+      <div class="create-modal" *ngIf="showEditModal()" role="dialog" aria-modal="true" (click)="$event.stopPropagation()" style="max-width:640px;">
+        <form (submit)="$event.preventDefault(); submitEditMetadata();">
+          <h3 style="margin-top:0">Atualizar informações do treinamento</h3>
+          <label style="display:block;margin-bottom:.4rem">Título</label>
+          <input type="text" [value]="editForm().title" (input)="setEditField('title',$any($event.target).value)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.5rem;" />
+          <label style="display:block;margin-bottom:.4rem">Descrição</label>
+          <textarea [value]="editForm().description" (input)="setEditField('description',$any($event.target).value)" style="width:100%;min-height:120px;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.5rem;"></textarea>
+          <label style="display:block;margin-bottom:.4rem">Autor</label>
+          <input type="text" [value]="editForm().author" (input)="setEditField('author',$any($event.target).value)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:.5rem;" />
+          <div style="display:flex;gap:.5rem;justify-content:flex-end">
+            <button type="button" class="btn btn--subtle" (click)="closeEditMetadata()" [disabled]="editing()">Cancelar</button>
+            <button type="submit" class="btn btn--primary" [disabled]="editing()">{{ editing() ? 'Salvando...' : 'Salvar' }}</button>
+          </div>
+          <div *ngIf="editError()" class="error" style="margin-top:.5rem">{{editError()}}</div>
+        </form>
+      </div>
       <section class="card">
         <h2 class="card-title">Descrição</h2>
         <p class="description">{{t.description || '—'}}</p>
@@ -98,6 +116,8 @@ import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe'
           </form>
         </div>
 
+        <!-- (edit modal moved below so it's rendered for all training types) -->
+
         <!-- Modal de adicionar aula -->
         <div class="overlay" *ngIf="showAddLessonForModuleId()" (click)="closeAddLesson()"></div>
         <div class="create-modal" *ngIf="showAddLessonForModuleId()" role="dialog" aria-modal="true" (click)="$event.stopPropagation()" style="max-width:640px;">
@@ -125,7 +145,7 @@ import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe'
           <div class="kv-item"><span class="k">Upload</span><span class="v">{{ed.fileUploadedAt | date:'short'}}</span></div>
         </div>
         <div class="ebook-actions" *ngIf="trainingHasPdf(t)">
-          <a *ngIf="buildEbookFileUrl(extractPdfFileName(t)) as pdfUrl" class="btn btn--ghost" [href]="pdfUrl" target="_blank" rel="noopener">Abrir PDF</a>
+          <a *ngIf="buildEbookFileUrl(extractPdfFileName(t)) as pdfUrl" class="btn btn--ghost btn-xs" [href]="pdfUrl" target="_blank" rel="noopener">Abrir PDF</a>
         </div>
       </section>
       <section class="card">
@@ -223,6 +243,9 @@ import { PublicationStatusPipe } from '../../core/pipes/publication-status.pipe'
     .progress-bar.top { position:relative; height:5px; background:#e2e8f0; border-radius:4px; overflow:hidden; margin-top:-.5rem; }
     .progress-bar .bar { position:absolute; inset:0; background:linear-gradient(90deg,#6366f1,#818cf8); transition:width .25s; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(4px);} to { opacity:1; transform:translateY(0);} }
+  /* Modal overlay and centered modal styles - ensure modal overlays the page instead of injecting inline */
+  .overlay { position:fixed; inset:0; background:rgba(2,6,23,0.45); z-index:60; }
+  .create-modal { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:70; background:#ffffff; border-radius:12px; padding:1rem; box-shadow:0 10px 40px rgba(2,6,23,0.24); width:clamp(320px,90%,640px); max-height:90vh; overflow:auto; }
     /* cards empilhados verticalmente por padrão (uma coluna) */
     .cards { grid-template-columns: 1fr; }
     .meta-card { grid-column:1 / -1; }
@@ -289,7 +312,11 @@ export class AdminTrainingDetailComponent {
     this.uploadProgress.set(0); this.admin.uploadEbookFileWithProgress(t.id, file).subscribe({
       next: ev => { if (ev.type==='progress') this.uploadProgress.set(ev.progress ?? 0); },
       error: err => { this.error.set(err?.message || 'Falha upload PDF'); this.uploadProgress.set(null); },
-      complete: () => { this.uploadProgress.set(100); setTimeout(()=> this.uploadProgress.set(null), 1200); }
+      complete: () => {
+        this.uploadProgress.set(100);
+        const id = t.id;
+        setTimeout(()=> { this.uploadProgress.set(null); this.fetch(id); }, 1200);
+      }
     });
   }
 
@@ -298,7 +325,11 @@ export class AdminTrainingDetailComponent {
     this.uploadProgress.set(0); this.admin.uploadTrainingCoverImage(t.id, file).subscribe({
       next: ev => { if (ev.type==='progress') this.uploadProgress.set(ev.progress ?? 0); },
       error: err => { this.error.set(err?.message || 'Falha upload capa'); this.uploadProgress.set(null); },
-      complete: () => { this.uploadProgress.set(100); setTimeout(()=> this.uploadProgress.set(null), 1000); }
+      complete: () => {
+        this.uploadProgress.set(100);
+        const id = t.id;
+        setTimeout(()=> { this.uploadProgress.set(null); this.fetch(id); }, 1000);
+      }
     });
   }
 
@@ -317,12 +348,56 @@ export class AdminTrainingDetailComponent {
   addLessonForm = signal<{ title: string; content: string; lessonOrder: number }>({ title: '', content: '', lessonOrder: 1 });
   addLessonError = signal<string | null>(null);
 
+  // --- Edit metadata modal ---
+  showEditModal = signal<boolean>(false);
+  editing = signal<boolean>(false);
+  editError = signal<string | null>(null);
+  editForm = signal<{ title: string; description: string; author: string }>({ title: '', description: '', author: '' });
+
   unlinkSector(sectorId: string, trainingId: string) {
     if (!sectorId || !trainingId) return;
     if (!confirm('Remover vínculo com setor?')) return;
     this.admin.unlinkTrainingSector(trainingId, sectorId).subscribe({
       next: () => this.training.update(t => t ? { ...t, sectorAssignments: (t.sectorAssignments||[]).filter((s:any)=> s.sectorId !== sectorId) } : t),
       error: err => this.error.set(err?.message || 'Falha ao desvincular setor')
+    });
+  }
+
+  openEditMetadata() {
+    const t = this.training();
+    if (!t) return;
+    this.editForm.set({ title: String(t.title ?? ''), description: String(t.description ?? ''), author: String(t.author ?? '') });
+    this.editError.set(null);
+    this.showEditModal.set(true);
+  }
+
+  closeEditMetadata() { this.showEditModal.set(false); }
+
+  setEditField(key: 'title' | 'description' | 'author', value: any) {
+    this.editForm.update(f => ({ ...f, [key]: value }));
+  }
+
+  submitEditMetadata() {
+    const t = this.training(); if (!t) return;
+    const form = this.editForm();
+    this.editError.set(null);
+    const payload: any = {};
+    if (form.title !== undefined) payload.title = String(form.title).trim();
+    if (form.description !== undefined) payload.description = String(form.description).trim();
+    if (form.author !== undefined) payload.author = String(form.author).trim();
+    this.editing.set(true);
+    this.admin.updateTraining(t.id, payload).subscribe({
+      next: updated => {
+        // service may return the updated training or not; if not, refetch to get fresh data
+        if (updated && (updated as any).id) {
+          this.training.set(updated as any);
+        } else {
+          this.fetch(t.id);
+        }
+        this.showEditModal.set(false);
+      },
+      error: err => this.editError.set(err?.message || 'Falha ao atualizar treinamento'),
+      complete: () => this.editing.set(false)
     });
   }
 

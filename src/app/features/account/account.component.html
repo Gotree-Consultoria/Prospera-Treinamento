@@ -199,6 +199,11 @@
             <p>Informações da sua assinatura atual.</p>
           </header>
 
+            <div *ngIf="isSystemAdmin" class="empty">
+              <p class="strong">Administrador do Sistema: Acesso liberado sem assinatura</p>
+            </div>
+            <ng-container *ngIf="!isSystemAdmin">
+
           <div class="loading" *ngIf="subscriptionLoading">
             <span class="spinner" aria-hidden="true"></span>
             <p>Carregando assinatura…</p>
@@ -213,6 +218,8 @@
             <p>Você ainda não possui uma assinatura ativa.</p>
             <a routerLink="/planos" class="btn btn-primary">Ver Planos</a>
           </div>
+
+          </ng-container>
 
           <div *ngIf="!subscriptionLoading && subscription as sub" class="subscription-details card">
             <div class="sub-grid">
@@ -260,18 +267,60 @@
             <p>Centralize o acompanhamento da jornada de aprendizagem da sua empresa.</p>
           </header>
           <div class="learning-body">
-            <article class="learning-card">
-              <h2>Biblioteca Prospera</h2>
-              <p>Acesse todos os cursos disponíveis para o seu plano, organize trilhas e acompanhe certificados.</p>
-              <button type="button" class="btn btn-primary" (click)="openLearningCatalog()">Ir para a biblioteca</button>
-            </article>
-            <article class="learning-card">
-              <h2>Organizações vinculadas</h2>
-              <ul>
-                <li *ngFor="let org of user?.organizations || []">{{ org['organizationName'] || org['name'] }} — {{ org['position'] || 'Membro' }}</li>
-              </ul>
-              <p *ngIf="!(user?.organizations?.length)">Você ainda não está vinculado a nenhuma organização. Entre em contato com um administrador.</p>
-            </article>
+            <!-- If the current user is a system admin, show admin trainings and a note about full access -->
+            <div *ngIf="isSystemAdmin; else normalLearning">
+              <article class="learning-card">
+                <h2>Administrador do Sistema</h2>
+                <p>Administrador do Sistema: Acesso completo a todos os conteúdos.</p>
+              </article>
+
+              <div class="admin-trainings-container">
+                <header class="trainings-header">
+                  <h3>Conteúdos (Admin)</h3>
+                  <button class="btn btn-secondary" (click)="loadAdminTrainings(true)">
+                    <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                    Atualizar
+                  </button>
+                </header>
+
+                <div *ngIf="adminTrainingsLoading" class="loading">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <p>Carregando conteúdos…</p>
+                </div>
+
+                <div *ngIf="!adminTrainingsLoading && adminTrainingsError" class="error">
+                  <p>{{ adminTrainingsError }}</p>
+                </div>
+
+                <div *ngIf="!adminTrainingsLoading && adminTrainings.length" class="trainings-grid">
+                  <pros-admin-training-card
+                    *ngFor="let t of adminTrainings"
+                    [training]="t"
+                    [onDetailsClick]="openAdminTraining.bind(this)"
+                    [onAccessClick]="openStudentView.bind(this)"
+                  ></pros-admin-training-card>
+                </div>
+
+                <div *ngIf="!adminTrainingsLoading && !adminTrainings.length" class="empty">
+                  <i class="fas fa-inbox" aria-hidden="true"></i>
+                  <p>Nenhum conteúdo administrativo encontrado.</p>
+                </div>
+              </div>
+            </div>
+            <ng-template #normalLearning>
+              <article class="learning-card">
+                <h2>Biblioteca Prospera</h2>
+                <p>Acesse todos os cursos disponíveis para o seu plano, organize trilhas e acompanhe certificados.</p>
+                <button type="button" class="btn btn-primary" (click)="openLearningCatalog()">Ir para a biblioteca</button>
+              </article>
+              <article class="learning-card">
+                <h2>Organizações vinculadas</h2>
+                <ul>
+                  <li *ngFor="let org of user?.organizations || []">{{ org['organizationName'] || org['name'] }} — {{ org['position'] || 'Membro' }}</li>
+                </ul>
+                <p *ngIf="!(user?.organizations?.length)">Você ainda não está vinculado a nenhuma organização. Entre em contato com um administrador.</p>
+              </article>
+            </ng-template>
           </div>
         </section>
       </ng-container>

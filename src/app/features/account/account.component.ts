@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { SubscriptionService, UserSubscription } from '../../core/services/subscription.service';
 import { AdminService } from '../../core/services/admin.service';
 import { UserProfile } from '../../core/models/user';
+import { AdminTrainingCardComponent } from './admin-training-card.component';
 
 interface AccountMenuItem {
   id: 'profile' | 'plans' | 'manageCompanies' | 'learning';
@@ -35,7 +36,7 @@ interface CompanySubuser {
 @Component({
   selector: 'pros-account',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, AdminTrainingCardComponent],
   templateUrl: './account.component.html',
   styleUrls: ['./account.component.scss']
 })
@@ -91,6 +92,11 @@ export class AccountComponent implements OnInit {
   subscription: UserSubscription | null | undefined = undefined; // undefined=loading, null=sem assinatura
   subscriptionLoading = false;
   subscriptionError = '';
+
+  // Admin trainings (visible to system admins in the learning section)
+  adminTrainingsLoading = false;
+  adminTrainings: Array<any> = [];
+  adminTrainingsError = '';
 
   successMessage = '';
   errorMessage = '';
@@ -401,6 +407,15 @@ export class AccountComponent implements OnInit {
     return this.authService.isSystemAdmin() || this.authService.isOrgAdmin();
   }
 
+  get isSystemAdmin(): boolean {
+    return this.authService.isSystemAdmin();
+  }
+
+  // expose token role string to templates for confirmation/debug
+  get tokenRole(): string | null {
+    return this.authService.getRole() ?? this.authService.getSystemRole();
+  }
+
   get companyName(): string {
   const source = this.user?.company as Record<string, unknown> | undefined;
     const organizations = Array.isArray(this.user?.organizations) ? this.user?.organizations : [];
@@ -427,7 +442,10 @@ export class AccountComponent implements OnInit {
       this.activeProfileTab = this.availableProfileSections[0]?.id ?? 'dados';
     }
     if (section === 'learning') {
-      // no-op: companyTab feature removed
+      // If user is system admin, load admin trainings so they can inspect content via admin endpoints
+      if (this.authService.isSystemAdmin()) {
+        this.loadAdminTrainings();
+      }
     }
     if (section === 'manageCompanies') {
       this.activeProfileTab = 'company';
@@ -758,6 +776,7 @@ export class AccountComponent implements OnInit {
   }
 
   loadMySubscription(reset = false) {
+    try { console.debug('[Account] loadMySubscription role=', this.authService.getRole(), 'isSystemAdmin=', this.authService.isSystemAdmin()); } catch {}
     if (reset) {
       this.subscription = undefined;
       this.subscriptionError = '';
@@ -970,5 +989,49 @@ export class AccountComponent implements OnInit {
     if (digits.length <= 8) return digits.replace(/^(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
     if (digits.length <= 12) return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
     return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+  }
+
+  // Load admin trainings for system admins so they can inspect and open content using admin endpoints
+  loadAdminTrainings(force = false): void {
+    if (!this.authService.isSystemAdmin()) return;
+    if (this.adminTrainingsLoading && !force) return;
+    this.adminTrainingsLoading = true;
+    this.adminTrainingsError = '';
+    this.adminTrainings = [];
+    this.adminService.getTrainings().subscribe({
+      next: list => {
+        this.adminTrainingsLoading = false;
+        if (Array.isArray(list)) {
+          this.adminTrainings = list;
+        } else if (list && typeof list === 'object') {
+          this.adminTrainings = Array.isArray((list as any).items) ? (list as any).items : [];
+        } else {
+          this.adminTrainings = [];
+        }
+      },
+      error: err => {
+        console.warn('[Account] failed to load admin trainings', err);
+        this.adminTrainingsLoading = false;
+        this.adminTrainingsError = 'Não foi possível carregar os conteúdos administrativos agora.';
+      }
+    });
+  }
+
+  openAdminTraining(training: any): void {
+    const id = String(training?.id ?? training?.trainingId ?? training?.uuid ?? training?._id ?? '');
+    if (!id) return;
+    // navigate to admin detail route, which is protected by admin guard; system admins will pass it
+    this.router.navigate(['/admin/conteudo', id]);
+  }
+
+  openStudentView(training: any): void {
+    const id = String(training?.id ?? training?.trainingId ?? training?.uuid ?? training?._id ?? '');
+    if (!id) return;
+    // Debug: log before navigation so we can confirm click reached the handler
+    try {
+      console.debug('[Account] openStudentView', { id, training });
+    } catch {}
+    // Navigate to the student-facing content viewer
+    this.router.navigate(['/conteudo/visualizar', id]);
   }
 }

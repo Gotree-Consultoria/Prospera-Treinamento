@@ -35,6 +35,11 @@
                 "output": "assets"
               },
               {
+                "glob": "pdf.worker.min.js",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "assets"
+              },
+              {
                 "glob": "**/*",
                 "input": "../legacy/assets/images",
                 "output": "assets/images"
@@ -42,6 +47,10 @@
             ],
             "styles": [
               "src/styles.scss"
+            ]
+            ,
+            "allowedCommonJsDependencies": [
+              "pdfjs-dist"
             ]
           },
           "configurations": {
@@ -100,6 +109,11 @@
               {
                 "glob": "**/*",
                 "input": "src/assets",
+                "output": "assets"
+              },
+              {
+                "glob": "pdf.worker.min.js",
+                "input": "node_modules/pdfjs-dist/build",
                 "output": "assets"
               },
               {

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SubscriptionService, UserSubscription, AccessStatus } from '../../core/services/subscription.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'pros-subscription-view',
@@ -12,6 +13,12 @@ import { SubscriptionService, UserSubscription, AccessStatus } from '../../core/
     <div class="container">
       <h1>Minha Assinatura</h1>
 
+      <div *ngIf="isSystemAdmin()" class="empty" style="text-align:center;padding:1.5rem 0;margin-bottom:1rem;">
+        <p style="font-weight:600">Administrador do Sistema: Acesso liberado sem assinatura</p>
+      </div>
+
+      <ng-container *ngIf="!isSystemAdmin()">
+
       <div class="loading" *ngIf="loading()">
         <span class="spinner" aria-hidden="true"></span>
         <p>Carregando assinatura…</p>
@@ -20,7 +27,9 @@ import { SubscriptionService, UserSubscription, AccessStatus } from '../../core/
       <div class="empty" *ngIf="!loading() && !error() && subscription() === null">
         <p>Você ainda não possui uma assinatura ativa.</p>
         <a routerLink="/planos" class="btn btn-primary">Ver Planos</a>
-      </div>
+  </div>
+
+  </ng-container>
 
       <div class="error" *ngIf="!loading() && error()">
         <p>{{ error() }}</p>
@@ -79,12 +88,20 @@ import { SubscriptionService, UserSubscription, AccessStatus } from '../../core/
 })
 export class SubscriptionViewComponent implements OnInit {
   private readonly service = inject(SubscriptionService);
+  private readonly authService = inject(AuthService);
 
   readonly subscription = signal<UserSubscription | null | undefined>(undefined); // undefined=loading, null=sem assinatura
   readonly loading = computed(() => this.subscription() === undefined);
   readonly error = signal<string | null>(null);
+  readonly isSystemAdmin = computed(() => this.authService.isSystemAdmin());
+  readonly tokenRole = computed(() => this.authService.getRole() ?? this.authService.getSystemRole());
 
   ngOnInit(): void {
+    try {
+      console.debug('[SubscriptionView] init role', { role: this.authService.getRole(), systemRole: this.authService.getSystemRole(), isSystemAdmin: this.authService.isSystemAdmin() });
+      // localStorage flags (do not print token value)
+      try { console.debug('[SubscriptionView] storage', { hasToken: !!localStorage.getItem('jwtToken') || !!localStorage.getItem('jwttoken'), storedRole: localStorage.getItem('systemRole'), email: localStorage.getItem('loggedInUserEmail') }); } catch (e) {}
+    } catch (e) {}
     this.load();
   }
 
@@ -94,6 +111,13 @@ export class SubscriptionViewComponent implements OnInit {
     if (reset) {
       this.subscription.set(undefined);
       this.error.set(null);
+    }
+    // Se o usuário for SYSTEM_ADMIN, não precisamos consultar o endpoint; o
+    // token já determina a role e mostramos a mensagem informativa.
+    if (this.authService.isSystemAdmin()) {
+      this.subscription.set(null);
+      this.error.set(null);
+      return;
     }
     // Primeiro consulte o status de acesso — para membros de organização o backend
     // informa se o acesso vem da organização. Se for PERSONAL_SUBSCRIPTION, busque

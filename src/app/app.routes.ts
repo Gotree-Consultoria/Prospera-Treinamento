@@ -48,6 +48,12 @@ export const routes: Routes = [
 		data: { title: 'Painel Admin' }
 	},
 	{
+		path: 'conteudo/visualizar/:id',
+		canActivate: [authGuard],
+		loadComponent: () => import('./features/content/content-view.component').then(m => m.ContentViewComponent),
+		data: { title: 'Visualizar Conteúdo' }
+	},
+	{
 		path: 'admin/conteudo/:id',
 		canActivate: [authGuard, adminGuard],
 		loadComponent: () => import('./features/admin/admin-training-detail.component').then(m => m.AdminTrainingDetailComponent),
